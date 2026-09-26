@@ -41,6 +41,8 @@ export function BookingFormPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<ReadFile[]>([]);
   const [readMessage, setReadMessage] = useState('');
+  /** Texto tal cual lo lee pdf.js: para comprobar por qué una regla no encuentra algo. */
+  const [rawText, setRawText] = useState<string | null>(prefill?.rawText ?? null);
 
   // Desde la bandeja de entrada llega una propuesta: rellena el formulario y, al guardar, trae los adjuntos del correo.
   const prefill = (useLocation().state as { prefill?: InboxPrefill } | null)?.prefill;
@@ -134,6 +136,7 @@ export function BookingFormPage() {
       } catch {
         continue;
       }
+      setRawText(text);
       const s = suggestFromText(text, item.file.name);
       if (!s.type && !s.reference && !s.startDate) {
         continue;
@@ -329,6 +332,12 @@ export function BookingFormPage() {
         )}
         {progress.message && <p className="muted small">{progress.message}</p>}
         {prefill && readMessage && <p className="muted small">{readMessage}</p>}
+        {rawText && (
+          <details className="small muted" style={{ margin: '8px 0' }}>
+            <summary>Texto leído del PDF (para afinar las reglas)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>{rawText.slice(0, 4000)}</pre>
+          </details>
+        )}
         {error && <p className="error">{error}</p>}
         <button className="btn primary block" type="submit" disabled={saving || progress.busy}>
           {saving ? 'Guardando…' : 'Guardar'}

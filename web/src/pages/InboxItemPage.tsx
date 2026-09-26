@@ -30,6 +30,8 @@ export interface InboxPrefill {
   /** De dónde salieron los datos («billete.pdf», «texto del correo») y qué falló, para enseñarlo en el formulario. */
   sources?: string[];
   warnings?: string[];
+  /** Texto del PDF tal cual lo leyó pdf.js, para afinar las reglas. */
+  rawText?: string | null;
 }
 
 export function InboxItemPage() {
@@ -105,6 +107,7 @@ export function InboxItemPage() {
         try {
           const bytes = await downloadInboxAttachment(item!.id, attachment.id);
           const text = await extractPdfText(bytes);
+          prefill.rawText ??= text;
           const suggestion = suggestFromText(text, attachment.name);
           if (suggestion.type || suggestion.reference || suggestion.startDate) {
             prefill = applySuggestion(prefill, suggestion);
