@@ -254,3 +254,22 @@ Nombre del pasajero: Asientos: Recibo(s) de boleto(s) electrónico(s):
     expect(filled).toMatchObject({ startLocal: '2026-10-01T20:05', endLocal: '2026-10-02T04:10', endTz: 'America/Argentina/Buenos_Aires' });
   });
 });
+
+describe('pasajeros de un vuelo en columnas separadas', () => {
+  it('empareja nombres, asientos y billetes aunque el PDF los saque por columnas', () => {
+    const text = `Vuelo AR 1133 MAD → EZE 01 OCT 2026 20:05
+Nombre del pasajero:
+» Manuel Bernabe Escribano
+» Francisco Jose Belso Alfonso
+Asientos:
+23G
+23H
+Recibo(s) de boleto(s) electrónico(s):
+0442167894233
+0442167894234
+Terminal:
+TERMINAL 1`;
+
+    expect(suggestFromText(text).notes).toBe('Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: TERMINAL 1');
+  });
+});

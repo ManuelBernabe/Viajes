@@ -234,23 +234,17 @@ function findStations(text: string): { from: string | null; to: string | null } 
  */
 function findFlightNotes(text: string): string | null {
   const parts: string[] = [];
-  const passengers: string[] = [];
-  const tickets: string[] = [];
-  const row = /^[»•\-*>]?\s*([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ .'\-]{4,60}?)\s+(\d{1,3}[A-K])\b(?:\s+(\d{10,14}))?\s*$/gm;
-  let match: RegExpExecArray | null;
-  while ((match = row.exec(text))) {
-    passengers.push(`${match[1].trim()} (${match[2]})`);
-    if (match[3]) {
-      tickets.push(match[3]);
-    }
-  }
-  if (passengers.length > 0) {
+  // Los nombres van marcados con «»» (o viñeta); asientos «23G» y billetes de 13 cifras aparecen donde el PDF los coloque:
+  // en la misma línea o en columnas aparte. Se emparejan por orden.
+  const names = [...text.matchAll(/^[»•>]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ .'\-]{3,60}?)\s*(?=\s\d{1,3}[A-K]\b|\s\d{10,14}\b|$)/gm)].map((m) => m[1].trim());
+  const seatsFrom = Math.max(0, text.search(/\basientos?\b|\bseats?\b/i));
+  const seats = [...text.slice(seatsFrom).matchAll(/(?<![A-Z0-9])(\d{1,3}[A-K])(?![A-Z0-9])/g)].map((m) => m[1]);
+  const tickets = [...text.matchAll(/(?<!\d)(\d{13})(?!\d)/g)].map((m) => m[1]);
+  if (names.length > 0) {
+    const passengers = names.map((name, index) => (seats[index] ? `${name} (${seats[index]})` : name));
     parts.push(`${passengers.length === 1 ? 'Pasajero' : 'Pasajeros'}: ${passengers.join(', ')}`);
-  } else {
-    const seats = [...text.matchAll(/\b(?:asientos?|seats?)\s*[:.]?\s*((?:\d{1,3}[A-K])(?:\s*[,/]\s*\d{1,3}[A-K])*)/gi)].map((m) => m[1]);
-    if (seats.length > 0) {
-      parts.push(`Asientos ${seats.join(', ')}`);
-    }
+  } else if (seats.length > 0) {
+    parts.push(`Asientos ${seats.join(', ')}`);
   }
   if (tickets.length > 0) {
     parts.push(`${tickets.length === 1 ? 'Billete' : 'Billetes'} ${tickets.join(', ')}`);
