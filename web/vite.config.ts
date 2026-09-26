@@ -23,7 +23,9 @@ export default defineConfig({
       },
       injectManifest: {
         // El worker de pdf.js es .mjs y los iconos .png: sin ellos en la caché, sin red no se abren los PDF.
-        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,webmanifest,woff2}'],
+        // El manifest.webmanifest lo añade el propio plugin; si además lo recoge el glob, queda duplicado con otra
+        // revisión y Workbox aborta el worker al arrancar («conflicting entries»): sin popup de versión ni avisos.
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 5_000_000,
       },
     }),
