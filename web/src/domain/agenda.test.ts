@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking, Trip } from '../data/types';
-import { groupByDay, nextBooking, sortTrips, todayLocal, tripStatus } from './agenda';
+import { groupByDay, nextBooking, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
 
 const booking = (id: string, startLocal: string, startUtcMs: number): Booking => ({
   id, tripId: 't', type: 'flight', title: id, startLocal, startTz: 'Europe/Madrid', startPlace: null, endLocal: null,
@@ -22,6 +22,11 @@ describe('nextBooking', () => {
   it('sin nada por venir no devuelve nada', () => {
     expect(nextBooking(list, 200 * h)).toBeUndefined();
     expect(nextBooking([], 0)).toBeUndefined();
+  });
+
+  it('las próximas van en orden y con límite', () => {
+    expect(upcomingBookings(list, 0, 3).map((b) => b.id)).toEqual(['ayer', 'hace-2h', 'mañana']);
+    expect(upcomingBookings(list, 50 * h, 1).map((b) => b.id)).toEqual(['hace-2h']);
   });
 });
 

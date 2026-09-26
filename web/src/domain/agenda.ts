@@ -6,9 +6,15 @@ export const GRACE_MS = 6 * 3_600_000;
 
 /** La próxima reserva por instante real, entre todas las de todos los viajes. */
 export function nextBooking(bookings: readonly Booking[], nowMs: number, graceMs = GRACE_MS): Booking | undefined {
+  return upcomingBookings(bookings, nowMs, 1, graceMs)[0];
+}
+
+/** Las próximas `limit` reservas por instante real, la más cercana primero. */
+export function upcomingBookings(bookings: readonly Booking[], nowMs: number, limit: number, graceMs = GRACE_MS): Booking[] {
   return [...bookings]
     .sort((a, b) => a.startUtcMs - b.startUtcMs)
-    .find((b) => b.startUtcMs >= nowMs - graceMs);
+    .filter((b) => b.startUtcMs >= nowMs - graceMs)
+    .slice(0, limit);
 }
 
 export interface Day {

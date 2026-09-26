@@ -4,7 +4,8 @@ import { listAllBookings, listAttachments, listInbox, listTrips } from '../data/
 import { useSyncStatus } from '../data/syncClient';
 import type { Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { nextBooking, sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
+import { sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
+import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 
 function TripCard({ trip }: { trip: Trip }) {
@@ -25,42 +26,50 @@ function TripCard({ trip }: { trip: Trip }) {
 }
 
 function NextUp() {
-  const next = useLiveQuery(async () => {
-    const booking = nextBooking(await listAllBookings(), Date.now());
-    if (!booking) {
-      return null;
-    }
-    const attachments = await listAttachments(booking.id);
-    return { booking, qr: attachments.some((a) => a.qrText) };
+  const upcoming = useLiveQuery(async () => {
+    const bookings = upcomingBookings(await listAllBookings(), Date.now(), 3);
+    return Promise.all(
+      bookings.map(async (booking) => ({ booking, qr: (await listAttachments(booking.id)).some((a) => a.qrText) })),
+    );
   }, []);
 
-  if (!next) {
+  if (!upcoming || upcoming.length === 0) {
     return null;
   }
-  const { booking, qr } = next;
+  const [{ booking, qr }, ...rest] = upcoming;
   const info = TYPE_INFO[booking.type];
   return (
-    <section className="card highlight">
-      <div className="muted small">Lo siguiente</div>
-      <h3>
-        {info.icon} {booking.title}
-      </h3>
-      {booking.changeNote && <div className="error small">⚠️ {booking.changeNote}</div>}
-      <div>
-        {formatDay(booking.startLocal)} · {timeOf(booking.startLocal)} hora de {zoneLabel(booking.startTz)}
-        {booking.startPlace && ` · ${booking.startPlace}`}
-      </div>
-      <div className="actions">
-        {qr && (
-          <Link className="btn primary" to={`/bookings/${booking.id}/qr`}>
-            Ver QR
+    <>
+      <section className="card highlight">
+        <div className="muted small">Lo siguiente</div>
+        <h3>
+          {info.icon} {booking.title}
+        </h3>
+        {booking.changeNote && <div className="error small">⚠️ {booking.changeNote}</div>}
+        <div>
+          {formatDay(booking.startLocal)} · {timeOf(booking.startLocal)} hora de {zoneLabel(booking.startTz)}
+          {booking.startPlace && ` · ${booking.startPlace}`}
+        </div>
+        <div className="actions">
+          {qr && (
+            <Link className="btn primary" to={`/bookings/${booking.id}/qr`}>
+              Ver QR
+            </Link>
+          )}
+          <Link className="btn" to={`/bookings/${booking.id}`}>
+            Ver reserva
           </Link>
-        )}
-        <Link className="btn" to={`/bookings/${booking.id}`}>
-          Ver reserva
-        </Link>
-      </div>
-    </section>
+        </div>
+      </section>
+      {rest.length > 0 && (
+        <>
+          <div className="muted small" style={{ margin: '4px 0' }}>Después</div>
+          {rest.map((item) => (
+            <BookingCard key={item.booking.id} booking={item.booking} showDay={formatDay(item.booking.startLocal)} />
+          ))}
+        </>
+      )}
+    </>
   );
 }
 
