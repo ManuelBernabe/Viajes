@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { describeError } from '../api';
-import { disablePush, enablePush, pushState, sendTestPush, type PushState } from '../push/push';
+import { disablePush, enablePush, pushState, sendTestPush, showLocalTest, type PushState } from '../push/push';
+
+const TEST_DELAY_S = 10;
 
 /** Sección «Avisos» de Ajustes: activar, desactivar y probar las notificaciones. */
 export function PushSettings() {
@@ -12,13 +14,19 @@ export function PushSettings() {
     pushState().then(setState, () => setState({ kind: 'unsupported', reason: 'No se ha podido comprobar.' }));
   }, []);
 
-  async function run(action: () => Promise<PushState | number>) {
+  async function run(action: () => Promise<PushState | number | void>) {
     setBusy(true);
     setMessage('');
     try {
       const result = await action();
-      if (typeof result === 'number') {
-        setMessage(result > 0 ? `Aviso enviado a ${result} dispositivo${result === 1 ? '' : 's'}.` : 'No hay ningún dispositivo con avisos activados.');
+      if (result === undefined) {
+        setMessage('Aviso local mostrado. Si no lo ves, revisa Ajustes del iPhone → Notificaciones → Viajes y el modo de concentración.');
+      } else if (typeof result === 'number') {
+        if (result < 0) {
+          setMessage(`Llegará en ${TEST_DELAY_S} segundos: cierra la app y espera en la pantalla de inicio.`);
+        } else {
+          setMessage(result > 0 ? `Aviso enviado a ${result} dispositivo${result === 1 ? '' : 's'}.` : 'No hay ningún dispositivo con avisos activados.');
+        }
       } else {
         setState(result);
         if (result.kind === 'denied') {
@@ -53,8 +61,11 @@ export function PushSettings() {
       )}
       {state?.kind === 'on' && (
         <>
-          <button className="btn block" disabled={busy} onClick={() => void run(sendTestPush)}>
-            Enviar un aviso de prueba
+          <button className="btn block" disabled={busy} onClick={() => void run(showLocalTest)}>
+            Mostrar un aviso local (sin servidor)
+          </button>
+          <button className="btn block" disabled={busy} onClick={() => void run(() => sendTestPush(TEST_DELAY_S))}>
+            Enviar un aviso de prueba en {TEST_DELAY_S} s
           </button>
           <button className="btn block secondary" disabled={busy} onClick={() => void run(disablePush)}>
             Desactivar avisos en este móvil

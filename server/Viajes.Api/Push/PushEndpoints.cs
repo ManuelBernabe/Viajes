@@ -78,12 +78,32 @@ public static class PushEndpoints
             return Results.Ok(new { configured = sender.IsConfigured, devices });
         });
 
-        // Un aviso de prueba a todos los dispositivos de quien lo pide.
-        group.MapPost("/test", async (ClaimsPrincipal principal, UserManager<IdentityUser> users, PushService push, CancellationToken ct) =>
+        // Un aviso de prueba a todos los dispositivos de quien lo pide. Con ?delay=10 se manda pasados diez
+        // segundos, para poder cerrar la app y ver que el aviso llega con ella cerrada.
+        group.MapPost("/test", async (int? delay, ClaimsPrincipal principal, UserManager<IdentityUser> users, PushService push, IServiceScopeFactory scopes, ILogger<PushService> log, CancellationToken ct) =>
         {
             var userId = users.GetUserId(principal)!;
-            var sent = await push.SendToUserAsync(userId, new PushMessage("Viajes", "Los avisos funcionan en este móvil.", "/", "test"), ct);
-            return Results.Ok(new { sent });
+            var message = new PushMessage("Viajes", "Los avisos funcionan en este móvil.", "/", "test");
+            var seconds = Math.Clamp(delay ?? 0, 0, 60);
+            if (seconds == 0)
+            {
+                return Results.Ok(new { sent = await push.SendToUserAsync(userId, message, ct) });
+            }
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(seconds));
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    await scope.ServiceProvider.GetRequiredService<PushService>().SendToUserAsync(userId, message, CancellationToken.None);
+                }
+                catch (Exception e)
+                {
+                    log.LogWarning(e, "Fallo el aviso de prueba retardado.");
+                }
+            });
+            return Results.Ok(new { sent = -1, delay = seconds });
         });
     }
 }

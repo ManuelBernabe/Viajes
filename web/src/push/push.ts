@@ -82,10 +82,20 @@ export async function disablePush(): Promise<PushState> {
   return { kind: 'off' };
 }
 
-/** Manda un aviso de prueba a los dispositivos de la cuenta; devuelve a cuántos llegó. */
-export async function sendTestPush(): Promise<number> {
-  const { sent } = await api<{ sent: number }>('/api/push/test', { method: 'POST', body: '{}' });
+/** Manda un aviso de prueba a los dispositivos de la cuenta; devuelve a cuántos llegó (-1 si va con retardo). */
+export async function sendTestPush(delaySeconds = 0): Promise<number> {
+  const { sent } = await api<{ sent: number }>(`/api/push/test?delay=${delaySeconds}`, { method: 'POST', body: '{}' });
   return sent;
+}
+
+/** Muestra un aviso desde el propio móvil, sin servidor: comprueba permiso y service worker. */
+export async function showLocalTest(): Promise<void> {
+  const registration = await navigator.serviceWorker.ready;
+  await registration.showNotification('Viajes', {
+    body: 'Aviso local de prueba: el permiso y el service worker funcionan.',
+    tag: 'local-test',
+    icon: '/pwa-192x192.png',
+  });
 }
 
 /** Si el dispositivo ya estaba suscrito, vuelve a registrarlo por si el servidor lo perdió o cambió la clave. */
