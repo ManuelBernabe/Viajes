@@ -33,7 +33,25 @@ Para que **reenviar** un correo baste, crea un filtro en Gmail:
 Reenvía desde cualquier correo la reserva a `tu.usuario+viajes@gmail.com` (Gmail entrega a tu buzón todo lo que
 lleve `+algo`). En uno o dos minutos aparece en la app.
 
-Opcional: más filtros que etiqueten directamente los correos de proveedores concretos («De: iberia.com»).
+### Sin reenviar: etiquetar automáticamente los correos de los proveedores
+
+El script no mira quién envía el correo, solo la etiqueta. Así que un segundo filtro que etiquete directamente lo
+que mandan las aerolíneas, trenes y hoteles evita el reenvío:
+
+1. Gmail → rueda dentada → **Ver todos los ajustes** → **Filtros y direcciones bloqueadas** → **Crear un filtro**.
+2. En **De**, pega los dominios de tus proveedores separados por `OR`, por ejemplo:
+
+   ```
+   renfe.com OR trenes.com OR iberia.com OR aireuropa.com OR aerolineas.com.ar OR voegol.com.br OR jetsmart.com OR booking.com OR airbnb.com OR latam.com OR ryanair.com OR vueling.com
+   ```
+
+3. **Crear filtro** → marca **Aplicar la etiqueta: Viajes** → **Crear filtro**.
+
+No marques «Aplicar también a las conversaciones que cumplan los criterios»: importaría todo el correo antiguo de
+esos remitentes. Los cambios de horario llegan del mismo dominio, así que también entran solos y la app los
+detecta como modificación de la reserva. Si un proveedor manda publicidad desde el mismo dominio, aparecerá como
+borrador «por revisar» y basta con descartarlo; para afinar, añade en **Asunto** palabras como
+`reserva OR confirmación OR booking OR billete OR itinerario`.
 
 ## Qué extrae la app
 
