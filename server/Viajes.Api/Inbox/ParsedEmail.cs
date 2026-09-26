@@ -44,6 +44,14 @@ public sealed class Suggestion
 
 public sealed record ParsedAttachment(string Name, string Mime, byte[] Bytes, string? QrText);
 
+public enum GmailAuth
+{
+    /// <summary>Sin cabecera de Gmail: correo que no salió de Google (enviado desde la propia cuenta).</summary>
+    None,
+    Pass,
+    Fail,
+}
+
 public sealed class ParsedEmail
 {
     public required string MessageId { get; init; }
@@ -56,8 +64,10 @@ public sealed class ParsedEmail
 
     public string? BodyText { get; init; }
 
-    /// <summary>Gmail dio por bueno DKIM o SPF del remitente (cabecera Authentication-Results de mx.google.com).</summary>
-    public bool GmailAuthenticated { get; init; }
+    /// <summary>Qué dijo Gmail del remitente (cabecera Authentication-Results de mx.google.com).</summary>
+    public GmailAuth GmailAuth { get; init; }
+
+    public bool GmailAuthenticated => GmailAuth == GmailAuth.Pass;
 
     public required Suggestion Suggestion { get; init; }
 

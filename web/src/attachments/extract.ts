@@ -118,8 +118,11 @@ function findAirports(text: string): string[] {
 
 /** «Origen: ALICANTE TERMINAL» / «Salida ... Llegada ...» / «Destino: MADRID-PUERTA DE ATOCHA». */
 function findStations(text: string): { from: string | null; to: string | null } {
-  const from = /\b(?:origen|desde|from|salida)\s*[:\-]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .\-']{3,40}?)(?=\s{2,}|\s*\n|\s+\d|\s+(?:destino|hasta|to|llegada)\b|$)/im.exec(text);
-  const to = /\b(?:destino|hasta|to|llegada)\s*[:\-]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .\-']{3,40}?)(?=\s{2,}|\s*\n|\s+\d|$)/im.exec(text);
+  // El nombre de la estación va en mayúsculas; termina donde empieza otra etiqueta («Destino:», «Fecha:»), un número o una línea nueva.
+  // Sin la bandera «i»: la clase de minúsculas debe distinguir «Fecha:» de «TERMINAL».
+  const end = String.raw`(?=\s{2,}|\s*\n|\s+\d|\s+[A-ZÁÉÍÓÚÑ]?[a-záéíóúñ]|\s+(?:DESTINO|HASTA|TO|LLEGADA|FECHA|TREN|COCHE|PLAZA|SALIDA)\b|$)`;
+  const from = new RegExp(String.raw`\b(?:[Oo]rigen|ORIGEN|[Dd]esde|DESDE|[Ff]rom|FROM|[Ss]alida|SALIDA)\s*[:\-]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .\-']{3,40}?)` + end, 'm').exec(text);
+  const to = new RegExp(String.raw`\b(?:[Dd]estino|DESTINO|[Hh]asta|HASTA|[Tt]o|TO|[Ll]legada|LLEGADA)\s*[:\-]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .\-']{3,40}?)` + end, 'm').exec(text);
   const clean = (s: string | undefined) => (s ? s.trim().replace(/\s+/g, ' ') : null);
   return { from: clean(from?.[1]), to: clean(to?.[1]) };
 }
@@ -140,6 +143,38 @@ function findTrain(text: string): string | null {
 
 function titleCase(s: string): string {
   return s.toLowerCase().replace(/(^|[\s\-'])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
+/** Campos de una propuesta de reserva tal y como los usa el formulario. */
+export interface PrefillFields {
+  type: string | null;
+  title: string | null;
+  startLocal: string | null;
+  startTz: string | null;
+  startPlace: string | null;
+  endLocal: string | null;
+  endTz: string | null;
+  endPlace: string | null;
+  reference: string | null;
+  address: string | null;
+}
+
+/** Rellena con la sugerencia solo lo que en la base esté vacío. El título se sustituye si la sugerencia trae tipo. */
+export function applySuggestion<T extends PrefillFields>(base: T, s: TextSuggestion): T {
+  const local = (date: string | null, time: string | null) => (date ? `${date}T${time ?? '00:00'}` : null);
+  const startLocal = local(s.startDate, s.startTime);
+  const endLocal = local(s.endDate ?? (s.endTime ? s.startDate : null), s.endTime);
+  return {
+    ...base,
+    type: base.type ?? s.type,
+    title: s.type && s.title ? (base.type ? base.title ?? s.title : s.title) : base.title ?? s.title,
+    startLocal: base.startLocal ?? startLocal,
+    startPlace: base.startPlace ?? s.startPlace,
+    endLocal: base.endLocal ?? endLocal,
+    endPlace: base.endPlace ?? s.endPlace,
+    reference: base.reference ?? s.reference,
+    address: base.address ?? s.address,
+  };
 }
 
 export function suggestFromText(text: string, fileName = ''): TextSuggestion {

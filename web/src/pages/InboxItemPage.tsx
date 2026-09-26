@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { describeError } from '../api';
 import { BackLink } from '../app/Layout';
-import { formatSize } from '../attachments/files';
+import { applySuggestion, suggestFromText } from '../attachments/extract';
+import { formatSize, isPdf } from '../attachments/files';
+import { extractPdfText } from '../attachments/pdfText';
 import { getInboxItem, listTrips } from '../data/repo';
-import { setInboxStatus } from '../data/syncClient';
+import { downloadInboxAttachment, setInboxStatus } from '../data/syncClient';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
 
@@ -30,6 +32,7 @@ export function InboxItemPage() {
   const [tripId, setTripId] = useState('');
   const [message, setMessage] = useState('');
   const [showBody, setShowBody] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
   if (item === undefined || trips === undefined) {
     return <main className="page muted">Cargando…</main>;
@@ -50,15 +53,21 @@ export function InboxItemPage() {
   const options = [...sorted.active, ...sorted.past];
   const chosen = tripId || options[0]?.id || '';
 
-  function createBooking() {
+  /**
+   * Los datos estructurados del servidor van primero. Lo que falte se completa leyendo el texto del correo y,
+   * después, el texto de los PDF adjuntos (un reenvío pierde los datos estructurados, pero no el billete).
+   */
+  async function createBooking() {
     if (!chosen) {
       setMessage('Crea primero un viaje donde guardar la reserva.');
       return;
     }
-    const prefill: InboxPrefill = {
+    setPreparing(true);
+    setMessage('');
+    let prefill: InboxPrefill = {
       inboxItemId: item!.id,
       type: item!.suggestedType,
-      title: item!.suggestedTitle ?? item!.subject,
+      title: item!.suggestedTitle,
       startLocal: item!.suggestedStartLocal,
       startTz: item!.suggestedStartTz,
       startPlace: item!.suggestedStartPlace,
@@ -68,6 +77,25 @@ export function InboxItemPage() {
       reference: item!.suggestedReference,
       address: item!.suggestedAddress,
     };
+    try {
+      if (!prefill.type && item!.bodyText) {
+        prefill = applySuggestion(prefill, suggestFromText(item!.bodyText, item!.subject));
+      }
+      for (const attachment of item!.attachments) {
+        if (!isPdf(attachment.mime) || (prefill.type && prefill.startLocal && prefill.reference)) {
+          continue;
+        }
+        try {
+          const bytes = await downloadInboxAttachment(item!.id, attachment.id);
+          prefill = applySuggestion(prefill, suggestFromText(await extractPdfText(bytes), attachment.name));
+        } catch {
+          // Sin red o PDF ilegible: se sigue con lo que hay.
+        }
+      }
+    } finally {
+      setPreparing(false);
+    }
+    prefill.title ??= item!.subject;
     navigate(`/trips/${chosen}/bookings/new`, { state: { prefill } });
   }
 
@@ -138,8 +166,8 @@ export function InboxItemPage() {
 
       {message && <p className="error">{message}</p>}
       <div className="actions">
-        <button className="btn primary" onClick={createBooking}>
-          Crear reserva
+        <button className="btn primary" disabled={preparing} onClick={() => void createBooking()}>
+          {preparing ? 'Leyendo el correo…' : 'Crear reserva'}
         </button>
         <button className="btn danger" onClick={() => void discard()}>
           Descartar

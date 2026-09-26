@@ -127,11 +127,20 @@ public static class InboxEndpoints
             return Results.Problem("No se puede leer el correo.", statusCode: StatusCodes.Status400BadRequest);
         }
 
+        // Entra lo que Gmail validó (DKIM o SPF) y lo que la propia persona reenvía desde su cuenta: un correo de la
+        // cuenta a sí misma no lleva cabecera de validación, pero solo puede haberlo escrito quien tiene la sesión de Gmail.
         var requireAuth = !string.Equals(config["IMPORT_REQUIRE_GMAIL_AUTH"], "false", StringComparison.OrdinalIgnoreCase);
-        if (requireAuth && !email.GmailAuthenticated)
+        if (requireAuth && email.GmailAuth != GmailAuth.Pass)
         {
-            log.LogWarning("Importación rechazada: Gmail no validó DKIM/SPF. De {De}, asunto «{Asunto}».", email.From, email.Subject);
-            return Results.Problem("Gmail no validó el remitente (DKIM/SPF).", statusCode: StatusCodes.Status422UnprocessableEntity);
+            var owner = await db.Users.FindAsync([token.UserId], ct);
+            var ownForward = email.GmailAuth == GmailAuth.None
+                && owner?.Email is not null
+                && string.Equals(owner.Email, email.From, StringComparison.OrdinalIgnoreCase);
+            if (!ownForward)
+            {
+                log.LogWarning("Importación rechazada: validación de Gmail {Resultado}, remitente {De}. Asunto «{Asunto}».", email.GmailAuth, email.From, email.Subject);
+                return Results.Problem("Gmail no validó el remitente (DKIM/SPF).", statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
         }
 
         var householdId = await access.EnsureHousehold(token.UserId);

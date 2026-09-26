@@ -120,6 +120,38 @@ public sealed class InboxImportTests(TestApp app) : IClassFixture<TestApp>
     }
 
     [Fact]
+    public async Task A_forward_from_the_token_owner_is_accepted_without_gmail_headers_and_loses_the_fwd_prefix()
+    {
+        var (api, token) = await SignUpWithToken("dueno@example.com");
+        var eml = Email("<fwd-1@gmail.com>", "Fwd: RV: 🚄 Tu reserva en Trenes.com 15337485", "", text: "Reenviado", from: "dueno@example.com");
+
+        var response = await Import(app, token, eml);
+        var item = Assert.Single((await api.GetSyncFull()).Inbox);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("🚄 Tu reserva en Trenes.com 15337485", item.SuggestedTitle);
+    }
+
+    [Fact]
+    public async Task A_forward_pretending_to_be_the_owner_but_failing_gmail_checks_is_rejected()
+    {
+        var (_, token) = await SignUpWithToken("dueno2@example.com");
+        var eml = Email("<spoof-1@x.com>", "Falso", "Authentication-Results: mx.google.com; dkim=fail; spf=fail\r\n", text: "hola", from: "dueno2@example.com");
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Import(app, token, eml)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Arc_authentication_results_count_too()
+    {
+        var (api, token) = await SignUpWithToken("arc@example.com");
+        var eml = Email("<arc-1@x.com>", "ARC", "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@renfe.com\r\n", text: "hola");
+
+        Assert.Equal(HttpStatusCode.OK, (await Import(app, token, eml)).StatusCode);
+        Assert.Single((await api.GetSyncFull()).Inbox);
+    }
+
+    [Fact]
     public async Task A_missing_or_revoked_token_is_unauthorized()
     {
         var (api, token) = await SignUpWithToken("inbox6@example.com");
@@ -182,11 +214,11 @@ public sealed class InboxImportTests(TestApp app) : IClassFixture<TestApp>
         return await client.PostAsync("/api/inbox/import", content);
     }
 
-    private static string Email(string messageId, string subject, string extraHeaders, string? text = null, string? html = null, (string Name, string Mime, byte[] Bytes)[]? attachments = null)
+    private static string Email(string messageId, string subject, string extraHeaders, string? text = null, string? html = null, (string Name, string Mime, byte[] Bytes)[]? attachments = null, string from = "noreply@iberia.com")
     {
         var builder = new StringBuilder();
         builder.Append(extraHeaders);
-        builder.Append("From: Iberia <noreply@iberia.com>\r\nTo: manuel+viajes@gmail.com\r\n");
+        builder.Append($"From: Remitente <{from}>\r\nTo: manuel+viajes@gmail.com\r\n");
         builder.Append($"Subject: {subject}\r\nDate: Mon, 21 Sep 2026 10:00:00 +0200\r\nMessage-ID: {messageId}\r\nMIME-Version: 1.0\r\n");
         builder.Append("Content-Type: multipart/mixed; boundary=\"frontera\"\r\n\r\n");
         if (text is not null)

@@ -48,7 +48,8 @@ Sin datos estructurados, el borrador trae igualmente el asunto, el texto y los a
 
 ## Seguridad
 
-- Solo entran correos que Gmail haya validado (DKIM o SPF correctos): un remitente falso se rechaza.
+- Solo entran correos que Gmail haya validado (DKIM o SPF correctos) o que reenvíes tú desde tu propia cuenta de
+  Gmail (esos no llevan cabecera de validación porque no salen de Google). Un remitente falso se rechaza.
 - El mismo correo dos veces no duplica nada.
 - El HTML nunca llega al móvil: se guarda el texto plano y el `.eml` original en el almacenamiento.
 - Nada del correo se envía a terceros.

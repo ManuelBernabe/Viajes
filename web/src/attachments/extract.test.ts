@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findDates, findTimes, suggestFromText } from './extract';
+import { applySuggestion, findDates, findTimes, suggestFromText } from './extract';
 
 describe('findDates y findTimes', () => {
   it('reconoce fechas numéricas, ISO y con mes en palabras', () => {
@@ -74,5 +74,30 @@ Número de reserva: 1234567890`;
     const s = suggestFromText('Hola, ¿qué tal? Nos vemos.');
 
     expect(s).toMatchObject({ type: null, title: null, reference: null, startDate: null, startTime: null });
+  });
+});
+
+describe('applySuggestion', () => {
+  const empty = { type: null, title: 'Fwd: Tu reserva', startLocal: null, startTz: null, startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null };
+
+  it('rellena lo vacío y sustituye el título del asunto cuando se reconoce el tipo', () => {
+    const s = suggestFromText('Billete AVE 05123 Origen: ALICANTE TERMINAL Destino: MADRID-PUERTA DE ATOCHA Fecha: 26/09/2026 Salida: 14:35 Llegada: 17:05 Localizador: ABCDE1');
+    const filled = applySuggestion(empty, s);
+
+    expect(filled).toMatchObject({
+      type: 'train',
+      title: 'AVE 05123 Alicante Terminal → Madrid-Puerta De Atocha',
+      startLocal: '2026-09-26T14:35',
+      endLocal: '2026-09-26T17:05',
+      startPlace: 'Alicante Terminal',
+      reference: 'ABCDE1',
+    });
+  });
+
+  it('no pisa lo que ya venía', () => {
+    const base = { ...empty, type: 'flight', title: 'IB 3170', reference: 'XK7P2Q', startLocal: '2026-10-12T10:05' };
+    const filled = applySuggestion(base, suggestFromText('Localizador: OTRO12 Fecha 01/01/2027 09:00'));
+
+    expect(filled).toMatchObject({ type: 'flight', title: 'IB 3170', reference: 'XK7P2Q', startLocal: '2026-10-12T10:05' });
   });
 });

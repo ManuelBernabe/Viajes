@@ -45,7 +45,8 @@ public static partial class EmailParser
 
         if (suggestion.Title is null)
         {
-            suggestion.Title = string.IsNullOrWhiteSpace(message.Subject) ? null : message.Subject.Trim();
+            var subject = CleanSubject(message.Subject);
+            suggestion.Title = subject.Length == 0 ? null : subject;
         }
 
         var from = message.From.Mailboxes.FirstOrDefault()?.Address ?? message.Sender?.Address ?? "";
@@ -56,30 +57,60 @@ public static partial class EmailParser
             Subject = message.Subject ?? "",
             ReceivedMs = (message.Date == default ? DateTimeOffset.UtcNow : message.Date).ToUnixTimeMilliseconds(),
             BodyText = BodyText(message),
-            GmailAuthenticated = GmailAuthenticated(message),
+            GmailAuth = GmailAuthentication(message),
             Suggestion = suggestion,
             Attachments = attachments,
         };
     }
 
-    /// <summary>Gmail añade «Authentication-Results: mx.google.com; dkim=pass …». Sin DKIM ni SPF válidos, no entra.</summary>
-    public static bool GmailAuthenticated(MimeMessage message)
+    /// <summary>
+    /// Gmail añade «Authentication-Results: mx.google.com; dkim=pass …» (o su variante ARC) a lo que recibe de fuera.
+    /// Sin DKIM ni SPF válidos, no entra. Un correo enviado desde la propia cuenta de Gmail no lleva esta cabecera:
+    /// ese caso lo decide el punto de importación comparando el remitente con el dueño del token.
+    /// </summary>
+    public static bool GmailAuthenticated(MimeMessage message) => GmailAuthentication(message) == GmailAuth.Pass;
+
+    /// <summary>Pass si Gmail validó DKIM o SPF; Fail si lo comprobó y falló; None si no hay cabecera de Gmail (correo interno).</summary>
+    public static GmailAuth GmailAuthentication(MimeMessage message)
     {
-        foreach (var header in message.Headers.Where(h => h.Field.Equals("Authentication-Results", StringComparison.OrdinalIgnoreCase)))
+        var result = GmailAuth.None;
+        foreach (var header in message.Headers.Where(h =>
+                     h.Field.Equals("Authentication-Results", StringComparison.OrdinalIgnoreCase)
+                     || h.Field.Equals("ARC-Authentication-Results", StringComparison.OrdinalIgnoreCase)))
         {
-            var value = header.Value.Replace("\r", " ").Replace("\n", " ");
-            if (!value.TrimStart().StartsWith("mx.google.com", StringComparison.OrdinalIgnoreCase))
+            var value = header.Value.Replace("\r", " ").Replace("\n", " ").TrimStart();
+            // ARC antepone «i=1; ».
+            value = ArcPrefix().Replace(value, "");
+            if (!value.StartsWith("mx.google.com", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             if (AuthPass().IsMatch(value))
             {
-                return true;
+                return GmailAuth.Pass;
             }
+
+            result = GmailAuth.Fail;
         }
 
-        return false;
+        return result;
+    }
+
+    /// <summary>«Fwd: RV: Tu reserva» → «Tu reserva».</summary>
+    public static string CleanSubject(string? subject)
+    {
+        var cleaned = (subject ?? "").Trim();
+        while (true)
+        {
+            var next = ForwardPrefix().Replace(cleaned, "").Trim();
+            if (next == cleaned)
+            {
+                return cleaned;
+            }
+
+            cleaned = next;
+        }
     }
 
     /// <summary>Texto plano para consultar en la app. El HTML nunca sale del servidor como HTML.</summary>
@@ -124,6 +155,12 @@ public static partial class EmailParser
 
     [GeneratedRegex(@"\b(dkim|spf)=pass\b", RegexOptions.IgnoreCase)]
     private static partial Regex AuthPass();
+
+    [GeneratedRegex(@"^i=\d+;\s*")]
+    private static partial Regex ArcPrefix();
+
+    [GeneratedRegex(@"^(fwd?|rv|re|tr|wg|aw)\s*:\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex ForwardPrefix();
 
     [GeneratedRegex(@"<(script|style)[^>]*>.*?</\1>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
     private static partial Regex ScriptsAndStyles();
