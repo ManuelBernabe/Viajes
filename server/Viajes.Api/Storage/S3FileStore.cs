@@ -23,6 +23,8 @@ public sealed class S3FileStore(IAmazonS3 s3, string bucket) : IFileStore
         }, ct);
     }
 
+    public Task DeleteAsync(string key, CancellationToken ct) => s3.DeleteObjectAsync(bucket, key, ct);
+
     public async Task<StoredFile?> OpenReadAsync(string key, CancellationToken ct)
     {
         try

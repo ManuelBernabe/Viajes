@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Viajes.Api.Access;
 
 namespace Viajes.Api.Auth;
 
@@ -19,7 +20,8 @@ public static class AuthEndpoints
             RegisterRequest body,
             IConfiguration config,
             UserManager<IdentityUser> users,
-            SignInManager<IdentityUser> signIn) =>
+            SignInManager<IdentityUser> signIn,
+            AccessService access) =>
         {
             // Hasta que existan las invitaciones (Plan 2), solo se registra quien conoce el código.
             if (!IsRegistrationCode(body.Code, config["REGISTRATION_CODE"]))
@@ -34,11 +36,16 @@ public static class AuthEndpoints
                 return Results.Problem(IdentityMessages.Describe(result.Errors), statusCode: StatusCodes.Status400BadRequest);
             }
 
+            await access.EnsureHousehold(user.Id);
             await signIn.SignInAsync(user, isPersistent: true);
             return Results.Ok(new { email = user.Email });
         });
 
-        group.MapPost("/login", async (LoginRequest body, SignInManager<IdentityUser> signIn) =>
+        group.MapPost("/login", async (
+            LoginRequest body,
+            SignInManager<IdentityUser> signIn,
+            UserManager<IdentityUser> users,
+            AccessService access) =>
         {
             var result = await signIn.PasswordSignInAsync(body.Email, body.Password, isPersistent: true, lockoutOnFailure: true);
             if (result.IsLockedOut)
@@ -46,9 +53,15 @@ public static class AuthEndpoints
                 return Results.Problem("Demasiados intentos. Espera unos minutos.", statusCode: StatusCodes.Status429TooManyRequests);
             }
 
-            return result.Succeeded
-                ? Results.Ok(new { email = body.Email })
-                : Results.Problem("Email o contraseña incorrectos.", statusCode: StatusCodes.Status401Unauthorized);
+            if (!result.Succeeded)
+            {
+                return Results.Problem("Email o contraseña incorrectos.", statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            // Las cuentas creadas antes del Plan 1 no tienen hogar todavía.
+            var user = await users.FindByEmailAsync(body.Email);
+            await access.EnsureHousehold(user!.Id);
+            return Results.Ok(new { email = body.Email });
         });
 
         group.MapPost("/logout", async (SignInManager<IdentityUser> signIn) =>

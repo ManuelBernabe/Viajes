@@ -1,7 +1,7 @@
 # Resultados de la prueba de viabilidad en iPhone
 
-- iPhone: 
-- Versión de iOS: 
+- iPhone: iPhone 13 Pro Max
+- Versión de iOS: 26.6.1
 - URL: https://viajes-production-82cb.up.railway.app
 - Fecha de instalación: 26/09/2026
 - Almacenamiento de ficheros: volumen local (`FILE_STORE=local`; no se ha comprobado si Railway ofrece buckets)

@@ -39,6 +39,14 @@ public sealed class LocalFileStore(string root) : IFileStore
         return Task.FromResult<StoredFile?>(new StoredFile(File.OpenRead(path), contentType));
     }
 
+    public Task DeleteAsync(string key, CancellationToken ct)
+    {
+        var path = PathFor(key);
+        File.Delete(path);
+        File.Delete(path + ".type");
+        return Task.CompletedTask;
+    }
+
     private string PathFor(string key)
     {
         if (!FileKeys.IsValid(key))

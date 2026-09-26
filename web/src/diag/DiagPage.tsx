@@ -5,13 +5,14 @@ import { EnvironmentCheck } from './EnvironmentCheck';
 import { FilesCheck } from './FilesCheck';
 import { OutboxCheck } from './OutboxCheck';
 import { WakeLockCheck } from './WakeLockCheck';
+import '../App.css';
 
 export function DiagPage() {
   const [signedIn, setSignedIn] = useState(false);
   const onSignedIn = useCallback((value: boolean) => setSignedIn(value), []);
 
   return (
-    <main>
+    <main className="diag">
       <h1>Viajes · diagnóstico</h1>
       <EnvironmentCheck />
       <AuthCheck onSignedIn={onSignedIn} />

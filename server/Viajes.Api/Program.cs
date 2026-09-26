@@ -4,6 +4,7 @@ using Viajes.Api.Data;
 using Viajes.Api.Diag;
 using Viajes.Api.Hosting;
 using Viajes.Api.Storage;
+using Viajes.Api.Trips;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,7 @@ app.MapGet("/api/version", (VersionInfo version) => Results.Ok(new
 }));
 app.MapAuthEndpoints();
 app.MapDiagEndpoints();
+app.MapTripEndpoints();
 app.Map("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html", SpaHosting.StaticOptions(spa));
 

@@ -19,6 +19,9 @@ export default defineConfig({
       },
       workbox: {
         navigateFallbackDenylist: [/^\/api\//],
+        // El worker de pdf.js es .mjs y los iconos .png: sin ellos en la caché, sin red no se abren los PDF.
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,webmanifest,woff2}'],
+        maximumFileSizeToCacheInBytes: 5_000_000,
       },
     }),
   ],
