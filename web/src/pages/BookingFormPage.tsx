@@ -42,7 +42,7 @@ export function BookingFormPage() {
   const [pendingFiles, setPendingFiles] = useState<ReadFile[]>([]);
   const [readMessage, setReadMessage] = useState('');
   /** Texto tal cual lo lee pdf.js: para comprobar por qué una regla no encuentra algo. */
-  const [rawText, setRawText] = useState<string | null>(prefill?.rawText ?? null);
+  const [rawText, setRawText] = useState<string | null>(null);
 
   // Desde la bandeja de entrada llega una propuesta: rellena el formulario y, al guardar, trae los adjuntos del correo.
   const prefill = (useLocation().state as { prefill?: InboxPrefill } | null)?.prefill;
@@ -64,6 +64,13 @@ export function BookingFormPage() {
   const [address, setAddress] = useState(prefill?.address ?? '');
   const [notes, setNotes] = useState(prefill?.notes ?? '');
   const [changeNote, setChangeNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (prefill?.rawText) {
+      setRawText(prefill.rawText);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [loaded, setLoaded] = useState(!bookingId);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
