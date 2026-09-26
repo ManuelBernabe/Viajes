@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
-import { useAttachFiles } from '../attachments/useAttachFiles';
+import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp';
+import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAttachFiles';
 import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, timeOf, zoneLabel } from '../data/localTime';
 import { getBooking, saveBooking } from '../data/repo';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
@@ -26,8 +27,10 @@ export function BookingFormPage() {
   const { tripId: tripFromRoute, bookingId } = useParams();
   const navigate = useNavigate();
   const session = useSession();
-  const { attach, progress } = useAttachFiles(session.email ?? '');
+  const { attachRead, progress } = useAttachFiles(session.email ?? '');
   const fileInput = useRef<HTMLInputElement>(null);
+  const [pendingFiles, setPendingFiles] = useState<ReadFile[]>([]);
+  const [readMessage, setReadMessage] = useState('');
 
   const [tripId, setTripId] = useState(tripFromRoute ?? '');
   const [type, setType] = useState<BookingType>('flight');
@@ -76,6 +79,32 @@ export function BookingFormPage() {
 
   const info = TYPE_INFO[type];
 
+  /** Al elegir ficheros se leen ya: si alguno es una tarjeta de embarque, rellena lo que esté vacío. */
+  async function onFilesChosen(files: FileList) {
+    setReadMessage('Leyendo…');
+    const read = await readFiles(files, setReadMessage);
+    setPendingFiles(read);
+    const errors = read.filter((r) => r.error).map((r) => r.error);
+    const pass = read.map((r) => (r.qrText ? parseBoardingPass(r.qrText) : null)).find((p) => p !== null);
+    if (pass) {
+      const fill = prefillFromBoardingPass(pass);
+      setType('flight');
+      if (!title.trim()) setTitle(fill.title);
+      if (!reference.trim()) setReference(fill.reference);
+      if (!startDate) setStartDate(fill.startDate);
+      if (!startPlace.trim()) setStartPlace(fill.startPlace);
+      if (!endPlace.trim()) setEndPlace(fill.endPlace);
+      if (!notes.trim()) setNotes(fill.notes);
+      setReadMessage(`Tarjeta de embarque leída (${pass.passenger}): comprueba la fecha y pon la hora de salida.`);
+    } else {
+      const withQr = read.filter((r) => r.qrText).length;
+      setReadMessage(withQr ? `${withQr} QR ${withQr === 1 ? 'leído' : 'leídos'}.` : read.some((r) => !r.error) ? 'Ficheros listos para adjuntar.' : '');
+    }
+    if (errors.length) {
+      setReadMessage((m) => `${m} ${errors.join(' ')}`.trim());
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError('');
@@ -113,9 +142,8 @@ export function BookingFormPage() {
         session.email ?? '',
         bookingId,
       );
-      const files = fileInput.current?.files;
-      if (files && files.length > 0) {
-        await attach(booking.id, files);
+      if (pendingFiles.length > 0) {
+        await attachRead(booking.id, pendingFiles);
       }
       navigate(`/bookings/${booking.id}`, { replace: true });
     } finally {
@@ -210,7 +238,19 @@ export function BookingFormPage() {
         {!bookingId && (
           <div className="field">
             <label htmlFor="files">Adjuntos (tarjetas de embarque, PDF, fotos)</label>
-            <input id="files" ref={fileInput} type="file" accept="image/*,application/pdf" multiple />
+            <input
+              id="files"
+              ref={fileInput}
+              type="file"
+              accept="image/*,application/pdf"
+              multiple
+              onChange={(e) => {
+                if (e.target.files) {
+                  void onFilesChosen(e.target.files);
+                }
+              }}
+            />
+            {readMessage && <p className="muted small">{readMessage}</p>}
           </div>
         )}
         {progress.message && <p className="muted small">{progress.message}</p>}

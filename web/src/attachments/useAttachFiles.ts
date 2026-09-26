@@ -8,35 +8,59 @@ export interface AttachProgress {
   message: string;
 }
 
+export interface ReadFile {
+  file: File;
+  bytes: ArrayBuffer;
+  mime: string;
+  qrText: string | null;
+  error: string | null;
+}
+
+/** Lee los ficheros y busca su QR. Lo que falle queda con su mensaje en `error`. */
+export async function readFiles(files: FileList | File[], onProgress?: (message: string) => void): Promise<ReadFile[]> {
+  const result: ReadFile[] = [];
+  for (const file of Array.from(files)) {
+    const mime = mimeOf(file);
+    if (tooBig(file.size)) {
+      result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: `${file.name}: supera los 20 MB (${formatSize(file.size)}).` });
+      continue;
+    }
+    try {
+      const bytes = await file.arrayBuffer();
+      if (bytes.byteLength === 0) {
+        result.push({ file, bytes, mime, qrText: null, error: `${file.name}: el fichero está vacío. Si está en iCloud, ábrelo antes en Archivos para descargarlo.` });
+        continue;
+      }
+      onProgress?.(`Buscando QR en ${file.name}…`);
+      result.push({ file, bytes, mime, qrText: await readQr(bytes, mime), error: null });
+    } catch (error) {
+      result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: `${file.name}: ${error instanceof Error ? error.message : 'no se ha podido leer.'}` });
+    }
+  }
+  return result;
+}
+
 /** Adjunta ficheros a una reserva: los guarda en el móvil, lee el QR y deja la subida a la sincronización. */
 export function useAttachFiles(createdBy: string) {
   const [progress, setProgress] = useState<AttachProgress>({ busy: false, message: '' });
 
-  const attach = useCallback(
-    async (bookingId: string, files: FileList | File[]) => {
-      const list = Array.from(files);
-      if (list.length === 0) {
-        return;
-      }
-      setProgress({ busy: true, message: `Guardando ${list.length === 1 ? 'el fichero' : `${list.length} ficheros`}…` });
+  const attachRead = useCallback(
+    async (bookingId: string, read: ReadFile[]) => {
+      setProgress({ busy: true, message: 'Guardando…' });
       const errors: string[] = [];
-      for (const file of list) {
-        if (tooBig(file.size)) {
-          errors.push(`${file.name}: supera los 20 MB (${formatSize(file.size)}).`);
+      for (const item of read) {
+        if (item.error) {
+          errors.push(item.error);
           continue;
         }
         try {
-          const bytes = await file.arrayBuffer();
-          if (bytes.byteLength === 0) {
-            errors.push(`${file.name}: el fichero está vacío. Si está en iCloud, ábrelo antes en Archivos para descargarlo.`);
-            continue;
-          }
-          const mime = mimeOf(file);
-          setProgress({ busy: true, message: `Buscando QR en ${file.name}…` });
-          const qrText = await readQr(bytes, mime);
-          await addAttachment({ bookingId, name: file.name, mime, size: bytes.byteLength, qrText }, bytes, createdBy);
+          await addAttachment(
+            { bookingId, name: item.file.name, mime: item.mime, size: item.bytes.byteLength, qrText: item.qrText },
+            item.bytes,
+            createdBy,
+          );
         } catch (error) {
-          errors.push(`${file.name}: ${error instanceof Error ? error.message : 'no se ha podido guardar.'}`);
+          errors.push(`${item.file.name}: ${error instanceof Error ? error.message : 'no se ha podido guardar.'}`);
         }
       }
       setProgress({ busy: false, message: errors.join(' ') });
@@ -44,5 +68,17 @@ export function useAttachFiles(createdBy: string) {
     [createdBy],
   );
 
-  return { attach, progress };
+  const attach = useCallback(
+    async (bookingId: string, files: FileList | File[]) => {
+      if (files.length === 0) {
+        return;
+      }
+      setProgress({ busy: true, message: 'Leyendo…' });
+      const read = await readFiles(files, (message) => setProgress({ busy: true, message }));
+      await attachRead(bookingId, read);
+    },
+    [attachRead],
+  );
+
+  return { attach, attachRead, progress };
 }
