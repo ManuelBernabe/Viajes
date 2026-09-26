@@ -98,6 +98,52 @@ export async function showLocalTest(): Promise<void> {
   });
 }
 
+export interface PushDiagnostics {
+  /** Fecha de compilación del service worker activo, o null si no responde (versión antigua sin avisos). */
+  workerBuild: string | null;
+  /** Dominio del servicio push al que está suscrito el móvil (Apple, Google…). */
+  endpointHost: string | null;
+  /** Últimas líneas de la bitácora del service worker. */
+  log: string[];
+}
+
+/** Datos para saber si los pushes llegan al móvil: versión del worker, servicio push y bitácora. */
+export async function pushDiagnostics(): Promise<PushDiagnostics> {
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = await registration?.pushManager.getSubscription();
+  let endpointHost: string | null = null;
+  try {
+    endpointHost = subscription ? new URL(subscription.endpoint).host : null;
+  } catch {
+    endpointHost = null;
+  }
+
+  const workerBuild = await new Promise<string | null>((resolve) => {
+    const worker = registration?.active;
+    if (!worker) {
+      resolve(null);
+      return;
+    }
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), 2000);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      resolve((event.data as { build?: string })?.build ?? null);
+    };
+    worker.postMessage({ type: 'PING' }, [channel.port2]);
+  });
+
+  let log: string[] = [];
+  try {
+    const cache = await caches.open('push-log');
+    const entry = await cache.match('/__push-log');
+    log = entry ? ((await entry.json()) as string[]) : [];
+  } catch {
+    log = [];
+  }
+  return { workerBuild, endpointHost, log };
+}
+
 /** Si el dispositivo ya estaba suscrito, vuelve a registrarlo por si el servidor lo perdió o cambió la clave. */
 export async function refreshPushSubscription(): Promise<void> {
   if (!pushSupport().ok || Notification.permission !== 'granted') {

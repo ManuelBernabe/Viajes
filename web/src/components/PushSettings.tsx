@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { describeError } from '../api';
-import { disablePush, enablePush, pushState, sendTestPush, showLocalTest, type PushState } from '../push/push';
+import {
+  disablePush,
+  enablePush,
+  pushDiagnostics,
+  pushState,
+  sendTestPush,
+  showLocalTest,
+  type PushDiagnostics,
+  type PushState,
+} from '../push/push';
 
 const TEST_DELAY_S = 10;
 
@@ -9,10 +18,19 @@ export function PushSettings() {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [diagnostics, setDiagnostics] = useState<PushDiagnostics | null>(null);
 
   useEffect(() => {
     pushState().then(setState, () => setState({ kind: 'unsupported', reason: 'No se ha podido comprobar.' }));
   }, []);
+
+  async function refreshDiagnostics() {
+    try {
+      setDiagnostics(await pushDiagnostics());
+    } catch (error) {
+      setMessage(describeError(error));
+    }
+  }
 
   async function run(action: () => Promise<PushState | number | void>) {
     setBusy(true);
@@ -73,6 +91,32 @@ export function PushSettings() {
         </>
       )}
       {message && <p className="muted small">{message}</p>}
+      {state?.kind === 'on' && (
+        <details onToggle={(event) => event.currentTarget.open && void refreshDiagnostics()}>
+          <summary className="small">Diagnóstico de avisos</summary>
+          {diagnostics ? (
+            <div className="small">
+              <p>Service worker: {diagnostics.workerBuild ?? 'sin respuesta (versión antigua sin avisos)'}</p>
+              <p>Servicio push: {diagnostics.endpointHost ?? 'ninguno'}</p>
+              <p>Bitácora del móvil ({diagnostics.log.length}):</p>
+              {diagnostics.log.length === 0 ? (
+                <p className="muted">Ningún push ha llegado todavía a este móvil.</p>
+              ) : (
+                <ul>
+                  {diagnostics.log.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              )}
+              <button className="btn block secondary" onClick={() => void refreshDiagnostics()}>
+                Actualizar diagnóstico
+              </button>
+            </div>
+          ) : (
+            <p className="muted small">Consultando…</p>
+          )}
+        </details>
+      )}
     </section>
   );
 }
