@@ -98,6 +98,9 @@ public sealed class Booking : IVersioned
 
     public string? Notes { get; set; }
 
+    /// <summary>Aviso visible («Modificada el 27/09 según correo: salida 14:35 → 16:10») hasta que alguien lo quita.</summary>
+    public string? ChangeNote { get; set; }
+
     public required string CreatedBy { get; set; }
 
     public long Version { get; set; }

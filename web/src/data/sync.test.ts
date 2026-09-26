@@ -13,7 +13,7 @@ const trip = (id: string, extra: Partial<Trip> = {}): Trip => ({
 });
 const booking = (id: string, tripId: string, extra: Partial<Booking> = {}): Booking => ({
   id, tripId, type: 'flight', title: id, startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null,
-  endLocal: null, endTz: null, endPlace: null, startUtcMs: 1, reference: null, address: null, notes: null,
+  endLocal: null, endTz: null, endPlace: null, startUtcMs: 1, reference: null, address: null, notes: null, changeNote: null,
   createdBy: 'yo', version: 1, deletedAtMs: null, ...extra,
 });
 const attachment = (id: string, bookingId: string, extra: Partial<Attachment> = {}): Attachment => ({
@@ -78,7 +78,7 @@ describe('pull', () => {
 describe('uploads', () => {
   it('sube los ficheros pendientes y los marca subidos', async () => {
     const t = await saveTrip({ title: 'Japón', destination: null, startDate: null, endDate: null }, 'yo');
-    const b = await saveBooking({ tripId: t.id, type: 'flight', title: 'Vuelo', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null, notes: null }, 'yo');
+    const b = await saveBooking({ tripId: t.id, type: 'flight', title: 'Vuelo', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null, notes: null, changeNote: null }, 'yo');
     const a = await addAttachment({ bookingId: b.id, name: 'f.pdf', mime: 'application/pdf', size: 1, qrText: null }, new Uint8Array([1]).buffer, 'yo');
     const sent: string[] = [];
 
@@ -92,7 +92,7 @@ describe('uploads', () => {
 
   it('sin red se para y queda incompleto', async () => {
     const t = await saveTrip({ title: 'Japón', destination: null, startDate: null, endDate: null }, 'yo');
-    const b = await saveBooking({ tripId: t.id, type: 'flight', title: 'Vuelo', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null, notes: null }, 'yo');
+    const b = await saveBooking({ tripId: t.id, type: 'flight', title: 'Vuelo', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null, notes: null, changeNote: null }, 'yo');
     await addAttachment({ bookingId: b.id, name: 'f.pdf', mime: 'application/pdf', size: 1, qrText: null }, new Uint8Array([1]).buffer, 'yo');
 
     const result = await uploads({ upload: async () => 'retry' });
@@ -105,7 +105,7 @@ describe('uploads', () => {
 describe('syncAll', () => {
   it('envía la cola, sube ficheros y baja cambios, en ese orden', async () => {
     const t = await saveTrip({ title: 'Japón', destination: null, startDate: null, endDate: null }, 'yo');
-    const b = await saveBooking({ tripId: t.id, type: 'flight', title: 'Vuelo', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null, notes: null }, 'yo');
+    const b = await saveBooking({ tripId: t.id, type: 'flight', title: 'Vuelo', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null, notes: null, changeNote: null }, 'yo');
     await addAttachment({ bookingId: b.id, name: 'f.pdf', mime: 'application/pdf', size: 1, qrText: null }, new Uint8Array([1]).buffer, 'yo');
     const log: string[] = [];
 

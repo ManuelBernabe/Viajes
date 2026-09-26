@@ -16,7 +16,10 @@ export function BookingCard({ booking, showDay }: { booking: Booking; showDay?: 
         {info.icon}
       </div>
       <div className="body">
-        <div className="title">{booking.title}</div>
+        <div className="title">
+          {booking.title}
+          {booking.changeNote && <span className="badge danger"> ⚠️ Modificada</span>}
+        </div>
         {showDay && <div className="sub">{showDay}</div>}
         {route && <div className="sub">{route}</div>}
         {booking.reference && <div className="sub">Localizador {booking.reference}</div>}

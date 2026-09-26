@@ -32,6 +32,8 @@ export interface Booking {
   reference: string | null;
   address: string | null;
   notes: string | null;
+  /** Aviso visible hasta que alguien lo quita: «Modificada el 27/09 según correo: …». */
+  changeNote: string | null;
   createdBy: string;
   version: number;
   deletedAtMs: number | null;
@@ -121,6 +123,7 @@ export interface BookingBody {
   reference: string | null;
   address: string | null;
   notes: string | null;
+  changeNote: string | null;
 }
 
 export interface AttachmentBody {

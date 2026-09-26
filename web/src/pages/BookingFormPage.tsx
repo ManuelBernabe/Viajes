@@ -7,11 +7,10 @@ import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp'
 import { suggestFromText } from '../attachments/extract';
 import { isPdf } from '../attachments/files';
 import { extractPdfText } from '../attachments/pdfText';
-import { readQr } from '../attachments/qr';
 import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAttachFiles';
+import { importInboxAttachments } from '../data/inboxImport';
 import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, timeOf, zoneLabel } from '../data/localTime';
-import { addAttachment, getBooking, getInboxItem, saveBooking } from '../data/repo';
-import { downloadInboxAttachment, setInboxStatus } from '../data/syncClient';
+import { getBooking, saveBooking } from '../data/repo';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
 import type { InboxPrefill } from './InboxItemPage';
@@ -62,6 +61,7 @@ export function BookingFormPage() {
   const [reference, setReference] = useState(prefill?.reference ?? '');
   const [address, setAddress] = useState(prefill?.address ?? '');
   const [notes, setNotes] = useState(prefill?.notes ?? '');
+  const [changeNote, setChangeNote] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(!bookingId);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -87,6 +87,7 @@ export function BookingFormPage() {
         setReference(booking.reference ?? '');
         setAddress(booking.address ?? '');
         setNotes(booking.notes ?? '');
+        setChangeNote(booking.changeNote);
       }
       setLoaded(true);
     });
@@ -163,21 +164,6 @@ export function BookingFormPage() {
     }
   }
 
-  /** Los adjuntos del correo pasan a ser adjuntos normales de la reserva (con su QR) y el borrador se cierra. */
-  async function importInboxAttachments(inboxItemId: string, bookingId: string) {
-    const item = await getInboxItem(inboxItemId);
-    if (!item) {
-      return;
-    }
-    for (const attachment of item.attachments) {
-      setReadMessage(`Trayendo ${attachment.name}…`);
-      const bytes = await downloadInboxAttachment(item.id, attachment.id);
-      const qrText = attachment.qrText ?? (await readQr(bytes, attachment.mime));
-      await addAttachment({ bookingId, name: attachment.name, mime: attachment.mime, size: bytes.byteLength, qrText }, bytes, session.email ?? '');
-    }
-    await setInboxStatus(item.id, 'confirmed', bookingId);
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError('');
@@ -211,6 +197,7 @@ export function BookingFormPage() {
           reference: reference.trim() || null,
           address: address.trim() || null,
           notes: notes.trim() || null,
+          changeNote,
         },
         session.email ?? '',
         bookingId,
@@ -219,7 +206,7 @@ export function BookingFormPage() {
         await attachRead(booking.id, pendingFiles);
       }
       if (prefill?.inboxItemId) {
-        await importInboxAttachments(prefill.inboxItemId, booking.id);
+        await importInboxAttachments(prefill.inboxItemId, booking.id, session.email ?? '', setReadMessage);
       }
       navigate(`/bookings/${booking.id}`, { replace: true });
     } catch (error) {

@@ -5,10 +5,14 @@ import { BackLink } from '../app/Layout';
 import { applySuggestion, suggestFromText } from '../attachments/extract';
 import { formatSize, isPdf } from '../attachments/files';
 import { extractPdfText } from '../attachments/pdfText';
-import { getInboxItem, listTrips } from '../data/repo';
+import { useSession } from '../app/SessionContext';
+import { importInboxAttachments } from '../data/inboxImport';
+import { getInboxItem, listAllBookings, listTrips, saveBooking } from '../data/repo';
 import { downloadInboxAttachment, setInboxStatus } from '../data/syncClient';
+import type { Booking } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
+import { applyChanges, diffBooking, findExistingBooking, type Change } from '../domain/changes';
 
 export interface InboxPrefill {
   inboxItemId: string;
@@ -34,9 +38,13 @@ export function InboxItemPage() {
   const item = useLiveQuery(() => getInboxItem(itemId), [itemId]);
   const trips = useLiveQuery(listTrips, []);
   const [tripId, setTripId] = useState('');
+  const session = useSession();
   const [message, setMessage] = useState('');
   const [showBody, setShowBody] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  /** El correo se refiere a una reserva ya cargada: se enseñan los cambios y se decide qué hacer. */
+  const [match, setMatch] = useState<{ existing: Booking; prefill: InboxPrefill; changes: Change[] } | null>(null);
+  const [working, setWorking] = useState('');
 
   if (item === undefined || trips === undefined) {
     return <main className="page muted">Cargando…</main>;
@@ -123,7 +131,54 @@ export function InboxItemPage() {
     prefill.sources = sources;
     prefill.warnings = warnings;
     prefill.title ??= item!.subject;
+
+    // ¿Es una modificación de algo que ya está en la app?
+    const existing = findExistingBooking(await listAllBookings(), prefill);
+    if (existing) {
+      setMatch({ existing, prefill, changes: diffBooking(existing, prefill) });
+      return;
+    }
     navigate(`/trips/${chosen}/bookings/new`, { state: { prefill } });
+  }
+
+  /** Aplica los cambios del correo a la reserva existente, le añade los adjuntos y marca el aviso. */
+  async function updateExisting() {
+    if (!match) {
+      return;
+    }
+    setWorking('Actualizando la reserva…');
+    try {
+      const body = applyChanges(match.existing, match.prefill, match.changes, new Date());
+      await saveBooking(body, session.email ?? '', match.existing.id);
+      await importInboxAttachments(item!.id, match.existing.id, session.email ?? '', setWorking);
+      navigate(`/bookings/${match.existing.id}`, { replace: true });
+    } catch (error) {
+      setMessage(describeError(error));
+    } finally {
+      setWorking('');
+    }
+  }
+
+  /** Sin cambios: solo se añaden los adjuntos nuevos (un billete reenviado, por ejemplo). */
+  async function attachToExisting() {
+    if (!match) {
+      return;
+    }
+    setWorking('Añadiendo los adjuntos…');
+    try {
+      await importInboxAttachments(item!.id, match.existing.id, session.email ?? '', setWorking);
+      navigate(`/bookings/${match.existing.id}`, { replace: true });
+    } catch (error) {
+      setMessage(describeError(error));
+    } finally {
+      setWorking('');
+    }
+  }
+
+  function createAnyway() {
+    if (match) {
+      navigate(`/trips/${chosen}/bookings/new`, { state: { prefill: match.prefill } });
+    }
   }
 
   async function discard() {
@@ -192,14 +247,63 @@ export function InboxItemPage() {
       </div>
 
       {message && <p className="error">{message}</p>}
-      <div className="actions">
-        <button className="btn primary" disabled={preparing} onClick={() => void createBooking()}>
-          {preparing ? 'Leyendo el correo…' : 'Crear reserva'}
-        </button>
-        <button className="btn danger" onClick={() => void discard()}>
-          Descartar
-        </button>
-      </div>
+
+      {match ? (
+        <section className="card highlight">
+          <h3>Esta reserva ya está en la app</h3>
+          <p>
+            {TYPE_INFO[match.existing.type].icon} {match.existing.title}
+            {match.existing.reference && ` · ${match.existing.reference}`}
+          </p>
+          {match.changes.length > 0 ? (
+            <>
+              <p className="error">
+                <strong>El correo trae cambios:</strong>
+              </p>
+              <ul>
+                {match.changes.map((change) => (
+                  <li key={change.field}>
+                    {change.label}: {change.before} → <strong>{change.after}</strong>
+                  </li>
+                ))}
+              </ul>
+              <div className="actions">
+                <button className="btn primary" disabled={!!working} onClick={() => void updateExisting()}>
+                  {working || 'Actualizar la reserva'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="muted small">Los datos del correo coinciden con los de la reserva.</p>
+              {item.attachments.length > 0 && (
+                <div className="actions">
+                  <button className="btn primary" disabled={!!working} onClick={() => void attachToExisting()}>
+                    {working || 'Añadir los adjuntos a la reserva'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          <div className="actions">
+            <button className="btn" disabled={!!working} onClick={createAnyway}>
+              Crear como reserva nueva
+            </button>
+            <button className="btn danger" disabled={!!working} onClick={() => void discard()}>
+              Descartar el correo
+            </button>
+          </div>
+        </section>
+      ) : (
+        <div className="actions">
+          <button className="btn primary" disabled={preparing} onClick={() => void createBooking()}>
+            {preparing ? 'Leyendo el correo…' : 'Crear reserva'}
+          </button>
+          <button className="btn danger" onClick={() => void discard()}>
+            Descartar
+          </button>
+        </div>
+      )}
     </main>
   );
 }

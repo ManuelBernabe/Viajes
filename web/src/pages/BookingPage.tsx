@@ -5,7 +5,7 @@ import { useSession } from '../app/SessionContext';
 import { useAttachFiles } from '../attachments/useAttachFiles';
 import { AttachmentThumbs } from '../components/AttachmentThumbs';
 import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
-import { deleteBooking, getBooking, listAttachments } from '../data/repo';
+import { deleteBooking, getBooking, listAttachments, saveBooking } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
 
@@ -36,6 +36,19 @@ export function BookingPage() {
   const info = TYPE_INFO[booking.type];
   const hasQr = attachments.some((a) => a.qrText);
 
+  /** Quita el aviso de modificación; la reserva queda como está. */
+  async function acknowledge() {
+    const b = booking!;
+    await saveBooking(
+      {
+        tripId: b.tripId, type: b.type, title: b.title, startLocal: b.startLocal, startTz: b.startTz, startPlace: b.startPlace,
+        endLocal: b.endLocal, endTz: b.endTz, endPlace: b.endPlace, reference: b.reference, address: b.address, notes: b.notes, changeNote: null,
+      },
+      session.email ?? '',
+      b.id,
+    );
+  }
+
   async function remove() {
     if (!confirm(`¿Borrar «${booking!.title}»?`)) {
       return;
@@ -56,6 +69,15 @@ export function BookingPage() {
           Editar
         </Link>
       </div>
+
+      {booking.changeNote && (
+        <div className="notice danger">
+          <strong>⚠️ {booking.changeNote}</strong>
+          <button className="btn small" style={{ marginTop: 8 }} type="button" onClick={() => void acknowledge()}>
+            Entendido, quitar el aviso
+          </button>
+        </div>
+      )}
 
       {hasQr && (
         <Link className="btn primary block" to={`/bookings/${bookingId}/qr`}>

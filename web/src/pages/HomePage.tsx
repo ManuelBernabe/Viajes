@@ -45,6 +45,7 @@ function NextUp() {
       <h3>
         {info.icon} {booking.title}
       </h3>
+      {booking.changeNote && <div className="error small">⚠️ {booking.changeNote}</div>}
       <div>
         {formatDay(booking.startLocal)} · {timeOf(booking.startLocal)} hora de {zoneLabel(booking.startTz)}
         {booking.startPlace && ` · ${booking.startPlace}`}

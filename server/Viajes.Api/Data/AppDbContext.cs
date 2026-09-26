@@ -85,6 +85,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             booking.Property(b => b.Reference).HasMaxLength(100);
             booking.Property(b => b.Address).HasMaxLength(500);
             booking.Property(b => b.Notes).HasMaxLength(4000);
+            booking.Property(b => b.ChangeNote).HasMaxLength(1000);
             booking.HasIndex(b => b.TripId);
             booking.HasIndex(b => b.Version);
         });

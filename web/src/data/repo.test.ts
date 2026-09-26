@@ -30,6 +30,7 @@ const flight = (tripId: string, overrides: Partial<BookingBody> = {}): BookingBo
   reference: null,
   address: null,
   notes: null,
+  changeNote: null,
   ...overrides,
 });
 

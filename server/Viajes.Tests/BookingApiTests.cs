@@ -50,6 +50,21 @@ public sealed class BookingApiTests(TestApp app) : IClassFixture<TestApp>
     }
 
     [Fact]
+    public async Task A_change_note_is_stored_and_can_be_cleared()
+    {
+        var api = await TripsApi.SignUp(app, "reserva-cambio@example.com");
+        var tripId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        await api.PutTrip(tripId);
+
+        await api.PutBooking(bookingId, tripId, new { changeNote = "Modificada el 27/09 según correo: salida 14:35 → 16:10" });
+        Assert.Equal("Modificada el 27/09 según correo: salida 14:35 → 16:10", (await api.GetSync()).Bookings.Single().ChangeNote);
+
+        await api.PutBooking(bookingId, tripId, new { changeNote = (string?)null });
+        Assert.Null((await api.GetSync()).Bookings.Single().ChangeNote);
+    }
+
+    [Fact]
     public async Task Arrival_is_optional()
     {
         var api = await TripsApi.SignUp(app, "reserva4@example.com");

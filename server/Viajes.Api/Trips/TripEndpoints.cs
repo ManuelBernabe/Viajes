@@ -192,6 +192,7 @@ public static partial class TripEndpoints
         booking.Reference = Clean(body.Reference, 100);
         booking.Address = Clean(body.Address, 500);
         booking.Notes = Clean(body.Notes, 4000);
+        booking.ChangeNote = Clean(body.ChangeNote, 1000);
 
         await db.SaveChangesAsync();
         return Results.NoContent();
