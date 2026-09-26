@@ -4,3 +4,7 @@ h1 { font-size: 1.3rem; }
 h2 { font-size: 1rem; margin: 0 0 0.5rem; }
 input, button { font-size: 1rem; margin: 0.25rem 0; display: block; width: 100%; padding: 0.5rem; box-sizing: border-box; }
 .error { color: #b42318; }
+button.secondary { background: transparent; border: 1px solid #bbb; }
+.update-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+.update-card { background: #fff; color: #111; border-radius: 16px 16px 0 0; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); width: 100%; max-width: 36rem; box-sizing: border-box; font-family: -apple-system, system-ui, sans-serif; }
+.update-card h2 { font-size: 1.1rem; margin: 0 0 0.5rem; }

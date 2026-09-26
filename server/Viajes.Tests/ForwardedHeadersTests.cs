@@ -45,6 +45,32 @@ public sealed class ForwardedHeadersTests(ProxiedApp app) : IClassFixture<Proxie
         Assert.Equal("203.0.113.7", network.RemoteIp);
     }
 
+    [Fact]
+    public async Task Behind_two_proxy_hops_the_client_ip_is_the_first_one()
+    {
+        // Railway: el borde añade la IP del cliente y un salto interno añade la del borde.
+        var network = await Network("203.0.113.7, 10.0.0.1");
+
+        Assert.Equal("203.0.113.7", network.RemoteIp);
+    }
+
+    [Fact]
+    public async Task An_entry_spoofed_by_the_client_before_the_proxy_hops_is_ignored()
+    {
+        var network = await Network("198.51.100.99, 203.0.113.7, 10.0.0.1");
+
+        Assert.Equal("203.0.113.7", network.RemoteIp);
+    }
+
+    private async Task<NetworkInfo> Network(string forwardedFor)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/diag/network");
+        request.Headers.Add("X-Forwarded-Proto", "https");
+        request.Headers.Add("X-Forwarded-For", forwardedFor);
+
+        return (await (await app.CreateClient().SendAsync(request)).Content.ReadFromJsonAsync<NetworkInfo>())!;
+    }
+
     private static HttpRequestMessage Login(string? forwardedProto)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")

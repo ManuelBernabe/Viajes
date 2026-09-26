@@ -3,6 +3,10 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+# Railway expone sus variables como argumentos de construcción: el commit identifica cada versión de la app
+# y, al cambiar en cada despliegue, evita que la caché de capas reutilice un build antiguo de la web.
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV RAILWAY_GIT_COMMIT_SHA=$RAILWAY_GIT_COMMIT_SHA
 RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS server

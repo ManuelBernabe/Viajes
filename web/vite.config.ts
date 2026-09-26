@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       pwaAssets: { config: true },
       manifest: {
         name: 'Viajes',
@@ -23,7 +23,9 @@ export default defineConfig({
     }),
   ],
   define: {
-    __APP_VERSION__: JSON.stringify(new Date().toISOString()),
+    __BUILD_AT__: JSON.stringify(new Date().toISOString()),
+    // Railway lo pasa como argumento de construcción (ARG en el Dockerfile); en local queda vacío.
+    __BUILD_COMMIT__: JSON.stringify(process.env.RAILWAY_GIT_COMMIT_SHA ?? ''),
   },
   build: {
     outDir: '../server/Viajes.Api/wwwroot',
