@@ -43,10 +43,16 @@ self.addEventListener('message', (event) => {
     void self.skipWaiting();
   }
   if (event.data && event.data.type === 'PING') {
-    (event.ports[0] ?? event.source)?.postMessage({ type: 'PONG', build: BUILD });
+    const reply = { type: 'PONG', build: BUILD };
+    event.ports[0]?.postMessage(reply);
+    event.source?.postMessage(reply);
   }
 });
 clientsClaim();
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(logPush(`worker activado: ${BUILD}`));
+});
 
 self.addEventListener('push', (event) => {
   let payload: PushPayload = {};

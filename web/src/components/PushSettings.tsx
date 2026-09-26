@@ -97,6 +97,7 @@ export function PushSettings() {
           {diagnostics ? (
             <div className="small">
               <p>Service worker: {diagnostics.workerBuild ?? 'sin respuesta (versión antigua sin avisos)'}</p>
+              <p>Estado: {diagnostics.workerState}</p>
               <p>Servicio push: {diagnostics.endpointHost ?? 'ninguno'}</p>
               <p>Bitácora del móvil ({diagnostics.log.length}):</p>
               {diagnostics.log.length === 0 ? (

@@ -103,6 +103,8 @@ export interface PushDiagnostics {
   workerBuild: string | null;
   /** Dominio del servicio push al que está suscrito el móvil (Apple, Google…). */
   endpointHost: string | null;
+  /** Estado de la instalación: qué worker controla la página y si hay otro instalándose o esperando. */
+  workerState: string;
   /** Últimas líneas de la bitácora del service worker. */
   log: string[];
 }
@@ -118,18 +120,36 @@ export async function pushDiagnostics(): Promise<PushDiagnostics> {
     endpointHost = null;
   }
 
+  const parts = [
+    `controla: ${navigator.serviceWorker.controller ? 'sí' : 'no'}`,
+    registration?.installing ? 'instalando otro' : '',
+    registration?.waiting ? 'otro esperando' : '',
+    registration?.active ? `activo (${registration.active.state})` : 'sin worker activo',
+  ];
+  const workerState = parts.filter(Boolean).join(' · ');
+
   const workerBuild = await new Promise<string | null>((resolve) => {
     const worker = registration?.active;
     if (!worker) {
       resolve(null);
       return;
     }
-    const channel = new MessageChannel();
-    const timer = setTimeout(() => resolve(null), 2000);
-    channel.port1.onmessage = (event) => {
+    const done = (build: string | null) => {
       clearTimeout(timer);
-      resolve((event.data as { build?: string })?.build ?? null);
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      resolve(build);
     };
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; build?: string } | undefined;
+      if (data?.type === 'PONG') {
+        done(data.build ?? null);
+      }
+    };
+    const timer = setTimeout(() => done(null), 3000);
+    // El worker responde por el puerto transferido y también al cliente; vale cualquiera de los dos.
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    const channel = new MessageChannel();
+    channel.port1.onmessage = (event) => done((event.data as { build?: string })?.build ?? null);
     worker.postMessage({ type: 'PING' }, [channel.port2]);
   });
 
@@ -141,7 +161,7 @@ export async function pushDiagnostics(): Promise<PushDiagnostics> {
   } catch {
     log = [];
   }
-  return { workerBuild, endpointHost, log };
+  return { workerBuild, endpointHost, workerState, log };
 }
 
 /** Si el dispositivo ya estaba suscrito, vuelve a registrarlo por si el servidor lo perdió o cambió la clave. */
