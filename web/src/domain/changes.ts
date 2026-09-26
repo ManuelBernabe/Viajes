@@ -19,9 +19,20 @@ function norm(value: string | null | undefined): string {
   return (value ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+const DAY_MS = 86_400_000;
+
+function daysApart(a: string, b: string): number {
+  const [ay, am, ad] = a.slice(0, 10).split('-').map(Number);
+  const [by, bm, bd] = b.slice(0, 10).split('-').map(Number);
+  return Math.abs(Date.UTC(ay, am - 1, ad) - Date.UTC(by, bm - 1, bd)) / DAY_MS;
+}
+
 /**
- * La reserva ya cargada a la que se refiere el correo: mismo localizador o, sin localizador,
- * mismo tipo, misma fecha de salida y mismo origen o destino.
+ * La reserva ya cargada a la que se refiere el correo, por este orden:
+ * 1. mismo localizador;
+ * 2. mismo tipo y misma ruta (origen y destino) con salida a menos de 7 días: un cambio que mueve la fecha y
+ *    emite localizador nuevo (Renfe lo hace) sigue siendo la misma reserva;
+ * 3. mismo tipo, mismo día de salida y mismo origen o destino.
  */
 export function findExistingBooking(bookings: readonly Booking[], proposal: Proposal): Booking | undefined {
   if (proposal.reference) {
@@ -33,10 +44,19 @@ export function findExistingBooking(bookings: readonly Booking[], proposal: Prop
   if (!proposal.type || !proposal.startLocal) {
     return undefined;
   }
+  const sameType = bookings.filter((b) => b.type === proposal.type);
+  if (proposal.startPlace && proposal.endPlace) {
+    const byRoute = sameType
+      .filter((b) => norm(b.startPlace) === norm(proposal.startPlace) && norm(b.endPlace) === norm(proposal.endPlace))
+      .filter((b) => daysApart(b.startLocal, proposal.startLocal!) <= 7)
+      .sort((a, b) => daysApart(a.startLocal, proposal.startLocal!) - daysApart(b.startLocal, proposal.startLocal!));
+    if (byRoute.length > 0) {
+      return byRoute[0];
+    }
+  }
   const date = proposal.startLocal.slice(0, 10);
-  return bookings.find(
+  return sameType.find(
     (b) =>
-      b.type === proposal.type &&
       b.startLocal.slice(0, 10) === date &&
       ((proposal.startPlace && norm(b.startPlace) === norm(proposal.startPlace)) ||
         (proposal.endPlace && norm(b.endPlace) === norm(proposal.endPlace))),

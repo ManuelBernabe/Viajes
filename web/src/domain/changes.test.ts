@@ -20,7 +20,8 @@ describe('findExistingBooking', () => {
 
   it('sin localizador, por tipo, fecha y origen', () => {
     expect(findExistingBooking([booking()], proposal({ reference: null, startPlace: 'ALICANTE-TERMIN', endPlace: null }))?.id).toBe('b1');
-    expect(findExistingBooking([booking()], proposal({ reference: null, startLocal: '2026-10-02T14:35' }))).toBeUndefined();
+    // Misma ruta y un día de diferencia: es la misma reserva movida de día.
+    expect(findExistingBooking([booking()], proposal({ reference: null, startLocal: '2026-10-02T14:35' }))?.id).toBe('b1');
     expect(findExistingBooking([booking()], proposal({ reference: 'OTRO01', startPlace: 'Valencia', endPlace: 'Sevilla' }))).toBeUndefined();
   });
 });
@@ -32,7 +33,9 @@ describe('diffBooking y describeChanges', () => {
     expect(changes.map((c) => c.field)).toEqual(['startLocal', 'endLocal']);
     expect(changes[0].before).toMatch(/14:35/);
     expect(changes[0].after).toMatch(/16:10/);
-    expect(describeChanges(changes, new Date(2026, 8, 27))).toMatch(/^Modificada el 27\/09 según correo: salida .*14:35.* → .*16:10.*; llegada .*17:08.* → .*18:45/);
+    expect(describeChanges(changes, new Date(2026, 8, 27))).toBe(
+      'Modificada el 27/09 según correo:\n• Salida: jue, 1 oct 14:35 → 16:10\n• Llegada: jue, 1 oct 17:08 → 18:45',
+    );
   });
 
   it('sin diferencias no hay cambios', () => {
@@ -77,5 +80,23 @@ describe('otros cambios', () => {
     ]);
     const body = applyChanges(booking(), proposal({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', endLocal: '2026-10-01T17:08', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' }), changes, new Date(2026, 8, 27));
     expect(body).toMatchObject({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' });
+  });
+});
+
+describe('segundo cambio con localizador nuevo y fecha movida', () => {
+  it('encuentra la reserva por tipo y ruta aunque cambien localizador y día', () => {
+    const changed = booking({ reference: 'NUEVO1', startLocal: '2026-10-02T09:00', endLocal: '2026-10-02T11:30' });
+    const secondEmail = proposal({ reference: 'OTRO22', startLocal: '2026-10-03T16:10', endLocal: '2026-10-03T18:45' });
+
+    expect(findExistingBooking([changed], secondEmail)?.id).toBe('b1');
+    expect(findExistingBooking([changed], proposal({ reference: 'OTRO22', startLocal: '2026-10-20T16:10' }))).toBeUndefined();
+    expect(findExistingBooking([changed], proposal({ reference: 'OTRO22', startLocal: '2026-10-03T16:10', startPlace: 'Valencia', endPlace: 'Chamartin' }))).toBeUndefined();
+  });
+
+  it('con varias candidatas elige la de fecha más cercana', () => {
+    const near = booking({ id: 'near', reference: 'A', startLocal: '2026-10-03T08:00' });
+    const far = booking({ id: 'far', reference: 'B', startLocal: '2026-10-08T08:00' });
+
+    expect(findExistingBooking([far, near], proposal({ reference: 'X', startLocal: '2026-10-04T16:10' }))?.id).toBe('near');
   });
 });
