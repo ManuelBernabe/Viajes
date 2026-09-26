@@ -7,6 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      // Service worker propio (src/sw.ts): la misma precarga de antes más los avisos push.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       pwaAssets: { config: true },
       manifest: {
         name: 'Viajes',
@@ -17,8 +21,7 @@ export default defineConfig({
         background_color: '#ffffff',
         theme_color: '#1f3a5f',
       },
-      workbox: {
-        navigateFallbackDenylist: [/^\/api\//],
+      injectManifest: {
         // El worker de pdf.js es .mjs y los iconos .png: sin ellos en la caché, sin red no se abren los PDF.
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,webmanifest,woff2}'],
         maximumFileSizeToCacheInBytes: 5_000_000,

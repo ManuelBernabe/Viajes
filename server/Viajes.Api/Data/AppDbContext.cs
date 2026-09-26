@@ -26,6 +26,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<InboxAttachment> InboxAttachments => Set<InboxAttachment>();
 
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+
+    public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -88,6 +92,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             booking.Property(b => b.ChangeNote).HasMaxLength(1000);
             booking.HasIndex(b => b.TripId);
             booking.HasIndex(b => b.Version);
+        });
+
+        builder.Entity<PushSubscription>(subscription =>
+        {
+            subscription.HasKey(s => s.Id);
+            subscription.Property(s => s.Endpoint).HasMaxLength(2000);
+            subscription.Property(s => s.P256dh).HasMaxLength(200);
+            subscription.Property(s => s.Auth).HasMaxLength(100);
+            subscription.Property(s => s.LastError).HasMaxLength(500);
+            subscription.HasIndex(s => s.Endpoint).IsUnique();
+            subscription.HasIndex(s => s.UserId);
+        });
+
+        builder.Entity<ReminderLog>(log =>
+        {
+            log.HasKey(l => new { l.BookingId, l.Kind, l.StartUtcMs });
+            log.Property(l => l.Kind).HasMaxLength(20);
         });
 
         builder.Entity<ImportToken>(token =>

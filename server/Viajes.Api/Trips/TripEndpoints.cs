@@ -117,7 +117,7 @@ public static partial class TripEndpoints
     // ---- Reservas ----
 
     private static async Task<IResult> PutBooking(
-        Guid id, BookingBody body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db)
+        Guid id, BookingBody body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, Push.PushService push, CancellationToken ct)
     {
         var userId = users.GetUserId(principal)!;
         var title = body.Title?.Trim();
@@ -192,9 +192,25 @@ public static partial class TripEndpoints
         booking.Reference = Clean(body.Reference, 100);
         booking.Address = Clean(body.Address, 500);
         booking.Notes = Clean(body.Notes, 4000);
+        var previousNote = booking.ChangeNote;
         booking.ChangeNote = Clean(body.ChangeNote, 1000);
 
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
+
+        // Un aviso de modificación nuevo se comunica al instante a todos los móviles del hogar.
+        if (booking.ChangeNote is not null && booking.ChangeNote != previousNote)
+        {
+            try
+            {
+                await push.SendToHouseholdAsync(trip.HouseholdId, Push.Reminders.ChangeMessage(booking), ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // El aviso es un extra: la reserva ya está guardada.
+                _ = e;
+            }
+        }
+
         return Results.NoContent();
     }
 

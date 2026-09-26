@@ -225,6 +225,39 @@ public sealed class InboxAttachment
     public string? QrText { get; set; }
 }
 
+/// <summary>Suscripción Web Push de un dispositivo (app instalada) de un usuario.</summary>
+public sealed class PushSubscription
+{
+    public Guid Id { get; set; }
+
+    public required string UserId { get; set; }
+
+    public required string Endpoint { get; set; }
+
+    public required string P256dh { get; set; }
+
+    public required string Auth { get; set; }
+
+    public long CreatedMs { get; set; }
+
+    public long? LastSentMs { get; set; }
+
+    public string? LastError { get; set; }
+}
+
+/// <summary>Aviso ya enviado para una reserva: no se repite salvo que cambie la hora de salida.</summary>
+public sealed class ReminderLog
+{
+    public Guid BookingId { get; set; }
+
+    /// <summary>«eve» (víspera), «soon» (poco antes) o «change» (modificación).</summary>
+    public required string Kind { get; set; }
+
+    public long StartUtcMs { get; set; }
+
+    public long SentMs { get; set; }
+}
+
 /// <summary>Una sola fila (Id = 1) con el último número de versión repartido.</summary>
 public sealed class ChangeCounter
 {

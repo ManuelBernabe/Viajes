@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { formatSize } from '../attachments/files';
 import { ImportTokens } from '../components/ImportTokens';
+import { PushSettings } from '../components/PushSettings';
 import { dropBlobs } from '../data/offline';
 import { listTrips } from '../data/repo';
 import { syncNow, useSyncStatus } from '../data/syncClient';
@@ -90,6 +91,8 @@ export function SettingsPage() {
           {sync.running ? 'Sincronizando…' : 'Sincronizar ahora'}
         </button>
       </section>
+
+      <PushSettings />
 
       <ImportTokens />
 
