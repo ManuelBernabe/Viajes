@@ -1,7 +1,4 @@
-import * as pdfjs from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+import { pdfLib } from './pdfSetup';
 
 export interface RenderOptions {
   /** Ancho objetivo en píxeles de cada página. */
@@ -12,7 +9,7 @@ export interface RenderOptions {
 /** Dibuja las páginas del PDF en lienzos. Sin depender del visor de iOS, que solo enseña la primera página. */
 export async function renderPdf(bytes: ArrayBuffer, options: RenderOptions = {}): Promise<HTMLCanvasElement[]> {
   const width = options.width ?? Math.min(window.innerWidth * (window.devicePixelRatio || 1), 2000);
-  const task = pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) });
+  const task = pdfLib().getDocument({ data: new Uint8Array(bytes.slice(0)) });
   const document_ = await task.promise;
   const pages = Math.min(document_.numPages, options.maxPages ?? 50);
   const canvases: HTMLCanvasElement[] = [];

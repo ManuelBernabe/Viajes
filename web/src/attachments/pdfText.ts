@@ -1,11 +1,8 @@
-import * as pdfjs from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+import { pdfLib } from './pdfSetup';
 
 /** Texto de las primeras páginas del PDF, con saltos de línea aproximados por la posición de cada trozo. */
 export async function extractPdfText(bytes: ArrayBuffer, maxPages = 3): Promise<string> {
-  const task = pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) });
+  const task = pdfLib().getDocument({ data: new Uint8Array(bytes.slice(0)) });
   const document_ = await task.promise;
   const lines: string[] = [];
   try {
