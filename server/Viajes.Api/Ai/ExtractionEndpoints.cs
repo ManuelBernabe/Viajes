@@ -13,7 +13,7 @@ public static class ExtractionEndpoints
         if (!string.IsNullOrWhiteSpace(geminiKey))
         {
             services.AddSingleton<IBookingExtractor>(provider =>
-                new GeminiBookingExtractor(GeminiBookingExtractor.CreateClient(geminiKey), provider.GetRequiredService<ILogger<GeminiBookingExtractor>>()));
+                new GeminiBookingExtractor(GeminiBookingExtractor.CreateClient(geminiKey), provider.GetRequiredService<ILogger<GeminiBookingExtractor>>(), config["GEMINI_MODEL"]));
             return services;
         }
 

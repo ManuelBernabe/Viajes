@@ -8,9 +8,12 @@ namespace Viajes.Api.Ai;
 /// imágenes tal cual y devuelve JSON validado contra un esquema. Se pide «store: false» para que Google no guarde
 /// la interacción en su servidor.
 /// </summary>
-public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookingExtractor> log) : IBookingExtractor
+public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookingExtractor> log, string? preferredModel = null) : IBookingExtractor
 {
     public const string ModelId = "gemini-3.8-flash";
+
+    /// <summary>Si un modelo está saturado (503/429), se prueba el siguiente; todos tienen nivel gratuito.</summary>
+    private static readonly string[] FallbackModels = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
 
     private const int MaxFiles = 6;
 
@@ -67,40 +70,52 @@ public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookin
 
         parts.Add(new { type = "text", text = "Devuelve los datos de la reserva en el JSON pedido." });
 
-        var body = new
-        {
-            model = ModelId,
-            system_instruction = SystemInstruction,
-            input = parts,
-            generation_config = new { temperature = 0, max_output_tokens = 1500 },
-            response_format = new { type = "text", mime_type = "application/json", schema = Schema },
-            store = false,
-        };
-
+        var models = FallbackModels.Prepend(preferredModel ?? ModelId).Distinct().ToList();
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "v1beta/interactions")
+            foreach (var model in models)
             {
-                Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
-            };
-            using var response = await http.SendAsync(request, ct);
-            var payload = await response.Content.ReadAsStringAsync(ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                log.LogWarning("Gemini respondió {Codigo}: {Cuerpo}", (int)response.StatusCode, payload.Length > 400 ? payload[..400] : payload);
-                return null;
+                var body = new
+                {
+                    model,
+                    system_instruction = SystemInstruction,
+                    input = parts,
+                    generation_config = new { temperature = 0, max_output_tokens = 1500 },
+                    response_format = new { type = "text", mime_type = "application/json", schema = Schema },
+                    store = false,
+                };
+                using var request = new HttpRequestMessage(HttpMethod.Post, "v1beta/interactions")
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
+                };
+                using var response = await http.SendAsync(request, ct);
+                var payload = await response.Content.ReadAsStringAsync(ct);
+                if ((int)response.StatusCode is 503 or 429)
+                {
+                    log.LogWarning("Gemini ({Modelo}) saturado ({Codigo}); se prueba el siguiente modelo.", model, (int)response.StatusCode);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    log.LogWarning("Gemini ({Modelo}) respondió {Codigo}: {Cuerpo}", model, (int)response.StatusCode, payload.Length > 400 ? payload[..400] : payload);
+                    return null;
+                }
+
+                var text = OutputText(payload);
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    log.LogWarning("Gemini ({Modelo}) no devolvió texto: {Cuerpo}", model, payload.Length > 400 ? payload[..400] : payload);
+                    return null;
+                }
+
+                var result = JsonSerializer.Deserialize<Extraction>(text, JsonOptions);
+                log.LogInformation("Extracción con Gemini ({Modelo}): tipo {Tipo}, localizador {Ref}.", model, result?.Type ?? "ninguno", result?.Reference ?? "-");
+                return result is null or { Type: null, Title: null, Reference: null, StartLocal: null } ? null : result;
             }
 
-            var text = OutputText(payload);
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                log.LogWarning("Gemini no devolvió texto: {Cuerpo}", payload.Length > 400 ? payload[..400] : payload);
-                return null;
-            }
-
-            var result = JsonSerializer.Deserialize<Extraction>(text, JsonOptions);
-            log.LogInformation("Extracción con Gemini: tipo {Tipo}, localizador {Ref}.", result?.Type ?? "ninguno", result?.Reference ?? "-");
-            return result is null or { Type: null, Title: null, Reference: null, StartLocal: null } ? null : result;
+            log.LogWarning("Gemini: todos los modelos saturados ({Modelos}).", string.Join(", ", models));
+            return null;
         }
         catch (HttpRequestException e)
         {
