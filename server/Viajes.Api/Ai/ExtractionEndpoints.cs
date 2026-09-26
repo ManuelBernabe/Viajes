@@ -43,8 +43,10 @@ public static class ExtractionEndpoints
         app.MapPost("/api/extract", Extract).RequireAuthorization().DisableAntiforgery();
     }
 
-    private static async Task<IResult> Extract(HttpContext http, IBookingExtractor extractor, CancellationToken ct)
+    private static async Task<IResult> Extract(HttpContext http, IBookingExtractor extractor, ILoggerFactory loggers, CancellationToken ct)
     {
+        var log = loggers.CreateLogger("Viajes.Extract");
+        log.LogInformation("Petición de lectura: {Tipo}, {Bytes} bytes, extractor {Extractor}.", http.Request.ContentType, http.Request.ContentLength, extractor.GetType().Name);
         if (!extractor.IsAvailable)
         {
             return Results.Problem("La lectura con IA no está configurada en el servidor.", statusCode: StatusCodes.Status503ServiceUnavailable);
