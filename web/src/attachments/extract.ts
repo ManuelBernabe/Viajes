@@ -228,6 +228,40 @@ function findStations(text: string): { from: string | null; to: string | null } 
   return { from: clean(from?.[1]), to: clean(to?.[1]) };
 }
 
+/**
+ * Notas de un vuelo: la tabla de pasajeros («» Manuel Bernabe Escribano 23G 0442167894233»), asientos sueltos
+ * («Asiento: 23G») y la terminal de salida.
+ */
+function findFlightNotes(text: string): string | null {
+  const parts: string[] = [];
+  const passengers: string[] = [];
+  const tickets: string[] = [];
+  const row = /^[»•\-*>]?\s*([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ .'\-]{4,60}?)\s+(\d{1,3}[A-K])\b(?:\s+(\d{10,14}))?\s*$/gm;
+  let match: RegExpExecArray | null;
+  while ((match = row.exec(text))) {
+    passengers.push(`${match[1].trim()} (${match[2]})`);
+    if (match[3]) {
+      tickets.push(match[3]);
+    }
+  }
+  if (passengers.length > 0) {
+    parts.push(`${passengers.length === 1 ? 'Pasajero' : 'Pasajeros'}: ${passengers.join(', ')}`);
+  } else {
+    const seats = [...text.matchAll(/\b(?:asientos?|seats?)\s*[:.]?\s*((?:\d{1,3}[A-K])(?:\s*[,/]\s*\d{1,3}[A-K])*)/gi)].map((m) => m[1]);
+    if (seats.length > 0) {
+      parts.push(`Asientos ${seats.join(', ')}`);
+    }
+  }
+  if (tickets.length > 0) {
+    parts.push(`${tickets.length === 1 ? 'Billete' : 'Billetes'} ${tickets.join(', ')}`);
+  }
+  const terminal = /\bterminal\s*[:.]?\s*\n?\s*((?:terminal\s+)?[A-Z0-9][A-Za-z0-9 ]{0,20}?)\s*(?:\n|$)/i.exec(text);
+  if (terminal) {
+    parts.push(`Salida: ${terminal[1].trim()}`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 /** «AVE 05123» si aparece con número en algún sitio; si no, el tipo de tren más un número de tren en línea propia (Renfe). */
 function findTrain(text: string): string | null {
   // «AVE 05123», «AVE - 05143», «AVE nº 5123».
@@ -329,6 +363,7 @@ export function suggestFromText(text: string, fileName = ''): TextSuggestion {
     suggestion.endDate = later?.date ?? null;
     const route = airports.length >= 2 ? `${airports[0]} → ${airports[1]}` : null;
     suggestion.title = [flight ? `${flight.carrier} ${flight.number}` : null, route].filter(Boolean).join(' ') || 'Vuelo';
+    suggestion.notes ??= findFlightNotes(text);
   } else if (type === 'train') {
     let stations = findStations(text);
     if (!stations.from || !stations.to) {

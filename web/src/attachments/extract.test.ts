@@ -248,6 +248,7 @@ Nombre del pasajero: Asientos: Recibo(s) de boleto(s) electrónico(s):
       endPlace: 'EZE',
       startTz: 'Europe/Madrid',
       endTz: 'America/Argentina/Buenos_Aires',
+      notes: 'Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: TERMINAL 1',
     });
     const filled = applySuggestion({ type: null, title: null, startLocal: null, startTz: null, startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null }, s);
     expect(filled).toMatchObject({ startLocal: '2026-10-01T20:05', endLocal: '2026-10-02T04:10', endTz: 'America/Argentina/Buenos_Aires' });
