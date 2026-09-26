@@ -62,3 +62,20 @@ describe('applyChanges', () => {
     expect(body.changeNote).toMatch(/^Modificada el 27\/09/);
   });
 });
+
+describe('otros cambios', () => {
+  it('detecta cambio de plazas, de localizador y salida a otro día con zona', () => {
+    const changes = diffBooking(
+      booking(),
+      proposal({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', endLocal: '2026-10-01T17:08', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' }),
+    );
+
+    expect(changes.map((c) => `${c.label}: ${c.before} → ${c.after}`)).toEqual([
+      'Salida: jue, 1 oct 14:35 (Madrid) → vie, 2 oct 09:00 (Lisbon)',
+      'Localizador: C3BMDV → NUEVO1',
+      'Notas: Coche 8 · Plazas 6B, 6A → Coche 3 · Plazas 1A, 1B',
+    ]);
+    const body = applyChanges(booking(), proposal({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', endLocal: '2026-10-01T17:08', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' }), changes, new Date(2026, 8, 27));
+    expect(body).toMatchObject({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' });
+  });
+});

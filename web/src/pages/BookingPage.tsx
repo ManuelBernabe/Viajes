@@ -71,7 +71,7 @@ export function BookingPage() {
       </div>
 
       {booking.changeNote && (
-        <div className="notice danger">
+        <div className="notice danger" style={{ whiteSpace: 'pre-line' }}>
           <strong>⚠️ {booking.changeNote}</strong>
           <button className="btn small" style={{ marginTop: 8 }} type="button" onClick={() => void acknowledge()}>
             Entendido, quitar el aviso

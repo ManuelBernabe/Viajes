@@ -12,6 +12,7 @@ export interface Proposal {
   endTz: string | null;
   endPlace: string | null;
   reference: string | null;
+  notes?: string | null;
 }
 
 function norm(value: string | null | undefined): string {
@@ -43,7 +44,7 @@ export function findExistingBooking(bookings: readonly Booking[], proposal: Prop
 }
 
 export interface Change {
-  field: 'startLocal' | 'endLocal' | 'startPlace' | 'endPlace' | 'title';
+  field: 'startLocal' | 'endLocal' | 'startPlace' | 'endPlace' | 'title' | 'reference' | 'notes';
   label: string;
   before: string;
   after: string;
@@ -56,24 +57,24 @@ function describeMoment(local: string | null, tz: string | null): string {
   return `${formatDay(local)} ${timeOf(local)}${tz ? ` (${zoneLabel(tz)})` : ''}`;
 }
 
+/** «14:35 → 16:10» si solo cambia la hora del mismo día; si no, fecha y hora completas. */
+function momentChange(beforeLocal: string | null, beforeTz: string | null, afterLocal: string, afterTz: string | null): { before: string; after: string } {
+  const sameDay = beforeLocal?.slice(0, 10) === afterLocal.slice(0, 10);
+  const sameTz = (beforeTz ?? '') === (afterTz ?? beforeTz ?? '');
+  if (beforeLocal && sameDay && sameTz) {
+    return { before: `${formatDay(beforeLocal)} ${timeOf(beforeLocal)}`, after: timeOf(afterLocal) };
+  }
+  return { before: describeMoment(beforeLocal, beforeTz), after: describeMoment(afterLocal, afterTz ?? beforeTz) };
+}
+
 /** Qué cambia entre la reserva cargada y lo que dice el correo. Solo campos que el correo trae. */
 export function diffBooking(existing: Booking, proposal: Proposal): Change[] {
   const changes: Change[] = [];
   if (proposal.startLocal && proposal.startLocal !== existing.startLocal) {
-    changes.push({
-      field: 'startLocal',
-      label: 'Salida',
-      before: describeMoment(existing.startLocal, existing.startTz),
-      after: describeMoment(proposal.startLocal, proposal.startTz ?? existing.startTz),
-    });
+    changes.push({ field: 'startLocal', label: 'Salida', ...momentChange(existing.startLocal, existing.startTz, proposal.startLocal, proposal.startTz) });
   }
   if (proposal.endLocal && proposal.endLocal !== existing.endLocal) {
-    changes.push({
-      field: 'endLocal',
-      label: 'Llegada',
-      before: describeMoment(existing.endLocal, existing.endTz),
-      after: describeMoment(proposal.endLocal, proposal.endTz ?? existing.endTz ?? existing.startTz),
-    });
+    changes.push({ field: 'endLocal', label: 'Llegada', ...momentChange(existing.endLocal, existing.endTz ?? existing.startTz, proposal.endLocal, proposal.endTz) });
   }
   if (proposal.startPlace && norm(proposal.startPlace) !== norm(existing.startPlace)) {
     changes.push({ field: 'startPlace', label: 'Origen', before: existing.startPlace ?? 'sin lugar', after: proposal.startPlace });
@@ -81,14 +82,25 @@ export function diffBooking(existing: Booking, proposal: Proposal): Change[] {
   if (proposal.endPlace && norm(proposal.endPlace) !== norm(existing.endPlace)) {
     changes.push({ field: 'endPlace', label: 'Destino', before: existing.endPlace ?? 'sin lugar', after: proposal.endPlace });
   }
+  if (proposal.reference && existing.reference && norm(proposal.reference) !== norm(existing.reference)) {
+    changes.push({ field: 'reference', label: 'Localizador', before: existing.reference, after: proposal.reference });
+  }
+  // El título no se compara: cada fuente lo redacta a su manera y no es un dato de la reserva.
+  if (proposal.notes && norm(proposal.notes) !== norm(existing.notes)) {
+    changes.push({ field: 'notes', label: 'Notas', before: existing.notes ?? 'sin notas', after: proposal.notes });
+  }
   return changes;
 }
 
-/** «Modificada el 27/09 según correo: salida 1 oct 14:35 → 1 oct 16:10». */
+/**
+ * «Modificada el 27/09 según correo:
+ *  • Salida: jue, 1 oct 14:35 → 16:10
+ *  • Llegada: jue, 1 oct 17:08 → 18:45»
+ */
 export function describeChanges(changes: readonly Change[], when: Date): string {
   const date = `${String(when.getDate()).padStart(2, '0')}/${String(when.getMonth() + 1).padStart(2, '0')}`;
-  const parts = changes.map((c) => `${c.label.toLowerCase()} ${c.before} → ${c.after}`);
-  return `Modificada el ${date} según correo: ${parts.join('; ')}`;
+  const lines = changes.map((c) => `• ${c.label}: ${c.before} → ${c.after}`);
+  return [`Modificada el ${date} según correo:`, ...lines].join('\n');
 }
 
 /** La reserva existente con los cambios del correo aplicados y el aviso puesto. */
@@ -126,6 +138,12 @@ export function applyChanges(existing: Booking, proposal: Proposal, changes: rea
         break;
       case 'title':
         body.title = proposal.title ?? existing.title;
+        break;
+      case 'reference':
+        body.reference = proposal.reference ?? existing.reference;
+        break;
+      case 'notes':
+        body.notes = proposal.notes ?? existing.notes;
         break;
     }
   }
