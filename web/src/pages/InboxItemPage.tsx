@@ -22,6 +22,7 @@ export interface InboxPrefill {
   endPlace: string | null;
   reference: string | null;
   address: string | null;
+  notes?: string | null;
 }
 
 export function InboxItemPage() {

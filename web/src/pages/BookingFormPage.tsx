@@ -61,7 +61,7 @@ export function BookingFormPage() {
   const [endPlace, setEndPlace] = useState(prefill?.endPlace ?? '');
   const [reference, setReference] = useState(prefill?.reference ?? '');
   const [address, setAddress] = useState(prefill?.address ?? '');
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(prefill?.notes ?? '');
   const [loaded, setLoaded] = useState(!bookingId);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -151,6 +151,7 @@ export function BookingFormPage() {
       fill(startTime, s.startTime, setStartTime);
       fill(startPlace, s.startPlace, setStartPlace);
       fill(address, s.address, setAddress);
+      fill(notes, s.notes, setNotes);
       if (s.endDate || s.endTime || s.endPlace) {
         setWithEnd(true);
         fill(endDate, s.endDate ?? s.startDate, setEndDate);

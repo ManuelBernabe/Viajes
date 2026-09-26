@@ -101,3 +101,56 @@ describe('applySuggestion', () => {
     expect(filled).toMatchObject({ type: 'flight', title: 'IB 3170', reference: 'XK7P2Q', startLocal: '2026-10-12T10:05' });
   });
 });
+
+describe('billete de Trenes.com (Renfe, dos pasajeros)', () => {
+  const text = `09/06/2026 - 11:05 0000
+IVA: (10%) 2,67 €
+DNI ó DOC.ID: *****279Z
+M.BERNABE.ESCRIBA
+Localizador: C3BMDV 5NLPM CERCANIAS/TRAM:
+TOTAL 29,35 € S.O.V., S.R.C. e I.V.A. Incluidos N.I.F.: A86868189
+08027 BARCELONA
+CARRER FILIPINES, 1, ,
+Nº Billete: 7598102037622
+Cierre del acceso al tren 2 minutos antes de la salida
+05143
+01/10/2026
+01/10/2026
+Origen: ALICANTE-TERMIN
+Destino: CHAMARTIN
+Sin Restauración
+ESTANDAR AVE
+14:35
+17:08
+Coche: 8 Plaza: 6B
+
+09/06/2026 - 11:05 0000
+F.BELSO.ALFONSO
+Localizador: C3BMDV NXHKC CERCANIAS/TRAM:
+Nº Billete: 7598102037630
+05143
+01/10/2026
+01/10/2026
+Origen: ALICANTE-TERMIN
+Destino: CHAMARTIN
+ESTANDAR AVE
+14:35
+17:08
+Coche: 8 Plaza: 6A`;
+
+  it('ignora la fecha de emisión y coge la del viaje, las horas, el tren y las plazas', () => {
+    const s = suggestFromText(text, 'billetes.pdf');
+
+    expect(s).toMatchObject({
+      type: 'train',
+      title: 'AVE 05143 Alicante-Termin → Chamartin',
+      reference: 'C3BMDV',
+      startDate: '2026-10-01',
+      startTime: '14:35',
+      endTime: '17:08',
+      startPlace: 'Alicante-Termin',
+      endPlace: 'Chamartin',
+      notes: 'Coche 8 · Plazas 6B, 6A',
+    });
+  });
+});

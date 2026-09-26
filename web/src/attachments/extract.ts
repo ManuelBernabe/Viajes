@@ -15,6 +15,8 @@ export interface TextSuggestion {
   endTime: string | null;
   endPlace: string | null;
   address: string | null;
+  /** Coche y plazas, pasajeros… lo que conviene tener a mano pero no tiene campo propio. */
+  notes: string | null;
 }
 
 const MONTHS: Record<string, number> = {
@@ -47,26 +49,65 @@ function isoDate(day: number, month: number, year: number): string | null {
 /** Todas las fechas del texto, en orden de aparición, con su posición. */
 export function findDates(text: string): { date: string; index: number }[] {
   const found: { date: string; index: number }[] = [];
+  const isIssueStamp = (index: number, length: number) => {
+    // «09/06/2026 - 11:05» es el sello de emisión del billete, no la fecha del viaje.
+    const after = text.slice(index + length, index + length + 12);
+    const before = text.slice(Math.max(0, index - 40), index).toLowerCase();
+    return /^\s*-\s*\d{1,2}[:.]\d{2}/.test(after) || /(emisi[oó]n|emitido|impreso|compra|fecha de reserva|issued|printed)\W*$/.test(before);
+  };
+  const push = (date: string | null, match: RegExpExecArray) => {
+    if (date && !isIssueStamp(match.index, match[0].length)) {
+      found.push({ date, index: match.index });
+    }
+  };
   const numeric = /\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b/g;
   const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
   const worded = /\b(\d{1,2})\s*(?:de\s+)?([a-záéíóú]{3,10})\.?\s*(?:de\s+|,\s*)?(\d{4})\b/gi;
   let match: RegExpExecArray | null;
   while ((match = numeric.exec(text))) {
-    const date = isoDate(Number(match[1]), Number(match[2]), Number(match[3]));
-    if (date) found.push({ date, index: match.index });
+    push(isoDate(Number(match[1]), Number(match[2]), Number(match[3])), match);
   }
   while ((match = iso.exec(text))) {
-    const date = isoDate(Number(match[3]), Number(match[2]), Number(match[1]));
-    if (date) found.push({ date, index: match.index });
+    push(isoDate(Number(match[3]), Number(match[2]), Number(match[1])), match);
   }
   while ((match = worded.exec(text))) {
     const month = MONTHS[match[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
     if (month) {
-      const date = isoDate(Number(match[1]), month, Number(match[3]));
-      if (date) found.push({ date, index: match.index });
+      push(isoDate(Number(match[1]), month, Number(match[3])), match);
     }
   }
   return found.sort((a, b) => a.index - b.index);
+}
+
+/** La fecha del viaje: la que más se repite (un billete por pasajero la repite); en empate, la primera. */
+function travelDate(dates: { date: string; index: number }[]): { date: string; index: number } | undefined {
+  if (dates.length === 0) {
+    return undefined;
+  }
+  const counts = new Map<string, number>();
+  for (const d of dates) {
+    counts.set(d.date, (counts.get(d.date) ?? 0) + 1);
+  }
+  const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  return dates.find((d) => d.date === best);
+}
+
+/** «Coche: 8 Plaza: 6B» (uno por pasajero) → «Coche 8 · Plazas 6B, 6A». */
+function findSeats(text: string): string | null {
+  const re = /\b(?:coche|car|wagon|vag[oó]n)\s*[:.]?\s*(\w+)\s*[,·]?\s*(?:plaza|asiento|seat)\s*[:.]?\s*(\w+)/gi;
+  const coaches = new Set<string>();
+  const seats: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text))) {
+    coaches.add(match[1]);
+    if (!seats.includes(match[2].toUpperCase())) {
+      seats.push(match[2].toUpperCase());
+    }
+  }
+  if (seats.length === 0) {
+    return null;
+  }
+  return `Coche ${[...coaches].join('/')} · ${seats.length === 1 ? 'Plaza' : 'Plazas'} ${seats.join(', ')}`;
 }
 
 /** Horas «14:35» o «14.35 h», con posición. */
@@ -127,7 +168,7 @@ function findStations(text: string): { from: string | null; to: string | null } 
   return { from: clean(from?.[1]), to: clean(to?.[1]) };
 }
 
-/** «AVE 05123» si aparece con número en algún sitio; si no, el tipo de tren a secas. */
+/** «AVE 05123» si aparece con número en algún sitio; si no, el tipo de tren más un número de tren en línea propia (Renfe). */
 function findTrain(text: string): string | null {
   const re = /\b(AVE|ALVIA|AVLO|INTERCITY|EUROMED|MD|REGIONAL|IRYO|OUIGO|TALGO|AVANT)\b\s*(?:n[ºo.]?\s*)?(\d{3,5})?/gi;
   let first: string | null = null;
@@ -137,6 +178,12 @@ function findTrain(text: string): string | null {
       return `${match[1].toUpperCase()} ${match[2]}`;
     }
     first ??= match[1].toUpperCase();
+  }
+  if (first) {
+    const alone = /^\s*(\d{5})\s*$/m.exec(text);
+    if (alone) {
+      return `${first} ${alone[1]}`;
+    }
   }
   return first;
 }
@@ -157,6 +204,7 @@ export interface PrefillFields {
   endPlace: string | null;
   reference: string | null;
   address: string | null;
+  notes?: string | null;
 }
 
 /** Rellena con la sugerencia solo lo que en la base esté vacío. El título se sustituye si la sugerencia trae tipo. */
@@ -174,6 +222,7 @@ export function applySuggestion<T extends PrefillFields>(base: T, s: TextSuggest
     endPlace: base.endPlace ?? s.endPlace,
     reference: base.reference ?? s.reference,
     address: base.address ?? s.address,
+    notes: base.notes ?? s.notes,
   };
 }
 
@@ -182,23 +231,27 @@ export function suggestFromText(text: string, fileName = ''): TextSuggestion {
   const dates = findDates(text);
   const times = findTimes(text);
   const reference = findReference(text);
+  const start = travelDate(dates);
   const suggestion: TextSuggestion = {
     type,
     title: null,
     reference,
-    startDate: dates[0]?.date ?? null,
+    startDate: start?.date ?? null,
     startTime: null,
     startPlace: null,
     endDate: null,
     endTime: null,
     endPlace: null,
     address: null,
+    notes: findSeats(text),
   };
 
-  // La primera hora que aparece tras la primera fecha suele ser la de salida; la siguiente, la de llegada.
-  const afterDate = times.filter((t) => dates.length === 0 || t.index > dates[0].index);
+  // La primera hora que aparece tras la fecha del viaje suele ser la de salida; la siguiente, la de llegada.
+  const afterDate = times.filter((t) => !start || t.index > start.index);
   suggestion.startTime = afterDate[0]?.time ?? times[0]?.time ?? null;
   suggestion.endTime = afterDate[1]?.time ?? null;
+  // Fechas distintas de la del viaje que vengan después: la vuelta o la salida del hotel.
+  const later = dates.find((d) => start && d.index > start.index && d.date > start.date);
 
   if (type === 'flight') {
     const flight = findFlight(text);
@@ -216,14 +269,14 @@ export function suggestFromText(text: string, fileName = ''): TextSuggestion {
   } else if (type === 'hotel') {
     const name = /\b(?:hotel|hostal|apartamentos?|parador)\s+([A-ZÁÉÍÓÚÑ][^\n,]{2,50})/i.exec(text);
     suggestion.title = name ? name[0].trim() : 'Hotel';
-    suggestion.endDate = dates[1]?.date ?? null;
+    suggestion.endDate = later?.date ?? null;
     suggestion.startTime = null;
     suggestion.endTime = null;
     const address = /\b(?:direcci[oó]n|address)\s*[:\-]?\s*([^\n]{8,120})/i.exec(text);
     suggestion.address = address ? address[1].trim() : null;
   } else if (type === 'car') {
     suggestion.title = 'Alquiler de coche';
-    suggestion.endDate = dates[1]?.date ?? null;
+    suggestion.endDate = later?.date ?? null;
   } else if (type === 'ticket') {
     const firstLine = text.split('\n').map((l) => l.trim()).find((l) => l.length > 4 && l.length < 80);
     suggestion.title = firstLine ?? 'Entrada';
