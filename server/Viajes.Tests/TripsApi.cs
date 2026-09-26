@@ -77,7 +77,7 @@ public sealed class TripsApi(HttpClient client)
     public sealed record InboxRow(
         Guid Id, string FromAddress, string Subject, long ReceivedMs, string? SuggestedType, string? SuggestedTitle,
         string? SuggestedStartLocal, string? SuggestedStartTz, string? SuggestedStartPlace, string? SuggestedEndLocal, string? SuggestedEndTz,
-        string? SuggestedEndPlace, string? SuggestedReference, string? SuggestedAddress, string? BodyText, string Status, Guid? BookingId,
+        string? SuggestedEndPlace, string? SuggestedReference, string? SuggestedAddress, string? SuggestedNotes, string? BodyText, string Status, Guid? BookingId,
         List<InboxAttachmentRow> Attachments, long Version, long? DeletedAtMs);
 
     public sealed record InboxAttachmentRow(Guid Id, string Name, string Mime, long Size, string? QrText);

@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Viajes.Api.Access;
+using Viajes.Api.Ai;
 using Viajes.Api.Data;
 using Viajes.Api.Storage;
 using Viajes.Api.Trips;
@@ -82,7 +83,7 @@ public static class InboxEndpoints
     // ---- Importación ----
 
     private static async Task<IResult> Import(
-        HttpContext http, IConfiguration config, AppDbContext db, AccessService access, IFileStore store, ILoggerFactory loggers, CancellationToken ct)
+        HttpContext http, IConfiguration config, AppDbContext db, AccessService access, IFileStore store, IBookingExtractor extractor, ILoggerFactory loggers, CancellationToken ct)
     {
         var log = loggers.CreateLogger("Viajes.Inbox");
         var header = http.Request.Headers.Authorization.ToString();
@@ -153,6 +154,27 @@ public static class InboxEndpoints
 
         log.LogInformation("Importando «{Asunto}» de {De} con {Adjuntos} adjuntos (tipo propuesto: {Tipo}).", email.Subject, email.From, email.Attachments.Count, email.Suggestion.Type ?? "ninguno");
 
+        // La IA lee el texto y los adjuntos y va primero; lo que deje vacío lo completan los datos estructurados y el asunto.
+        if (extractor.IsAvailable)
+        {
+            var files = email.Attachments
+                .Where(a => a.Mime == "application/pdf" || a.Mime.StartsWith("image/"))
+                .Select(a => new ExtractionFile(a.Name, a.Mime, a.Bytes))
+                .ToList();
+            var extraction = await extractor.ExtractAsync(new ExtractionInput(email.BodyText, files), ct);
+            if (extraction is not null)
+            {
+                var ai = new Suggestion
+                {
+                    Type = extraction.Type, Title = extraction.Title, Reference = extraction.Reference, StartLocal = extraction.StartLocal,
+                    StartTz = extraction.StartTz, StartPlace = extraction.StartPlace, EndLocal = extraction.EndLocal, EndTz = extraction.EndTz,
+                    EndPlace = extraction.EndPlace, Address = extraction.Address, Notes = extraction.Notes,
+                };
+                ai.FillFrom(email.Suggestion);
+                email.Suggestion = ai;
+            }
+        }
+
         var itemId = Guid.NewGuid();
         var rawKey = $"households/{householdId}/inbox/{itemId}/raw";
         raw.Position = 0;
@@ -177,6 +199,7 @@ public static class InboxEndpoints
             SuggestedEndPlace = email.Suggestion.EndPlace,
             SuggestedReference = email.Suggestion.Reference,
             SuggestedAddress = email.Suggestion.Address,
+            SuggestedNotes = email.Suggestion.Notes,
             BodyText = email.BodyText,
             RawFileKey = rawKey,
             Status = InboxItem.Pending,
@@ -264,7 +287,7 @@ public static class InboxEndpoints
     public static InboxItemDto ToDto(InboxItem item, IEnumerable<InboxAttachment> attachments) => new(
         item.Id, item.FromAddress, item.Subject, item.ReceivedMs, item.SuggestedType, item.SuggestedTitle,
         item.SuggestedStartLocal, item.SuggestedStartTz, item.SuggestedStartPlace, item.SuggestedEndLocal, item.SuggestedEndTz,
-        item.SuggestedEndPlace, item.SuggestedReference, item.SuggestedAddress, item.BodyText, item.Status, item.BookingId,
+        item.SuggestedEndPlace, item.SuggestedReference, item.SuggestedAddress, item.SuggestedNotes, item.BodyText, item.Status, item.BookingId,
         attachments.Select(a => new InboxAttachmentDto(a.Id, a.Name, a.Mime, a.Size, a.QrText)).ToList(),
         item.Version, item.DeletedAtMs);
 }

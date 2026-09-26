@@ -24,6 +24,8 @@ public sealed class Suggestion
 
     public string? Address { get; set; }
 
+    public string? Notes { get; set; }
+
     public bool IsEmpty => Type is null && Title is null && StartLocal is null && Reference is null;
 
     /// <summary>Completa los huecos con otra sugerencia, sin pisar lo que ya hay.</summary>
@@ -39,6 +41,7 @@ public sealed class Suggestion
         EndPlace ??= other.EndPlace;
         Reference ??= other.Reference;
         Address ??= other.Address;
+        Notes ??= other.Notes;
     }
 }
 
@@ -69,7 +72,8 @@ public sealed class ParsedEmail
 
     public bool GmailAuthenticated => GmailAuth == GmailAuth.Pass;
 
-    public required Suggestion Suggestion { get; init; }
+    /// <summary>Propuesta de campos; la importación la sustituye por la de la IA cuando la hay.</summary>
+    public required Suggestion Suggestion { get; set; }
 
     public required IReadOnlyList<ParsedAttachment> Attachments { get; init; }
 }

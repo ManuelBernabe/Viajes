@@ -93,6 +93,7 @@ public sealed record InboxItemDto(
     string? SuggestedEndPlace,
     string? SuggestedReference,
     string? SuggestedAddress,
+    string? SuggestedNotes,
     string? BodyText,
     string Status,
     Guid? BookingId,

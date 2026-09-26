@@ -90,6 +90,7 @@ export function InboxItemPage() {
       endPlace: item!.suggestedEndPlace,
       reference: item!.suggestedReference,
       address: item!.suggestedAddress,
+      notes: item!.suggestedNotes ?? null,
     };
     const complete = () =>
       !!(prefill.type && prefill.startLocal && prefill.reference && prefill.startPlace && prefill.endPlace);

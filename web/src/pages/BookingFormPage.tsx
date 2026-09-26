@@ -4,7 +4,8 @@ import { describeError } from '../api';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
 import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp';
-import { suggestFromText } from '../attachments/extract';
+import { extractWithAi, toSuggestion } from '../attachments/aiExtract';
+import { suggestFromText, type TextSuggestion } from '../attachments/extract';
 import { isPdf } from '../attachments/files';
 import { extractPdfText } from '../attachments/pdfText';
 import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAttachFiles';
@@ -131,21 +132,39 @@ export function BookingFormPage() {
     }
   }
 
-  /** Sin tarjeta de embarque: el texto del primer PDF legible propone los campos que sigan vacíos. */
+  /**
+   * Sin tarjeta de embarque: primero se pide al servidor que lea el fichero con IA (PDF o imagen); si no hay red o
+   * el servidor no tiene clave, el texto del primer PDF legible propone los campos con las reglas locales.
+   */
   async function suggestFromPdfs(read: ReadFile[]) {
     for (const item of read) {
-      if (item.error || !isPdf(item.mime)) {
+      if (item.error || !(isPdf(item.mime) || item.mime.startsWith('image/'))) {
         continue;
       }
-      let text = '';
-      try {
-        text = await extractPdfText(item.bytes);
-      } catch {
-        continue;
+      setReadMessage(`Leyendo ${item.file.name} con IA…`);
+      const ai = await extractWithAi(item.bytes, item.mime, item.file.name);
+      let s: TextSuggestion;
+      let source: string;
+      if (ai.status === 'ok') {
+        s = toSuggestion(ai.extraction);
+        source = `${item.file.name} (leído con IA)`;
+      } else {
+        if (!isPdf(item.mime)) {
+          setReadMessage(ai.status === 'nothing' ? `No se ha encontrado ninguna reserva en ${item.file.name}.` : '');
+          continue;
+        }
+        let text = '';
+        try {
+          text = await extractPdfText(item.bytes);
+        } catch {
+          continue;
+        }
+        setRawText(text);
+        s = suggestFromText(text, item.file.name);
+        source = `${item.file.name}${ai.status === 'unavailable' ? '' : ' (sin IA: sin conexión con el servidor)'}`;
       }
-      setRawText(text);
-      const s = suggestFromText(text, item.file.name);
       if (!s.type && !s.reference && !s.startDate) {
+        setReadMessage(`No se ha encontrado nada nuevo en ${item.file.name}.`);
         continue;
       }
       let filled = 0;
@@ -171,7 +190,7 @@ export function BookingFormPage() {
         fill(endTime, s.endTime, setEndTime);
         fill(endPlace, s.endPlace, setEndPlace);
       }
-      setReadMessage(filled > 0 ? `Datos propuestos a partir de ${item.file.name}: revísalos antes de guardar.` : `No se ha encontrado nada nuevo en ${item.file.name}.`);
+      setReadMessage(filled > 0 ? `Datos propuestos a partir de ${source}: revísalos antes de guardar.` : `No se ha encontrado nada nuevo en ${item.file.name}.`);
       return;
     }
   }

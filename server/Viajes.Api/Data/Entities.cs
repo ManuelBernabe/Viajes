@@ -192,6 +192,8 @@ public sealed class InboxItem : IVersioned
 
     public string? SuggestedAddress { get; set; }
 
+    public string? SuggestedNotes { get; set; }
+
     public string? BodyText { get; set; }
 
     public required string RawFileKey { get; set; }

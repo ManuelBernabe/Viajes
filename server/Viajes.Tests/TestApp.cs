@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Viajes.Api.Ai;
 
 namespace Viajes.Tests;
 
@@ -15,6 +19,9 @@ public class TestApp : WebApplicationFactory<Program>
     public const string RegistrationCode = "codigo-de-prueba";
 
     protected int AuthRateLimit { get; set; } = 1000;
+
+    /// <summary>Extractor de reservas con IA a usar en vez del real (que necesita clave). Null = no configurado.</summary>
+    protected virtual IBookingExtractor? Extractor => null;
 
     public HttpClient CreateHttpsClient(bool handleCookies = true) =>
         CreateClient(new WebApplicationFactoryClientOptions
@@ -33,6 +40,16 @@ public class TestApp : WebApplicationFactory<Program>
         builder.UseSetting("REGISTRATION_CODE", RegistrationCode);
         builder.UseSetting("AUTH_RATE_LIMIT", AuthRateLimit.ToString());
         builder.UseSetting("FILE_STORE", "local");
+
+        var extractor = Extractor;
+        if (extractor is not null)
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IBookingExtractor>();
+                services.AddSingleton(extractor);
+            });
+        }
     }
 
     protected override void Dispose(bool disposing)

@@ -86,6 +86,7 @@ export interface InboxItem {
   suggestedEndPlace: string | null;
   suggestedReference: string | null;
   suggestedAddress: string | null;
+  suggestedNotes?: string | null;
   bodyText: string | null;
   status: InboxStatus;
   bookingId: string | null;
