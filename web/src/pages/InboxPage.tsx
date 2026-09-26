@@ -4,8 +4,9 @@ import { listInbox } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
 
+/** «vie 26 sept, 15:28»: con varios correos parecidos, el día y la hora los distinguen. */
 function received(ms: number): string {
-  return new Date(ms).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return new Date(ms).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 export function InboxPage() {
@@ -30,14 +31,12 @@ export function InboxPage() {
               {item.suggestedType ? `${TYPE_INFO[item.suggestedType].icon} ` : '✉️ '}
               {item.suggestedTitle ?? item.subject}
             </h3>
-            <span className="badge">{received(item.receivedMs)}</span>
+            {item.attachments.length > 0 && <span className="badge">📎 {item.attachments.length}</span>}
           </div>
-          <div className="muted small">De {item.fromAddress}</div>
-          {item.attachments.length > 0 && (
-            <div className="muted small">
-              {item.attachments.length} {item.attachments.length === 1 ? 'adjunto' : 'adjuntos'}
-            </div>
-          )}
+          <div className="muted small">
+            {received(item.receivedMs)} · De {item.fromAddress}
+          </div>
+          {item.attachments.length > 0 && <div className="muted small">{item.attachments.map((a) => a.name).join(', ')}</div>}
         </Link>
       ))}
     </main>
