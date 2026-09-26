@@ -225,6 +225,28 @@ public sealed class InboxAttachment
     public string? QrText { get; set; }
 }
 
+/// <summary>Enlace de un solo uso para unirse a un hogar; en la base solo queda el hash del token.</summary>
+public sealed class Invitation
+{
+    public Guid Id { get; set; }
+
+    public Guid HouseholdId { get; set; }
+
+    public required string TokenHash { get; set; }
+
+    public required string CreatedBy { get; set; }
+
+    public long CreatedMs { get; set; }
+
+    public long ExpiresMs { get; set; }
+
+    public long? UsedMs { get; set; }
+
+    public string? UsedBy { get; set; }
+
+    public long? RevokedMs { get; set; }
+}
+
 /// <summary>Suscripción Web Push de un dispositivo (app instalada) de un usuario.</summary>
 public sealed class PushSubscription
 {

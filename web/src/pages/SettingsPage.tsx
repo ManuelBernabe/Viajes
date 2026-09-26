@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { formatSize } from '../attachments/files';
+import { HouseholdSettings } from '../components/HouseholdSettings';
 import { ImportTokens } from '../components/ImportTokens';
 import { PushSettings } from '../components/PushSettings';
 import { dropBlobs } from '../data/offline';
@@ -91,6 +92,8 @@ export function SettingsPage() {
           {sync.running ? 'Sincronizando…' : 'Sincronizar ahora'}
         </button>
       </section>
+
+      <HouseholdSettings />
 
       <PushSettings />
 

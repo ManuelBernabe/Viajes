@@ -3,12 +3,14 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Viajes.Api.Access;
+using Viajes.Api.Households;
 
 namespace Viajes.Api.Auth;
 
 public static class AuthEndpoints
 {
-    public sealed record RegisterRequest(string Email, string Password, string Code);
+    /// <summary>Alta con el código de registro o con el token de una invitación al hogar.</summary>
+    public sealed record RegisterRequest(string Email, string Password, string? Code, string? Invitation);
 
     public sealed record LoginRequest(string Email, string Password);
 
@@ -21,10 +23,19 @@ public static class AuthEndpoints
             IConfiguration config,
             UserManager<IdentityUser> users,
             SignInManager<IdentityUser> signIn,
-            AccessService access) =>
+            AccessService access,
+            InvitationService invitations) =>
         {
-            // Hasta que existan las invitaciones (Plan 2), solo se registra quien conoce el código.
-            if (!IsRegistrationCode(body.Code, config["REGISTRATION_CODE"]))
+            // Se registra quien conoce el código o quien trae una invitación válida al hogar de alguien.
+            var invited = !string.IsNullOrEmpty(body.Invitation);
+            if (invited)
+            {
+                if ((await invitations.Lookup(body.Invitation!)).State != InvitationState.Valid)
+                {
+                    return Results.Problem("La invitación no es válida, ha caducado o ya se ha usado.", statusCode: StatusCodes.Status410Gone);
+                }
+            }
+            else if (!IsRegistrationCode(body.Code, config["REGISTRATION_CODE"]))
             {
                 return Results.Problem("El código de registro no es válido.", statusCode: StatusCodes.Status403Forbidden);
             }
@@ -34,6 +45,12 @@ public static class AuthEndpoints
             if (!result.Succeeded)
             {
                 return Results.Problem(IdentityMessages.Describe(result.Errors), statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            if (invited)
+            {
+                // La cuenta nace ya dentro del hogar que invita; si el token se gastó entre medias, tendrá el suyo propio.
+                await invitations.Accept(body.Invitation!, user.Id);
             }
 
             await access.EnsureHousehold(user.Id);

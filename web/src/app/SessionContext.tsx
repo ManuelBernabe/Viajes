@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { cachedEmail, checkSession, login, logout, register } from '../auth/session';
+import { cachedEmail, checkSession, login, logout, register, type SignUpWith } from '../auth/session';
 import { sessionRenewed, startSyncLoop, useSyncStatus } from '../data/syncClient';
 
 export interface Session {
@@ -8,7 +8,7 @@ export interface Session {
   /** No se pudo comprobar la sesión con el servidor (sin red). */
   unverified: boolean;
   signIn(email: string, password: string): Promise<void>;
-  signUp(email: string, password: string, code: string): Promise<void>;
+  signUp(email: string, password: string, with_: SignUpWith): Promise<void>;
   signOut(): Promise<void>;
 }
 
@@ -71,8 +71,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStatus('in');
   }, []);
 
-  const signUp = useCallback(async (user: string, password: string, code: string) => {
-    const me = await register(user, password, code);
+  const signUp = useCallback(async (user: string, password: string, with_: SignUpWith) => {
+    const me = await register(user, password, with_);
     sessionRenewed();
     setEmail(me);
     setUnverified(false);

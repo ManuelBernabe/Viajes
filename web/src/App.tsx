@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout } from './app/Layout';
 import { SessionProvider, useSession } from './app/SessionContext';
 import { LoginPage } from './auth/LoginPage';
@@ -9,6 +9,7 @@ import { BookingPage } from './pages/BookingPage';
 import { HomePage } from './pages/HomePage';
 import { InboxItemPage } from './pages/InboxItemPage';
 import { InboxPage } from './pages/InboxPage';
+import { InvitationPage } from './pages/InvitationPage';
 import { QrPage } from './pages/QrPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TripFormPage } from './pages/TripFormPage';
@@ -18,8 +19,18 @@ import './app/theme.css';
 
 function Gate() {
   const session = useSession();
+  const location = useLocation();
   if (session.status === 'loading') {
     return <main className="page no-tabs center muted">Abriendo…</main>;
+  }
+  // El enlace de invitación se abre con o sin sesión: la propia página decide qué pedir.
+  if (location.pathname.startsWith('/invitacion/')) {
+    return (
+      <Routes>
+        <Route path="/invitacion/:token" element={<InvitationPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
   }
   if (session.status === 'out') {
     return <LoginPage />;

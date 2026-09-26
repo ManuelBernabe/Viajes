@@ -39,8 +39,14 @@ export async function login(email: string, password: string): Promise<string> {
   return me.email;
 }
 
-export async function register(email: string, password: string, code: string): Promise<string> {
-  const me = await api<{ email: string }>('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, code }) });
+export interface SignUpWith {
+  code?: string;
+  invitation?: string;
+}
+
+/** Alta con el código de registro o con el token de una invitación al hogar. */
+export async function register(email: string, password: string, with_: SignUpWith): Promise<string> {
+  const me = await api<{ email: string }>('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, code: with_.code ?? null, invitation: with_.invitation ?? null }) });
   await forgetOtherUser(me.email);
   await setMeta(EMAIL_KEY, me.email);
   return me.email;

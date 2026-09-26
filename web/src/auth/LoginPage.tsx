@@ -19,7 +19,7 @@ export function LoginPage() {
       if (mode === 'login') {
         await session.signIn(email.trim(), password);
       } else {
-        await session.signUp(email.trim(), password, code.trim());
+        await session.signUp(email.trim(), password, { code: code.trim() });
       }
     } catch (error) {
       setMessage(describeError(error));

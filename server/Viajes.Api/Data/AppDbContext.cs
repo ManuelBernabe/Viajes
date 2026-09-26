@@ -26,6 +26,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<InboxAttachment> InboxAttachments => Set<InboxAttachment>();
 
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
@@ -92,6 +94,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             booking.Property(b => b.ChangeNote).HasMaxLength(1000);
             booking.HasIndex(b => b.TripId);
             booking.HasIndex(b => b.Version);
+        });
+
+        builder.Entity<Invitation>(invitation =>
+        {
+            invitation.HasKey(i => i.Id);
+            invitation.Property(i => i.TokenHash).HasMaxLength(64);
+            invitation.HasIndex(i => i.TokenHash).IsUnique();
+            invitation.HasIndex(i => i.HouseholdId);
         });
 
         builder.Entity<PushSubscription>(subscription =>
