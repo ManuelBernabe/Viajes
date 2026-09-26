@@ -20,6 +20,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<ChangeCounter> ChangeCounter => Set<ChangeCounter>();
 
+    public DbSet<ImportToken> ImportTokens => Set<ImportToken>();
+
+    public DbSet<InboxItem> InboxItems => Set<InboxItem>();
+
+    public DbSet<InboxAttachment> InboxAttachments => Set<InboxAttachment>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -81,6 +87,36 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             booking.Property(b => b.Notes).HasMaxLength(4000);
             booking.HasIndex(b => b.TripId);
             booking.HasIndex(b => b.Version);
+        });
+
+        builder.Entity<ImportToken>(token =>
+        {
+            token.HasKey(t => t.Id);
+            token.Property(t => t.TokenHash).HasMaxLength(64);
+            token.Property(t => t.Label).HasMaxLength(100);
+            token.HasIndex(t => t.TokenHash).IsUnique();
+            token.HasIndex(t => t.UserId);
+        });
+
+        builder.Entity<InboxItem>(item =>
+        {
+            item.HasKey(i => i.Id);
+            item.Property(i => i.MessageId).HasMaxLength(998);
+            item.Property(i => i.FromAddress).HasMaxLength(320);
+            item.Property(i => i.Subject).HasMaxLength(998);
+            item.Property(i => i.Status).HasMaxLength(20);
+            item.Property(i => i.RawFileKey).HasMaxLength(300);
+            item.HasIndex(i => new { i.HouseholdId, i.MessageId }).IsUnique();
+            item.HasIndex(i => i.Version);
+        });
+
+        builder.Entity<InboxAttachment>(attachment =>
+        {
+            attachment.HasKey(a => a.Id);
+            attachment.Property(a => a.FileKey).HasMaxLength(300);
+            attachment.Property(a => a.Name).HasMaxLength(255);
+            attachment.Property(a => a.Mime).HasMaxLength(100);
+            attachment.HasIndex(a => a.InboxItemId);
         });
 
         builder.Entity<Attachment>(attachment =>

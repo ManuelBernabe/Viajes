@@ -3,6 +3,7 @@ using Viajes.Api.Auth;
 using Viajes.Api.Data;
 using Viajes.Api.Diag;
 using Viajes.Api.Hosting;
+using Viajes.Api.Inbox;
 using Viajes.Api.Storage;
 using Viajes.Api.Trips;
 
@@ -48,6 +49,7 @@ app.MapGet("/api/version", (VersionInfo version) => Results.Ok(new
 app.MapAuthEndpoints();
 app.MapDiagEndpoints();
 app.MapTripEndpoints();
+app.MapInboxEndpoints();
 app.Map("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html", SpaHosting.StaticOptions(spa));
 

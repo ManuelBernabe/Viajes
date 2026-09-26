@@ -63,4 +63,10 @@ public sealed class AccessService(AppDbContext db)
 
     public Task<Attachment?> VisibleAttachment(string userId, Guid attachmentId) =>
         VisibleAttachments(userId).FirstOrDefaultAsync(a => a.Id == attachmentId);
+
+    public IQueryable<InboxItem> VisibleInboxItems(string userId) =>
+        from item in db.InboxItems
+        join member in db.HouseholdMembers on item.HouseholdId equals member.HouseholdId
+        where member.UserId == userId && member.DeletedAtMs == null
+        select item;
 }

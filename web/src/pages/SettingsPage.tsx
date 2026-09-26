@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { formatSize } from '../attachments/files';
+import { ImportTokens } from '../components/ImportTokens';
 import { dropBlobs } from '../data/offline';
 import { listTrips } from '../data/repo';
 import { syncNow, useSyncStatus } from '../data/syncClient';
@@ -89,6 +90,8 @@ export function SettingsPage() {
           {sync.running ? 'Sincronizando…' : 'Sincronizar ahora'}
         </button>
       </section>
+
+      <ImportTokens />
 
       <section className="card">
         <h3>Espacio en el móvil</h3>

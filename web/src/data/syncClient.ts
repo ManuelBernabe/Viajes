@@ -5,6 +5,7 @@ import { getMeta, openDb } from './db';
 import { todayLocal } from '../domain/agenda';
 import { downloadMissing, getManualOffline, wantedOffline } from './offline';
 import { pendingCount, toSendResult, type SendResult } from './outbox';
+import { removeInboxItem } from './repo';
 import { LAST_SYNC_KEY, syncAll, type SyncDeps, type SyncOutcome } from './sync';
 import type { Attachment, Op, StoredBlob } from './types';
 
@@ -118,6 +119,23 @@ export async function downloadAttachment(attachment: Attachment): Promise<ArrayB
     throw error;
   }
   return response.arrayBuffer();
+}
+
+/** Baja el contenido de un adjunto de la bandeja de entrada (solo con red). */
+export async function downloadInboxAttachment(itemId: string, attachmentId: string): Promise<ArrayBuffer> {
+  const response = await fetch(`/api/inbox/${itemId}/attachments/${attachmentId}/content`);
+  if (!response.ok) {
+    const error = new ApiError(response.status, 'No se ha podido bajar el adjunto del correo.');
+    noteExpired(error);
+    throw error;
+  }
+  return response.arrayBuffer();
+}
+
+/** Marca el borrador como confirmado o descartado en el servidor y lo quita del móvil. */
+export async function setInboxStatus(itemId: string, status: 'confirmed' | 'discarded', bookingId?: string): Promise<void> {
+  await api(`/api/inbox/${itemId}/status`, { method: 'POST', body: JSON.stringify({ status, bookingId: bookingId ?? null }) });
+  await removeInboxItem(itemId);
 }
 
 /** Baja los ficheros de los viajes que deben estar en el móvil. */

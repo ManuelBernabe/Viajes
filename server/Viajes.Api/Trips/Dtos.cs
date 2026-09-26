@@ -74,9 +74,34 @@ public sealed record AttachmentDto(
         a.Id, a.BookingId, a.Name, a.Mime, a.Size, a.QrText, a.Uploaded, a.CreatedBy, a.Version, a.DeletedAtMs);
 }
 
+public sealed record InboxAttachmentDto(Guid Id, string Name, string Mime, long Size, string? QrText);
+
+public sealed record InboxItemDto(
+    Guid Id,
+    string FromAddress,
+    string Subject,
+    long ReceivedMs,
+    string? SuggestedType,
+    string? SuggestedTitle,
+    string? SuggestedStartLocal,
+    string? SuggestedStartTz,
+    string? SuggestedStartPlace,
+    string? SuggestedEndLocal,
+    string? SuggestedEndTz,
+    string? SuggestedEndPlace,
+    string? SuggestedReference,
+    string? SuggestedAddress,
+    string? BodyText,
+    string Status,
+    Guid? BookingId,
+    IReadOnlyList<InboxAttachmentDto> Attachments,
+    long Version,
+    long? DeletedAtMs);
+
 public sealed record SyncResponse(
     long Version,
     IReadOnlyList<Guid> TripIds,
     IReadOnlyList<TripDto> Trips,
     IReadOnlyList<BookingDto> Bookings,
-    IReadOnlyList<AttachmentDto> Attachments);
+    IReadOnlyList<AttachmentDto> Attachments,
+    IReadOnlyList<InboxItemDto> Inbox);

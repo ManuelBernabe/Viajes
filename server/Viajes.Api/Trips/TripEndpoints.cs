@@ -366,6 +366,9 @@ public static partial class TripEndpoints
         var trips = await visibleTrips.Where(t => t.Version > from).OrderBy(t => t.Version).ToListAsync(ct);
         var bookings = await access.VisibleBookings(userId).Where(b => b.Version > from).OrderBy(b => b.Version).ToListAsync(ct);
         var attachments = await access.VisibleAttachments(userId).Where(a => a.Version > from).OrderBy(a => a.Version).ToListAsync(ct);
+        var inbox = await access.VisibleInboxItems(userId).Where(i => i.Version > from).OrderBy(i => i.Version).ToListAsync(ct);
+        var inboxIds = inbox.Select(i => i.Id).ToList();
+        var inboxAttachments = await db.InboxAttachments.Where(a => inboxIds.Contains(a.InboxItemId)).ToListAsync(ct);
         await transaction.CommitAsync(ct);
 
         return Results.Ok(new SyncResponse(
@@ -373,7 +376,8 @@ public static partial class TripEndpoints
             tripIds,
             trips.Select(TripDto.From).ToList(),
             bookings.Select(BookingDto.From).ToList(),
-            attachments.Select(AttachmentDto.From).ToList()));
+            attachments.Select(AttachmentDto.From).ToList(),
+            inbox.Select(i => Inbox.InboxEndpoints.ToDto(i, inboxAttachments.Where(a => a.InboxItemId == i.Id))).ToList()));
     }
 
     // ---- Auxiliares ----

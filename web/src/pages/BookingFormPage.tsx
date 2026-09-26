@@ -1,13 +1,24 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { describeError } from '../api';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
 import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp';
+import { suggestFromText } from '../attachments/extract';
+import { isPdf } from '../attachments/files';
+import { extractPdfText } from '../attachments/pdfText';
+import { readQr } from '../attachments/qr';
 import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAttachFiles';
-import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, timeOf, zoneLabel } from '../data/localTime';
-import { getBooking, saveBooking } from '../data/repo';
+import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, timeOf, zoneLabel } from '../data/localTime';
+import { addAttachment, getBooking, getInboxItem, saveBooking } from '../data/repo';
+import { downloadInboxAttachment, setInboxStatus } from '../data/syncClient';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
+import type { InboxPrefill } from './InboxItemPage';
+
+function isType(value: string | null): value is BookingType {
+  return value !== null && (BOOKING_TYPES as readonly string[]).includes(value);
+}
 
 function ZoneSelect({ id, value, onChange }: { id: string; value: string; onChange: (tz: string) => void }) {
   const zones = allTimeZones();
@@ -32,20 +43,24 @@ export function BookingFormPage() {
   const [pendingFiles, setPendingFiles] = useState<ReadFile[]>([]);
   const [readMessage, setReadMessage] = useState('');
 
+  // Desde la bandeja de entrada llega una propuesta: rellena el formulario y, al guardar, trae los adjuntos del correo.
+  const prefill = (useLocation().state as { prefill?: InboxPrefill } | null)?.prefill;
+  const zoneOr = (tz: string | null) => (tz && isValidZone(tz) ? tz : deviceTimeZone());
+
   const [tripId, setTripId] = useState(tripFromRoute ?? '');
-  const [type, setType] = useState<BookingType>('flight');
-  const [title, setTitle] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [startTz, setStartTz] = useState(deviceTimeZone());
-  const [startPlace, setStartPlace] = useState('');
-  const [withEnd, setWithEnd] = useState(false);
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [endTz, setEndTz] = useState(deviceTimeZone());
-  const [endPlace, setEndPlace] = useState('');
-  const [reference, setReference] = useState('');
-  const [address, setAddress] = useState('');
+  const [type, setType] = useState<BookingType>(isType(prefill?.type ?? null) ? (prefill!.type as BookingType) : 'flight');
+  const [title, setTitle] = useState(prefill?.title ?? '');
+  const [startDate, setStartDate] = useState(prefill?.startLocal ? dateOf(prefill.startLocal) : '');
+  const [startTime, setStartTime] = useState(prefill?.startLocal ? timeOf(prefill.startLocal) : '');
+  const [startTz, setStartTz] = useState(zoneOr(prefill?.startTz ?? null));
+  const [startPlace, setStartPlace] = useState(prefill?.startPlace ?? '');
+  const [withEnd, setWithEnd] = useState(!!prefill?.endLocal);
+  const [endDate, setEndDate] = useState(prefill?.endLocal ? dateOf(prefill.endLocal) : '');
+  const [endTime, setEndTime] = useState(prefill?.endLocal ? timeOf(prefill.endLocal) : '');
+  const [endTz, setEndTz] = useState(zoneOr(prefill?.endTz ?? prefill?.startTz ?? null));
+  const [endPlace, setEndPlace] = useState(prefill?.endPlace ?? '');
+  const [reference, setReference] = useState(prefill?.reference ?? '');
+  const [address, setAddress] = useState(prefill?.address ?? '');
   const [notes, setNotes] = useState('');
   const [loaded, setLoaded] = useState(!bookingId);
   const [error, setError] = useState('');
@@ -99,10 +114,67 @@ export function BookingFormPage() {
     } else {
       const withQr = read.filter((r) => r.qrText).length;
       setReadMessage(withQr ? `${withQr} QR ${withQr === 1 ? 'leído' : 'leídos'}.` : read.some((r) => !r.error) ? 'Ficheros listos para adjuntar.' : '');
+      await suggestFromPdfs(read);
     }
     if (errors.length) {
       setReadMessage((m) => `${m} ${errors.join(' ')}`.trim());
     }
+  }
+
+  /** Sin tarjeta de embarque: el texto del primer PDF legible propone los campos que sigan vacíos. */
+  async function suggestFromPdfs(read: ReadFile[]) {
+    for (const item of read) {
+      if (item.error || !isPdf(item.mime)) {
+        continue;
+      }
+      let text = '';
+      try {
+        text = await extractPdfText(item.bytes);
+      } catch {
+        continue;
+      }
+      const s = suggestFromText(text, item.file.name);
+      if (!s.type && !s.reference && !s.startDate) {
+        continue;
+      }
+      let filled = 0;
+      const fill = (current: string, value: string | null, set: (v: string) => void) => {
+        if (!current.trim() && value) {
+          set(value);
+          filled++;
+        }
+      };
+      if (s.type) setType(s.type);
+      fill(title, s.title, setTitle);
+      fill(reference, s.reference, setReference);
+      fill(startDate, s.startDate, setStartDate);
+      fill(startTime, s.startTime, setStartTime);
+      fill(startPlace, s.startPlace, setStartPlace);
+      fill(address, s.address, setAddress);
+      if (s.endDate || s.endTime || s.endPlace) {
+        setWithEnd(true);
+        fill(endDate, s.endDate ?? s.startDate, setEndDate);
+        fill(endTime, s.endTime, setEndTime);
+        fill(endPlace, s.endPlace, setEndPlace);
+      }
+      setReadMessage(filled > 0 ? `Datos propuestos a partir de ${item.file.name}: revísalos antes de guardar.` : `No se ha encontrado nada nuevo en ${item.file.name}.`);
+      return;
+    }
+  }
+
+  /** Los adjuntos del correo pasan a ser adjuntos normales de la reserva (con su QR) y el borrador se cierra. */
+  async function importInboxAttachments(inboxItemId: string, bookingId: string) {
+    const item = await getInboxItem(inboxItemId);
+    if (!item) {
+      return;
+    }
+    for (const attachment of item.attachments) {
+      setReadMessage(`Trayendo ${attachment.name}…`);
+      const bytes = await downloadInboxAttachment(item.id, attachment.id);
+      const qrText = attachment.qrText ?? (await readQr(bytes, attachment.mime));
+      await addAttachment({ bookingId, name: attachment.name, mime: attachment.mime, size: bytes.byteLength, qrText }, bytes, session.email ?? '');
+    }
+    await setInboxStatus(item.id, 'confirmed', bookingId);
   }
 
   async function submit(event: FormEvent) {
@@ -145,7 +217,12 @@ export function BookingFormPage() {
       if (pendingFiles.length > 0) {
         await attachRead(booking.id, pendingFiles);
       }
+      if (prefill?.inboxItemId) {
+        await importInboxAttachments(prefill.inboxItemId, booking.id);
+      }
       navigate(`/bookings/${booking.id}`, { replace: true });
+    } catch (error) {
+      setError(describeError(error));
     } finally {
       setSaving(false);
     }
@@ -161,6 +238,7 @@ export function BookingFormPage() {
         <BackLink to={bookingId ? `/bookings/${bookingId}` : `/trips/${tripId}`} />
         <h1>{bookingId ? 'Editar reserva' : 'Nueva reserva'}</h1>
       </div>
+      {prefill && <p className="notice">Datos propuestos a partir del correo. Revisa la fecha, la hora y la zona horaria; los adjuntos del correo se añadirán al guardar.</p>}
       <form onSubmit={submit}>
         <div className="field">
           <label>Tipo</label>
@@ -254,6 +332,7 @@ export function BookingFormPage() {
           </div>
         )}
         {progress.message && <p className="muted small">{progress.message}</p>}
+        {prefill && readMessage && <p className="muted small">{readMessage}</p>}
         {error && <p className="error">{error}</p>}
         <button className="btn primary block" type="submit" disabled={saving || progress.busy}>
           {saving ? 'Guardando…' : 'Guardar'}

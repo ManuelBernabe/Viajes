@@ -58,6 +58,16 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     }
   }
 
+  // Bandeja de entrada: en el móvil solo viven los borradores pendientes.
+  for (const item of response.inbox ?? []) {
+    applied++;
+    if (item.deletedAtMs !== null || item.status !== 'pending') {
+      await database.delete('inbox', item.id);
+    } else {
+      await database.put('inbox', item);
+    }
+  }
+
   // Un viaje que ya no está en la lista (acceso retirado) se purga aunque no llegue ninguna fila suya.
   for (const trip of await database.getAll('trips')) {
     if (!keep.has(trip.id)) {

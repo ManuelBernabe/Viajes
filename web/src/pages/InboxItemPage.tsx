@@ -1,0 +1,150 @@
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { describeError } from '../api';
+import { BackLink } from '../app/Layout';
+import { formatSize } from '../attachments/files';
+import { getInboxItem, listTrips } from '../data/repo';
+import { setInboxStatus } from '../data/syncClient';
+import { useLiveQuery } from '../data/useLive';
+import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
+
+export interface InboxPrefill {
+  inboxItemId: string;
+  type: string | null;
+  title: string | null;
+  startLocal: string | null;
+  startTz: string | null;
+  startPlace: string | null;
+  endLocal: string | null;
+  endTz: string | null;
+  endPlace: string | null;
+  reference: string | null;
+  address: string | null;
+}
+
+export function InboxItemPage() {
+  const { itemId = '' } = useParams();
+  const navigate = useNavigate();
+  const item = useLiveQuery(() => getInboxItem(itemId), [itemId]);
+  const trips = useLiveQuery(listTrips, []);
+  const [tripId, setTripId] = useState('');
+  const [message, setMessage] = useState('');
+  const [showBody, setShowBody] = useState(false);
+
+  if (item === undefined || trips === undefined) {
+    return <main className="page muted">Cargando…</main>;
+  }
+  if (!item) {
+    return (
+      <main className="page">
+        <div className="topbar">
+          <BackLink to="/inbox" />
+          <h1>Correo</h1>
+        </div>
+        <p className="empty">Este borrador ya se ha tratado.</p>
+      </main>
+    );
+  }
+
+  const sorted = sortTrips(trips, todayLocal());
+  const options = [...sorted.active, ...sorted.past];
+  const chosen = tripId || options[0]?.id || '';
+
+  function createBooking() {
+    if (!chosen) {
+      setMessage('Crea primero un viaje donde guardar la reserva.');
+      return;
+    }
+    const prefill: InboxPrefill = {
+      inboxItemId: item!.id,
+      type: item!.suggestedType,
+      title: item!.suggestedTitle ?? item!.subject,
+      startLocal: item!.suggestedStartLocal,
+      startTz: item!.suggestedStartTz,
+      startPlace: item!.suggestedStartPlace,
+      endLocal: item!.suggestedEndLocal,
+      endTz: item!.suggestedEndTz,
+      endPlace: item!.suggestedEndPlace,
+      reference: item!.suggestedReference,
+      address: item!.suggestedAddress,
+    };
+    navigate(`/trips/${chosen}/bookings/new`, { state: { prefill } });
+  }
+
+  async function discard() {
+    if (!confirm('¿Descartar este correo? No se creará ninguna reserva.')) {
+      return;
+    }
+    try {
+      await setInboxStatus(item!.id, 'discarded');
+      navigate('/inbox', { replace: true });
+    } catch (error) {
+      setMessage(describeError(error));
+    }
+  }
+
+  return (
+    <main className="page">
+      <div className="topbar">
+        <BackLink to="/inbox" />
+        <h1>{item.suggestedTitle ?? item.subject}</h1>
+      </div>
+
+      <section className="card">
+        <div className="small muted">De {item.fromAddress}</div>
+        <div className="small muted">Asunto: {item.subject}</div>
+        {item.suggestedType && (
+          <p>
+            {TYPE_INFO[item.suggestedType].icon} {TYPE_INFO[item.suggestedType].label}
+            {item.suggestedStartLocal && ` · ${item.suggestedStartLocal.replace('T', ' ')}`}
+            {item.suggestedReference && ` · ${item.suggestedReference}`}
+          </p>
+        )}
+        {!item.suggestedType && <p className="small">No se han encontrado datos estructurados: la reserva se rellena a mano con el asunto y los adjuntos.</p>}
+        {item.attachments.length > 0 && (
+          <ul className="small">
+            {item.attachments.map((a) => (
+              <li key={a.id}>
+                {a.name} · {formatSize(a.size)}
+                {a.qrText && ' · código de barras leído'}
+              </li>
+            ))}
+          </ul>
+        )}
+        {item.bodyText && (
+          <button className="btn small" type="button" onClick={() => setShowBody(!showBody)}>
+            {showBody ? 'Ocultar el correo' : 'Ver el texto del correo'}
+          </button>
+        )}
+        {showBody && <pre className="small" style={{ whiteSpace: 'pre-wrap' }}>{item.bodyText}</pre>}
+      </section>
+
+      <div className="field">
+        <label htmlFor="trip">Viaje</label>
+        {options.length > 0 ? (
+          <select id="trip" value={chosen} onChange={(e) => setTripId(e.target.value)}>
+            {options.map((trip) => (
+              <option key={trip.id} value={trip.id}>
+                {trip.title}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Link className="btn" to="/trips/new">
+            Crear un viaje
+          </Link>
+        )}
+      </div>
+
+      {message && <p className="error">{message}</p>}
+      <div className="actions">
+        <button className="btn primary" onClick={createBooking}>
+          Crear reserva
+        </button>
+        <button className="btn danger" onClick={() => void discard()}>
+          Descartar
+        </button>
+      </div>
+    </main>
+  );
+}

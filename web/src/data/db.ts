@@ -1,5 +1,5 @@
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Attachment, Booking, Op, StoredBlob, Trip } from './types';
+import type { Attachment, Booking, InboxItem, Op, StoredBlob, Trip } from './types';
 
 export interface ViajesDb extends DBSchema {
   trips: { key: string; value: Trip };
@@ -8,6 +8,7 @@ export interface ViajesDb extends DBSchema {
   blobs: { key: string; value: StoredBlob };
   outbox: { key: number; value: Op };
   meta: { key: string; value: unknown };
+  inbox: { key: string; value: InboxItem };
 }
 
 export const DB_NAME = 'viajes';
@@ -16,14 +17,19 @@ let opening: Promise<IDBPDatabase<ViajesDb>> | null = null;
 
 /** Una sola conexión compartida: abrir y cerrar en cada consulta es lento en iOS. */
 export function openDb(): Promise<IDBPDatabase<ViajesDb>> {
-  opening ??= openDB<ViajesDb>(DB_NAME, 1, {
-    upgrade(database) {
-      database.createObjectStore('trips', { keyPath: 'id' });
-      database.createObjectStore('bookings', { keyPath: 'id' }).createIndex('tripId', 'tripId');
-      database.createObjectStore('attachments', { keyPath: 'id' }).createIndex('bookingId', 'bookingId');
-      database.createObjectStore('blobs', { keyPath: 'id' });
-      database.createObjectStore('outbox', { autoIncrement: true });
-      database.createObjectStore('meta');
+  opening ??= openDB<ViajesDb>(DB_NAME, 2, {
+    upgrade(database, oldVersion) {
+      if (oldVersion < 1) {
+        database.createObjectStore('trips', { keyPath: 'id' });
+        database.createObjectStore('bookings', { keyPath: 'id' }).createIndex('tripId', 'tripId');
+        database.createObjectStore('attachments', { keyPath: 'id' }).createIndex('bookingId', 'bookingId');
+        database.createObjectStore('blobs', { keyPath: 'id' });
+        database.createObjectStore('outbox', { autoIncrement: true });
+        database.createObjectStore('meta');
+      }
+      if (oldVersion < 2) {
+        database.createObjectStore('inbox', { keyPath: 'id' });
+      }
     },
     blocked() {
       // Otra pestaña con una versión vieja: no pasa en la app instalada.

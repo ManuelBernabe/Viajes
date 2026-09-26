@@ -145,3 +145,25 @@ describe('syncAll', () => {
     expect(outcome.incomplete).toBe(true);
   });
 });
+
+describe('bandeja de entrada', () => {
+  const inboxItem = (id: string, status: 'pending' | 'confirmed' | 'discarded' = 'pending') => ({
+    id, fromAddress: 'a@b.c', subject: id, receivedMs: 1, suggestedType: null, suggestedTitle: null, suggestedStartLocal: null,
+    suggestedStartTz: null, suggestedStartPlace: null, suggestedEndLocal: null, suggestedEndTz: null, suggestedEndPlace: null,
+    suggestedReference: null, suggestedAddress: null, bodyText: null, status, bookingId: null, attachments: [], version: 1, deletedAtMs: null,
+  });
+
+  it('solo conserva los borradores pendientes', async () => {
+    await pull({ fetchSync: async () => response({ inbox: [inboxItem('p'), inboxItem('c', 'confirmed')] }) });
+    const database = await openDb();
+    expect((await database.getAllKeys('inbox'))).toEqual(['p']);
+
+    await pull({ fetchSync: async () => response({ inbox: [inboxItem('p', 'discarded')] }) });
+    expect(await database.getAllKeys('inbox')).toEqual([]);
+  });
+
+  it('un servidor sin bandeja no rompe nada', async () => {
+    await pull({ fetchSync: async () => ({ version: 1, tripIds: [], trips: [], bookings: [], attachments: [] }) });
+    expect(await (await openDb()).getAllKeys('inbox')).toEqual([]);
+  });
+});

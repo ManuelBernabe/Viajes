@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
-import { listAllBookings, listAttachments, listTrips } from '../data/repo';
+import { listAllBookings, listAttachments, listInbox, listTrips } from '../data/repo';
 import { useSyncStatus } from '../data/syncClient';
 import type { Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
@@ -65,6 +65,7 @@ function NextUp() {
 
 export function HomePage() {
   const trips = useLiveQuery(listTrips, []);
+  const inboxCount = useLiveQuery(async () => (await listInbox()).length, []) ?? 0;
   const sync = useSyncStatus();
   const sorted = trips ? sortTrips(trips, todayLocal()) : null;
 
@@ -81,6 +82,16 @@ export function HomePage() {
           {sync.pending} {sync.pending === 1 ? 'cambio pendiente' : 'cambios pendientes'} de enviar
           {sync.incomplete ? ' · sin conexión con el servidor' : ''}
         </p>
+      )}
+      {inboxCount > 0 && (
+        <Link className="card highlight" to="/inbox">
+          <div className="row between">
+            <span>
+              ✉️ {inboxCount} {inboxCount === 1 ? 'correo por revisar' : 'correos por revisar'}
+            </span>
+            <span className="muted">›</span>
+          </div>
+        </Link>
       )}
       <NextUp />
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (

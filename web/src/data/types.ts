@@ -58,12 +58,47 @@ export interface StoredBlob {
   bytes: ArrayBuffer;
 }
 
+export interface InboxAttachment {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  qrText: string | null;
+}
+
+export type InboxStatus = 'pending' | 'confirmed' | 'discarded';
+
+/** Un correo importado desde Gmail, pendiente de convertirse en reserva. Solo los pendientes viven en el móvil. */
+export interface InboxItem {
+  id: string;
+  fromAddress: string;
+  subject: string;
+  receivedMs: number;
+  suggestedType: BookingType | null;
+  suggestedTitle: string | null;
+  suggestedStartLocal: string | null;
+  suggestedStartTz: string | null;
+  suggestedStartPlace: string | null;
+  suggestedEndLocal: string | null;
+  suggestedEndTz: string | null;
+  suggestedEndPlace: string | null;
+  suggestedReference: string | null;
+  suggestedAddress: string | null;
+  bodyText: string | null;
+  status: InboxStatus;
+  bookingId: string | null;
+  attachments: InboxAttachment[];
+  version: number;
+  deletedAtMs: number | null;
+}
+
 export interface SyncResponse {
   version: number;
   tripIds: string[];
   trips: Trip[];
   bookings: Booking[];
   attachments: Attachment[];
+  inbox?: InboxItem[];
 }
 
 export interface TripBody {

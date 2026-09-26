@@ -7,6 +7,8 @@ import { AttachmentViewerPage } from './pages/AttachmentViewerPage';
 import { BookingFormPage } from './pages/BookingFormPage';
 import { BookingPage } from './pages/BookingPage';
 import { HomePage } from './pages/HomePage';
+import { InboxItemPage } from './pages/InboxItemPage';
+import { InboxPage } from './pages/InboxPage';
 import { QrPage } from './pages/QrPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TripFormPage } from './pages/TripFormPage';
@@ -33,6 +35,8 @@ function Gate() {
         <Route path="/bookings/:bookingId" element={<BookingPage />} />
         <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/inbox" element={<InboxPage />} />
+        <Route path="/inbox/:itemId" element={<InboxItemPage />} />
       </Route>
       <Route path="/bookings/:bookingId/qr" element={<QrPage />} />
       <Route path="/attachments/:attachmentId" element={<AttachmentViewerPage />} />

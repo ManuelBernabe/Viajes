@@ -66,7 +66,20 @@ public sealed class TripsApi(HttpClient client)
     public async Task<Sync> GetSync(long since = 0) =>
         (await Client.GetFromJsonAsync<Sync>($"/api/sync?since={since}"))!;
 
+    public async Task<SyncFull> GetSyncFull(long since = 0) =>
+        (await Client.GetFromJsonAsync<SyncFull>($"/api/sync?since={since}"))!;
+
     public sealed record Sync(long Version, List<Guid> TripIds, List<TripRow> Trips, List<BookingRow> Bookings, List<AttachmentRow> Attachments);
+
+    public sealed record SyncFull(long Version, List<Guid> TripIds, List<TripRow> Trips, List<BookingRow> Bookings, List<AttachmentRow> Attachments, List<InboxRow> Inbox);
+
+    public sealed record InboxRow(
+        Guid Id, string FromAddress, string Subject, long ReceivedMs, string? SuggestedType, string? SuggestedTitle,
+        string? SuggestedStartLocal, string? SuggestedStartTz, string? SuggestedStartPlace, string? SuggestedEndLocal, string? SuggestedEndTz,
+        string? SuggestedEndPlace, string? SuggestedReference, string? SuggestedAddress, string? BodyText, string Status, Guid? BookingId,
+        List<InboxAttachmentRow> Attachments, long Version, long? DeletedAtMs);
+
+    public sealed record InboxAttachmentRow(Guid Id, string Name, string Mime, long Size, string? QrText);
 
     public sealed record TripRow(Guid Id, string Title, string? Destination, string? StartDate, string? EndDate, long Version, long? DeletedAtMs);
 

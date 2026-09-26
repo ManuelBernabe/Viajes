@@ -2,7 +2,7 @@ import { emitChange } from './bus';
 import { openDb } from './db';
 import { toUtcMs } from './localTime';
 import { enqueue } from './outbox';
-import type { Attachment, AttachmentBody, Booking, BookingBody, StoredBlob, Trip, TripBody } from './types';
+import type { Attachment, AttachmentBody, Booking, BookingBody, InboxItem, StoredBlob, Trip, TripBody } from './types';
 
 /**
  * Escrituras: se aplican en local al instante, se encolan para el servidor y se avisa a las pantallas.
@@ -173,10 +173,26 @@ export async function deleteAttachment(id: string): Promise<void> {
   emitChange();
 }
 
+// ---- Bandeja de entrada ----
+
+export async function listInbox(): Promise<InboxItem[]> {
+  return (await (await openDb()).getAll('inbox')).sort((a, b) => b.receivedMs - a.receivedMs);
+}
+
+export async function getInboxItem(id: string): Promise<InboxItem | undefined> {
+  return (await openDb()).get('inbox', id);
+}
+
+/** Tras confirmar o descartar en el servidor, el borrador desaparece del móvil. */
+export async function removeInboxItem(id: string): Promise<void> {
+  await (await openDb()).delete('inbox', id);
+  emitChange();
+}
+
 /** Borra todo lo local (al cerrar sesión). */
 export async function clearAll(): Promise<void> {
   const database = await openDb();
-  const tx = database.transaction(['trips', 'bookings', 'attachments', 'blobs', 'outbox', 'meta'], 'readwrite');
+  const tx = database.transaction(['trips', 'bookings', 'attachments', 'blobs', 'outbox', 'meta', 'inbox'], 'readwrite');
   await Promise.all([
     tx.objectStore('trips').clear(),
     tx.objectStore('bookings').clear(),
@@ -184,6 +200,7 @@ export async function clearAll(): Promise<void> {
     tx.objectStore('blobs').clear(),
     tx.objectStore('outbox').clear(),
     tx.objectStore('meta').clear(),
+    tx.objectStore('inbox').clear(),
   ]);
   await tx.done;
   emitChange();
