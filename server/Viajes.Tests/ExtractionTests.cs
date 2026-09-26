@@ -83,6 +83,33 @@ public sealed class ExtractionTests(AiApp app) : IClassFixture<AiApp>
     }
 
     [Fact]
+    public async Task A_json_body_carries_text_and_several_files()
+    {
+        var api = await TripsApi.SignUp(app, "ia5@example.com");
+        var page = new byte[] { 1, 2, 3 };
+
+        var response = await api.Client.PostAsJsonAsync("/api/extract", new
+        {
+            text = "Código de reserva DWYOLX",
+            files = new[] { new { name = "pagina-1.jpg", mime = "image/jpeg", data = Convert.ToBase64String(page) } },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var input = app.Fake.Inputs.Last();
+        Assert.Equal("Código de reserva DWYOLX", input.Text);
+        Assert.Equal(("pagina-1.jpg", "image/jpeg"), (input.Files.Single().Name, input.Files.Single().Mime));
+        Assert.Equal(page, input.Files.Single().Bytes);
+    }
+
+    [Fact]
+    public void Gemini_output_text_is_found_directly_or_inside_the_steps()
+    {
+        Assert.Equal("{\"a\":1}", Viajes.Api.Ai.GeminiBookingExtractor.OutputText("{\"id\":\"x\",\"output_text\":\"{\\\"a\\\":1}\"}"));
+        Assert.Equal("{\"b\":2}", Viajes.Api.Ai.GeminiBookingExtractor.OutputText("{\"id\":\"x\",\"steps\":[{\"type\":\"model\",\"content\":[{\"type\":\"thought\",\"text\":\"…\"},{\"type\":\"text\",\"text\":\"{\\\"b\\\":2}\"}]}]}"));
+        Assert.Null(Viajes.Api.Ai.GeminiBookingExtractor.OutputText("{\"id\":\"x\"}"));
+    }
+
+    [Fact]
     public async Task Extraction_needs_a_session()
     {
         var client = app.CreateHttpsClient(handleCookies: false);
