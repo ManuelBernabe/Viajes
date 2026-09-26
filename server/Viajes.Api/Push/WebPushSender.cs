@@ -30,6 +30,13 @@ public sealed class WebPushSender : IPushSender
 
     public string? PublicKey { get; }
 
+    /// <summary>Opciones para WebPushClient: solo admite headers, gcmAPIKey, vapidDetails y TTL; la urgencia va como cabecera.</summary>
+    public static Dictionary<string, object> Options() => new()
+    {
+        ["TTL"] = 6 * 3600,
+        ["headers"] = new Dictionary<string, object> { ["Urgency"] = "high" },
+    };
+
     public async Task<PushResult> SendAsync(Data.PushSubscription subscription, PushMessage message, CancellationToken ct)
     {
         if (_client is null)
@@ -43,7 +50,7 @@ public sealed class WebPushSender : IPushSender
             await _client.SendNotificationAsync(
                 new WebPush.PushSubscription(subscription.Endpoint, subscription.P256dh, subscription.Auth),
                 payload,
-                new Dictionary<string, object> { ["TTL"] = 6 * 3600, ["urgency"] = "high" },
+                Options(),
                 ct);
             return PushResult.Sent;
         }
@@ -57,9 +64,10 @@ public sealed class WebPushSender : IPushSender
             _log.LogWarning(e, "Web Push respondió {Codigo}.", (int)e.StatusCode);
             return PushResult.Failed;
         }
-        catch (HttpRequestException e)
+        catch (Exception e) when (e is HttpRequestException or ArgumentException or InvalidOperationException or TaskCanceledException)
         {
-            _log.LogWarning(e, "Web Push: error de red.");
+            // Un fallo al enviar no debe tumbar la petición ni el servicio de recordatorios.
+            _log.LogWarning(e, "Web Push: no se pudo enviar.");
             return PushResult.Failed;
         }
     }
