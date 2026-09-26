@@ -141,6 +141,34 @@ public sealed class ExtractionTests(AiApp app) : IClassFixture<AiApp>
         Assert.Contains("23G", item.SuggestedNotes);
     }
 
+    [Fact]
+    public async Task An_inbox_item_can_be_read_again_with_the_extractor()
+    {
+        var api = await TripsApi.SignUp(app, "ia6@example.com");
+        var created = await (await api.Client.PostAsJsonAsync("/api/import-tokens/", new { label = "x" })).Content.ReadFromJsonAsync<Created>();
+        var eml = "Authentication-Results: mx.google.com; dkim=pass\r\nFrom: a <automated@airbnb.com>\r\nTo: manuel+viajes@gmail.com\r\nSubject: Reserva\r\nDate: Mon, 21 Sep 2026 10:00:00 +0200\r\nMessage-ID: <re-1@x>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nLlegada jue, 15 oct\r\n";
+        var client = app.CreateHttpsClient(handleCookies: false);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", created!.Token);
+        var body = new StringContent(eml, Encoding.UTF8);
+        body.Headers.ContentType = new MediaTypeHeaderValue("message/rfc822");
+        app.Fake.Result = null;
+        await client.PostAsync("/api/inbox/import", body);
+        var item = Assert.Single((await api.GetSyncFull()).Inbox);
+        Assert.Null(item.SuggestedNotes);
+
+        app.Fake.Result = new Extraction("hotel", "Airbnb · Praia da Barra", "HMSR4NN3H9", "2026-10-15T15:00", "America/Bahia", "Airbnb · Praia da Barra", "2026-10-18T11:00", "America/Bahia", null, "R. Afonso Celso, 535", "2 adultos");
+        var response = await api.Client.PostAsync($"/api/inbox/{item.Id}/extract", null);
+        var updated = await response.Content.ReadFromJsonAsync<TripsApi.InboxRow>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(("hotel", "HMSR4NN3H9", "2026-10-15T15:00", "2 adultos"), (updated!.SuggestedType, updated.SuggestedReference, updated.SuggestedStartLocal, updated.SuggestedNotes));
+        Assert.Contains("Llegada", app.Fake.Inputs.Last().Text);
+        Assert.Equal("2 adultos", (await api.GetSyncFull()).Inbox.Single().SuggestedNotes);
+
+        var bea = await TripsApi.SignUp(app, "bea-ia@example.com");
+        Assert.Equal(HttpStatusCode.NotFound, (await bea.Client.PostAsync($"/api/inbox/{item.Id}/extract", null)).StatusCode);
+    }
+
     private static Task<HttpResponseMessage> Post(TripsApi api, byte[] bytes, string mime, string? name)
     {
         var content = new ByteArrayContent(bytes);

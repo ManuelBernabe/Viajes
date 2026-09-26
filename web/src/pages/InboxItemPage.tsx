@@ -8,7 +8,7 @@ import { extractPdfText } from '../attachments/pdfText';
 import { useSession } from '../app/SessionContext';
 import { importInboxAttachments } from '../data/inboxImport';
 import { getInboxItem, listAllBookings, listTrips, saveBooking } from '../data/repo';
-import { downloadInboxAttachment, setInboxStatus } from '../data/syncClient';
+import { downloadInboxAttachment, reExtractInbox, setInboxStatus } from '../data/syncClient';
 import type { Booking } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
@@ -78,25 +78,36 @@ export function InboxItemPage() {
     }
     setPreparing(true);
     setMessage('');
+    // Si el correo entró sin IA (antes de configurarla o con el modelo saturado), se pide ahora una lectura.
+    let source = item!;
+    const sources: string[] = [];
+    if (source.suggestedNotes === null || source.suggestedNotes === undefined) {
+      const again = await reExtractInbox(source.id);
+      if (again) {
+        source = again;
+        sources.push('la lectura con IA del correo');
+      }
+    } else {
+      sources.push('la lectura con IA del correo');
+    }
     let prefill: InboxPrefill = {
-      inboxItemId: item!.id,
-      type: item!.suggestedType,
-      title: item!.suggestedTitle,
-      startLocal: item!.suggestedStartLocal,
-      startTz: item!.suggestedStartTz,
-      startPlace: item!.suggestedStartPlace,
-      endLocal: item!.suggestedEndLocal,
-      endTz: item!.suggestedEndTz,
-      endPlace: item!.suggestedEndPlace,
-      reference: item!.suggestedReference,
-      address: item!.suggestedAddress,
-      notes: item!.suggestedNotes ?? null,
+      inboxItemId: source.id,
+      type: source.suggestedType,
+      title: source.suggestedTitle,
+      startLocal: source.suggestedStartLocal,
+      startTz: source.suggestedStartTz,
+      startPlace: source.suggestedStartPlace,
+      endLocal: source.suggestedEndLocal,
+      endTz: source.suggestedEndTz,
+      endPlace: source.suggestedEndPlace,
+      reference: source.suggestedReference,
+      address: source.suggestedAddress,
+      notes: source.suggestedNotes ?? null,
     };
     const complete = () =>
       !!(prefill.type && prefill.startLocal && prefill.reference && prefill.startPlace && prefill.endPlace);
-    const sources: string[] = [];
     const warnings: string[] = [];
-    if (prefill.type) {
+    if (prefill.type && sources.length === 0) {
       sources.push('los datos estructurados del correo');
     }
     try {

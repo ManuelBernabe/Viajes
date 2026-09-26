@@ -402,3 +402,55 @@ Seguinos:`;
     });
   });
 });
+
+describe('confirmación de Airbnb reenviada', () => {
+  const text = `---------- Mensaje reenviado ---------
+De: Airbnb <automated@airbnb.com>
+Fecha: El sáb, 26 sept 2026 a las 12:19
+Asunto: Confirmado: recibo de Airbnb de tu viaje (15–18 oct)
+
+Ya está todo listo para tu reserva en Salvador
+Luxo, conforto e vista mar da Praia da Barra!
+
+Casa/apto. entero, anfitrión: Glauber
+
+Llegada
+
+jue, 15 oct
+
+Después de las 15:00
+
+Salida
+
+dom, 18 oct
+
+Hasta las 11:00
+Dirección
+
+R. Afonso Celso, 535 - Barra, Salvador - BA, 40140-080, Brazil
+Viajeros
+
+2 adultos
+Desglose del precio
+
+68,28 € por 3 noches
+Pago completado el 26 sept
+Cobro el 30 sept
+Código de confirmación: HMSR4NN3H9`;
+
+  it('coge llegada y salida por etiqueta, no la fecha del reenvío ni la del pago', () => {
+    const year = inferYear(10, 15);
+    const s = suggestFromText(text);
+
+    expect(s).toMatchObject({
+      type: 'hotel',
+      title: 'Airbnb · Luxo, conforto e vista mar da Praia da Barra!',
+      reference: 'HMSR4NN3H9',
+      startDate: `${year}-10-15`,
+      startTime: '15:00',
+      endDate: `${year}-10-18`,
+      endTime: '11:00',
+      address: 'R. Afonso Celso, 535 - Barra, Salvador - BA, 40140-080, Brazil',
+    });
+  });
+});

@@ -53,10 +53,15 @@ function isoDate(day: number, month: number, year: number): string | null {
 export function findDates(text: string): { date: string; index: number }[] {
   const found: { date: string; index: number }[] = [];
   const isIssueStamp = (index: number, length: number) => {
-    // «09/06/2026 - 11:05» es el sello de emisión del billete, no la fecha del viaje.
-    const after = text.slice(index + length, index + length + 12);
+    // «09/06/2026 - 11:05» es el sello de emisión del billete; «Fecha: El sáb, 26 sept 2026 a las 12:19» la cabecera
+    // de un reenvío; «Pago completado el 26 sept», un cobro. Ninguna es la fecha del viaje.
+    const after = text.slice(index + length, index + length + 14);
     const before = text.slice(Math.max(0, index - 40), index).toLowerCase();
-    return /^\s*-\s*\d{1,2}[:.]\d{2}/.test(after) || /(emisi[oó]n|emitido|impreso|compra|fecha de reserva|issued|printed)\W*$/.test(before);
+    return (
+      /^\s*-\s*\d{1,2}[:.]\d{2}/.test(after) ||
+      /^\s*a las \d{1,2}[:.]\d{2}/.test(after) ||
+      /(emisi[oó]n|emitido|impreso|compra|fecha de reserva|issued|printed|pago completado el|cobro el|fecha:\s*el|date:)\W*$/.test(before)
+    );
   };
   const push = (date: string | null, match: RegExpExecArray) => {
     if (date && !isIssueStamp(match.index, match[0].length)) {
@@ -81,16 +86,25 @@ export function findDates(text: string): { date: string; index: number }[] {
     }
   }
   // «jueves, 01 octubre» sin año: la próxima vez que caiga esa fecha (el año en curso, o el siguiente si ya pasó hace más de 60 días).
-  if (found.length === 0) {
-    const noYear = /\b(\d{1,2})\s+(?:de\s+)?([a-záéíóú]{3,10})\b\.?(?!\s*(?:de\s+)?\d{4})/gi;
-    while ((match = noYear.exec(text))) {
-      const month = MONTHS[match[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
-      if (month) {
-        push(isoDate(Number(match[1]), month, inferYear(month, Number(match[1]))), match);
-      }
+  // Se admiten siempre (un reenvío trae la fecha del reenvío con año y las del viaje sin él), pero sin duplicar las que ya tienen año.
+  const noYear = /\b(\d{1,2})\s+(?:de\s+)?([a-záéíóú]{3,10})\b\.?(?!\s*(?:de\s+)?\d{4})/gi;
+  while ((match = noYear.exec(text))) {
+    const month = MONTHS[match[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
+    if (month && !found.some((d) => Math.abs(d.index - match!.index) < 3)) {
+      push(isoDate(Number(match[1]), month, inferYear(month, Number(match[1]))), match);
     }
   }
   return found.sort((a, b) => a.index - b.index);
+}
+
+/** La primera fecha que aparece poco después de una etiqueta («Llegada», «Check-in»…). */
+function labeledDate(text: string, label: RegExp): { date: string; index: number } | undefined {
+  const match = label.exec(text);
+  if (!match) {
+    return undefined;
+  }
+  const from = match.index;
+  return findDates(text.slice(from, from + 80)).map((d) => ({ date: d.date, index: d.index + from }))[0];
 }
 
 /** Año más plausible para un día/mes sin año: el actual, salvo que quede más de 60 días atrás. */
@@ -415,13 +429,21 @@ export function suggestFromText(rawText: string, fileName = ''): TextSuggestion 
     const route = stations.from && stations.to ? `${titleCase(stations.from)} → ${titleCase(stations.to)}` : null;
     suggestion.title = [findTrain(text), route].filter(Boolean).join(' ') || 'Tren';
   } else if (type === 'hotel') {
+    // Entrada y salida por sus etiquetas («Llegada jue, 15 oct», «Check-in: 26/09/2026»); si no, por orden.
+    const checkIn = labeledDate(text, /\b(?:llegada|entrada|check-?in)\b/i);
+    const checkOut = labeledDate(text, /\b(?:salida|check-?out)\b/i);
+    suggestion.startDate = checkIn?.date ?? suggestion.startDate;
+    suggestion.endDate = checkOut?.date ?? later?.date ?? null;
+    const timeAfter = (index: number | undefined) => (index === undefined ? null : findTimes(text.slice(index, index + 80))[0]?.time ?? null);
+    suggestion.startTime = timeAfter(checkIn?.index);
+    suggestion.endTime = timeAfter(checkOut?.index);
     const name = /\b(?:hotel|hostal|apartamentos?|parador)\s+([A-ZÁÉÍÓÚÑ][^\n,]{2,50})/i.exec(text);
-    suggestion.title = name ? name[0].trim() : 'Hotel';
-    suggestion.endDate = later?.date ?? null;
-    suggestion.startTime = null;
-    suggestion.endTime = null;
+    const airbnb = /airbnb/i.test(text) ? /^(.{6,80})\n+\s*(?:casa|apto|apartamento|habitaci[oó]n|alojamiento entero)[^\n]*anfitri[oó]n/im.exec(text) : null;
+    const city = /reserva en ([A-ZÁÉÍÓÚÑ][^\n.!]{2,40})/i.exec(text);
+    suggestion.title = airbnb ? `Airbnb · ${airbnb[1].trim()}` : name ? name[0].trim() : city ? `Alojamiento en ${city[1].trim()}` : 'Alojamiento';
     const address = /\b(?:direcci[oó]n|address)\s*[:\-]?\s*([^\n]{8,120})/i.exec(text);
     suggestion.address = address ? address[1].trim() : null;
+    suggestion.startPlace = suggestion.title;
   } else if (type === 'car') {
     suggestion.title = 'Alquiler de coche';
     suggestion.endDate = later?.date ?? null;

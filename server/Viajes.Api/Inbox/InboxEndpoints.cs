@@ -31,6 +31,7 @@ public static class InboxEndpoints
 
         var inbox = app.MapGroup("/api/inbox").RequireAuthorization();
         inbox.MapPost("/{id:guid}/status", SetStatus);
+        inbox.MapPost("/{id:guid}/extract", ReExtract);
         inbox.MapGet("/{id:guid}/attachments/{attachmentId:guid}/content", AttachmentContent);
     }
 
@@ -259,6 +260,58 @@ public static class InboxEndpoints
         item.BookingId = body.Status == InboxItem.Confirmed ? body.BookingId : null;
         await db.SaveChangesAsync();
         return Results.NoContent();
+    }
+
+    /// <summary>Vuelve a leer un borrador con la IA (para los importados antes de configurarla o si falló entonces).</summary>
+    private static async Task<IResult> ReExtract(
+        Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, IFileStore store, IBookingExtractor extractor, CancellationToken ct)
+    {
+        if (!extractor.IsAvailable)
+        {
+            return Results.Problem("La lectura con IA no está configurada en el servidor.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var userId = users.GetUserId(principal)!;
+        var item = await access.VisibleInboxItems(userId).FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (item is null)
+        {
+            return Results.Problem("No existe o no tienes acceso.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        var attachments = await db.InboxAttachments.Where(a => a.InboxItemId == id).ToListAsync(ct);
+        var files = new List<ExtractionFile>();
+        foreach (var attachment in attachments.Where(a => a.Mime == "application/pdf" || a.Mime.StartsWith("image/")))
+        {
+            var file = await store.OpenReadAsync(attachment.FileKey, ct);
+            if (file is null)
+            {
+                continue;
+            }
+
+            using var buffer = new MemoryStream();
+            await file.Content.CopyToAsync(buffer, ct);
+            files.Add(new ExtractionFile(attachment.Name, attachment.Mime, buffer.ToArray()));
+        }
+
+        var extraction = await extractor.ExtractAsync(new ExtractionInput(item.BodyText, files), ct);
+        if (extraction is null)
+        {
+            return Results.Problem("No se ha encontrado ninguna reserva en el correo.", statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
+
+        item.SuggestedType = extraction.Type ?? item.SuggestedType;
+        item.SuggestedTitle = extraction.Title ?? item.SuggestedTitle;
+        item.SuggestedReference = extraction.Reference ?? item.SuggestedReference;
+        item.SuggestedStartLocal = extraction.StartLocal ?? item.SuggestedStartLocal;
+        item.SuggestedStartTz = extraction.StartTz ?? item.SuggestedStartTz;
+        item.SuggestedStartPlace = extraction.StartPlace ?? item.SuggestedStartPlace;
+        item.SuggestedEndLocal = extraction.EndLocal ?? item.SuggestedEndLocal;
+        item.SuggestedEndTz = extraction.EndTz ?? item.SuggestedEndTz;
+        item.SuggestedEndPlace = extraction.EndPlace ?? item.SuggestedEndPlace;
+        item.SuggestedAddress = extraction.Address ?? item.SuggestedAddress;
+        item.SuggestedNotes = extraction.Notes ?? item.SuggestedNotes;
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(ToDto(item, attachments));
     }
 
     private static async Task<IResult> AttachmentContent(

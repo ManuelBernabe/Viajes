@@ -7,7 +7,8 @@ import { downloadMissing, getManualOffline, wantedOffline } from './offline';
 import { pendingCount, toSendResult, type SendResult } from './outbox';
 import { removeInboxItem } from './repo';
 import { LAST_SYNC_KEY, syncAll, type SyncDeps, type SyncOutcome } from './sync';
-import type { Attachment, Op, StoredBlob } from './types';
+import type { Attachment, InboxItem, Op, StoredBlob } from './types';
+import { emitChange } from './bus';
 
 export interface SyncStatus {
   running: boolean;
@@ -130,6 +131,19 @@ export async function downloadInboxAttachment(itemId: string, attachmentId: stri
     throw error;
   }
   return response.arrayBuffer();
+}
+
+/** Pide al servidor que vuelva a leer el borrador con IA; null si no hay IA, no reconoce nada o no hay red. */
+export async function reExtractInbox(itemId: string): Promise<InboxItem | null> {
+  try {
+    const item = await api<InboxItem>(`/api/inbox/${itemId}/extract`, { method: 'POST' });
+    await (await openDb()).put('inbox', item);
+    emitChange();
+    return item;
+  } catch (error) {
+    noteExpired(error);
+    return null;
+  }
 }
 
 /** Marca el borrador como confirmado o descartado en el servidor y lo quita del móvil. */
