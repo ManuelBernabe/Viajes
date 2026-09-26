@@ -78,12 +78,12 @@ export function InboxItemPage() {
       reference: item!.suggestedReference,
       address: item!.suggestedAddress,
     };
+    const complete = () =>
+      !!(prefill.type && prefill.startLocal && prefill.reference && prefill.startPlace && prefill.endPlace);
     try {
-      if (!prefill.type && item!.bodyText) {
-        prefill = applySuggestion(prefill, suggestFromText(item!.bodyText, item!.subject));
-      }
+      // El billete adjunto es más fiable que el texto del correo: va primero.
       for (const attachment of item!.attachments) {
-        if (!isPdf(attachment.mime) || (prefill.type && prefill.startLocal && prefill.reference)) {
+        if (!isPdf(attachment.mime) || complete()) {
           continue;
         }
         try {
@@ -92,6 +92,9 @@ export function InboxItemPage() {
         } catch {
           // Sin red o PDF ilegible: se sigue con lo que hay.
         }
+      }
+      if (!complete() && item!.bodyText) {
+        prefill = applySuggestion(prefill, suggestFromText(item!.bodyText, item!.subject));
       }
     } finally {
       setPreparing(false);

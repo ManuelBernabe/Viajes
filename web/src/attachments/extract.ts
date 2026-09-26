@@ -137,9 +137,10 @@ function detectType(text: string): BookingType | null {
 }
 
 function findReference(text: string): string | null {
-  const re = /\b(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/i;
+  // Admite una palabra entre la etiqueta y el código («Localizador Renfe: C3BMDV»); el código lleva al menos una cifra o va en mayúsculas.
+  const re = /\b(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)(?:\s+[A-Za-z]{2,12})?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/i;
   const match = re.exec(text);
-  return match ? match[1].toUpperCase() : null;
+  return match && /[0-9]|^[A-Z0-9]+$/.test(match[1]) ? match[1].toUpperCase() : null;
 }
 
 function findFlight(text: string): { carrier: string; number: string } | null {

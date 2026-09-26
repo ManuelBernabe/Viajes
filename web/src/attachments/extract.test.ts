@@ -154,3 +154,13 @@ Coche: 8 Plaza: 6A`;
     });
   });
 });
+
+describe('localizador con palabra intermedia', () => {
+  it('«Localizador Renfe: C3BMDV»', () => {
+    expect(suggestFromText('Tu billete de tren. Localizador Renfe: C3BMDV. Salida 01/10/2026 14:35').reference).toBe('C3BMDV');
+  });
+
+  it('no coge palabras normales como localizador', () => {
+    expect(suggestFromText('Localizador de vuelos baratos para tu viaje').reference).toBeNull();
+  });
+});
