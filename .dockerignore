@@ -1,0 +1,8 @@
+**/node_modules
+**/bin
+**/obj
+server/Viajes.Api/wwwroot
+**/.localdata
+.git
+docs
+.superpowers

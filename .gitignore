@@ -1,0 +1,12 @@
+bin/
+obj/
+node_modules/
+server/Viajes.Api/wwwroot/
+.localdata/
+dev-dist/
+*.db
+*.db-shm
+*.db-wal
+.env*
+!.env.example
+.superpowers/
