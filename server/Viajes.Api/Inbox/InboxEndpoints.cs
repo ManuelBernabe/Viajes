@@ -82,11 +82,13 @@ public static class InboxEndpoints
     // ---- Importación ----
 
     private static async Task<IResult> Import(
-        HttpContext http, IConfiguration config, AppDbContext db, AccessService access, IFileStore store, CancellationToken ct)
+        HttpContext http, IConfiguration config, AppDbContext db, AccessService access, IFileStore store, ILoggerFactory loggers, CancellationToken ct)
     {
+        var log = loggers.CreateLogger("Viajes.Inbox");
         var header = http.Request.Headers.Authorization.ToString();
         if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
+            log.LogWarning("Importación rechazada: sin token.");
             return Results.Problem("Falta el token de importación.", statusCode: StatusCodes.Status401Unauthorized);
         }
 
@@ -94,16 +96,19 @@ public static class InboxEndpoints
         var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
         if (token is null || token.RevokedMs is not null)
         {
+            log.LogWarning("Importación rechazada: token {Estado}.", token is null ? "desconocido" : "revocado");
             return Results.Problem("Token no válido o revocado.", statusCode: StatusCodes.Status401Unauthorized);
         }
 
         if (http.Request.ContentLength is null)
         {
+            log.LogWarning("Importación rechazada: sin Content-Length.");
             return Results.Problem("Falta el tamaño del mensaje.", statusCode: StatusCodes.Status411LengthRequired);
         }
 
         if (http.Request.ContentLength > MaxMessageBytes)
         {
+            log.LogWarning("Importación rechazada: {Bytes} bytes, más de 25 MB.", http.Request.ContentLength);
             return Results.Problem("El correo supera los 25 MB.", statusCode: StatusCodes.Status413PayloadTooLarge);
         }
 
@@ -118,12 +123,14 @@ public static class InboxEndpoints
         }
         catch (Exception e) when (e is FormatException or MimeKit.ParseException)
         {
+            log.LogWarning(e, "Importación rechazada: el correo no se puede leer ({Bytes} bytes).", raw.Length);
             return Results.Problem("No se puede leer el correo.", statusCode: StatusCodes.Status400BadRequest);
         }
 
         var requireAuth = !string.Equals(config["IMPORT_REQUIRE_GMAIL_AUTH"], "false", StringComparison.OrdinalIgnoreCase);
         if (requireAuth && !email.GmailAuthenticated)
         {
+            log.LogWarning("Importación rechazada: Gmail no validó DKIM/SPF. De {De}, asunto «{Asunto}».", email.From, email.Subject);
             return Results.Problem("Gmail no validó el remitente (DKIM/SPF).", statusCode: StatusCodes.Status422UnprocessableEntity);
         }
 
@@ -131,8 +138,11 @@ public static class InboxEndpoints
         var existing = await db.InboxItems.FirstOrDefaultAsync(i => i.HouseholdId == householdId && i.MessageId == email.MessageId, ct);
         if (existing is not null)
         {
+            log.LogInformation("Importación repetida de «{Asunto}»: ya existía.", email.Subject);
             return Results.Ok(new { id = existing.Id, duplicate = true });
         }
+
+        log.LogInformation("Importando «{Asunto}» de {De} con {Adjuntos} adjuntos (tipo propuesto: {Tipo}).", email.Subject, email.From, email.Attachments.Count, email.Suggestion.Type ?? "ninguno");
 
         var itemId = Guid.NewGuid();
         var rawKey = $"households/{householdId}/inbox/{itemId}/raw";
