@@ -23,6 +23,9 @@ export interface InboxPrefill {
   reference: string | null;
   address: string | null;
   notes?: string | null;
+  /** De dónde salieron los datos («billete.pdf», «texto del correo») y qué falló, para enseñarlo en el formulario. */
+  sources?: string[];
+  warnings?: string[];
 }
 
 export function InboxItemPage() {
@@ -80,6 +83,11 @@ export function InboxItemPage() {
     };
     const complete = () =>
       !!(prefill.type && prefill.startLocal && prefill.reference && prefill.startPlace && prefill.endPlace);
+    const sources: string[] = [];
+    const warnings: string[] = [];
+    if (prefill.type) {
+      sources.push('los datos estructurados del correo');
+    }
     try {
       // El billete adjunto es más fiable que el texto del correo: va primero.
       for (const attachment of item!.attachments) {
@@ -88,17 +96,28 @@ export function InboxItemPage() {
         }
         try {
           const bytes = await downloadInboxAttachment(item!.id, attachment.id);
-          prefill = applySuggestion(prefill, suggestFromText(await extractPdfText(bytes), attachment.name));
-        } catch {
-          // Sin red o PDF ilegible: se sigue con lo que hay.
+          const text = await extractPdfText(bytes);
+          const suggestion = suggestFromText(text, attachment.name);
+          if (suggestion.type || suggestion.reference || suggestion.startDate) {
+            prefill = applySuggestion(prefill, suggestion);
+            sources.push(attachment.name);
+          } else {
+            warnings.push(`${attachment.name}: sin datos reconocibles (${text.length} caracteres de texto).`);
+          }
+        } catch (error) {
+          // Sin red o PDF ilegible: se sigue con lo que hay, pero se dice.
+          warnings.push(`${attachment.name}: ${error instanceof Error ? error.message : 'no se pudo leer'}.`);
         }
       }
       if (!complete() && item!.bodyText) {
         prefill = applySuggestion(prefill, suggestFromText(item!.bodyText, item!.subject));
+        sources.push('el texto del correo');
       }
     } finally {
       setPreparing(false);
     }
+    prefill.sources = sources;
+    prefill.warnings = warnings;
     prefill.title ??= item!.subject;
     navigate(`/trips/${chosen}/bookings/new`, { state: { prefill } });
   }

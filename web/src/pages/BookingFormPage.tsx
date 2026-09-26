@@ -239,7 +239,13 @@ export function BookingFormPage() {
         <BackLink to={bookingId ? `/bookings/${bookingId}` : `/trips/${tripId}`} />
         <h1>{bookingId ? 'Editar reserva' : 'Nueva reserva'}</h1>
       </div>
-      {prefill && <p className="notice">Datos propuestos a partir del correo. Revisa la fecha, la hora y la zona horaria; los adjuntos del correo se añadirán al guardar.</p>}
+      {prefill && (
+        <p className="notice">
+          Datos propuestos a partir de {prefill.sources?.length ? prefill.sources.join(' y ') : 'el asunto del correo'}. Revisa la fecha, la hora y la zona
+          horaria; los adjuntos del correo se añadirán al guardar.
+          {prefill.warnings?.length ? <span className="error"> {prefill.warnings.join(' ')}</span> : null}
+        </p>
+      )}
       <form onSubmit={submit}>
         <div className="field">
           <label>Tipo</label>
