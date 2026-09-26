@@ -80,7 +80,25 @@ export function findDates(text: string): { date: string; index: number }[] {
       push(isoDate(Number(match[1]), month, Number(match[3])), match);
     }
   }
+  // «jueves, 01 octubre» sin año: la próxima vez que caiga esa fecha (el año en curso, o el siguiente si ya pasó hace más de 60 días).
+  if (found.length === 0) {
+    const noYear = /\b(\d{1,2})\s+(?:de\s+)?([a-záéíóú]{3,10})\b\.?(?!\s*(?:de\s+)?\d{4})/gi;
+    while ((match = noYear.exec(text))) {
+      const month = MONTHS[match[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
+      if (month) {
+        push(isoDate(Number(match[1]), month, inferYear(month, Number(match[1]))), match);
+      }
+    }
+  }
   return found.sort((a, b) => a.index - b.index);
+}
+
+/** Año más plausible para un día/mes sin año: el actual, salvo que quede más de 60 días atrás. */
+export function inferYear(month: number, day: number, now = new Date()): number {
+  const year = now.getFullYear();
+  const candidate = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(year, now.getMonth(), now.getDate());
+  return today - candidate > 60 * 86_400_000 ? year + 1 : year;
 }
 
 /** La fecha del viaje: la que más se repite (un billete por pasajero la repite); en empate, la primera. */

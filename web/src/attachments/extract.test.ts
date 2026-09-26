@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySuggestion, findDates, findTimes, suggestFromText } from './extract';
+import { applySuggestion, findDates, findTimes, inferYear, suggestFromText } from './extract';
 
 describe('findDates y findTimes', () => {
   it('reconoce fechas numéricas, ISO y con mes en palabras', () => {
@@ -309,5 +309,96 @@ describe('caracteres invisibles', () => {
     const text = `Vuelo AR 1133 MAD → EZE\n\n01 OCT 2026 20:05\n\nTerminal:\n\n1\n\nManuel Bernabe Escribano\n\nAsiento:\n\n23G\n\nFrancisco Jose Belso Alfonso\n\nAsiento:\n\n23H\n\nSu(s) boleto(s):\n\nManuel Bernabe Escribano:\n 0442167894233\n\nFrancisco Jose Belso Alfonso:\n 0442167894234\n`;
 
     expect(suggestFromText(text).notes).toBe('Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: Terminal 1');
+  });
+});
+
+describe('confirmación de compra de Aerolíneas Argentinas (texto real del iPhone)', () => {
+  const text = `AS Dynamic Notification
+
+Confirmación de compra
+
+¡Gracias por elegirnos!
+
+Código de Reserva
+
+DWYOLX
+
+AEROLINEAS ARGENTINAS
+
+Número de vuelo
+
+AR 1133
+
+Confirmado
+
+jueves, 01 octubre - 
+viernes, 02 octubre
+
+Salida:
+
+MAD MADRID, SPAIN
+
+20:05
+
+TERMINAL 1
+
+Llegada:
+
+EZE AEROPUERTO INTERNACIONAL DE EZEIZA
+
+04:10
+ +1 día
+
+INTERNATIONAL ARRIVALS TER
+
+Cabina:
+
+Turista
+ / Q
+
+Distancia (en Millas):
+
+6251
+
+Manuel B​ernab​e Esc​ribano
+
+Asiento:
+
+23G
+
+Fra​ncisc​o Jose Be​lso A​lfonso
+
+Asiento:
+
+23H
+
+Agregar al calendario
+
+Su(s) boleto(s):
+
+Manuel Bernabe Escribano: 
+ 0442167894233
+
+Francisco Jose Belso Alfonso: 
+ 0442167894234
+
+Seguinos:`;
+
+  it('lee todo, con fecha sin año y nombres con caracteres invisibles', () => {
+    const year = inferYear(10, 1);
+    const s = suggestFromText(text, 'confirmacion.pdf');
+
+    expect(s).toMatchObject({
+      type: 'flight',
+      title: 'AR 1133 MAD → EZE',
+      reference: 'DWYOLX',
+      startDate: `${year}-10-01`,
+      startTime: '20:05',
+      endDate: `${year}-10-02`,
+      endTime: '04:10',
+      startPlace: 'MAD',
+      endPlace: 'EZE',
+      notes: 'Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: Terminal 1',
+    });
   });
 });
