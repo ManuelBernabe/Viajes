@@ -273,3 +273,33 @@ TERMINAL 1`;
     expect(suggestFromText(text).notes).toBe('Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: TERMINAL 1');
   });
 });
+
+describe('itinerario web de Aerolíneas Argentinas (pasajero en tres líneas)', () => {
+  it('lee asientos y billetes por bloques y pone «Terminal 1»', () => {
+    const text = `Vuelo AR 1133 MAD → EZE
+01 OCT 2026 20:05
+Terminal:
+1
+Cabina:
+Turista / Q
+Comida:
+Cena, Desayuno
+Distancia (en Millas):
+6251
+Manuel Bernabe Escribano
+Asiento:
+23G
+Francisco Jose Belso Alfonso
+Asiento:
+23H
+Agregar al calendario
+Su(s) boleto(s):
+Manuel Bernabe Escribano:
+ 0442167894233
+Francisco Jose Belso Alfonso:
+ 0442167894234
+Seguinos:`;
+
+    expect(suggestFromText(text).notes).toBe('Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: Terminal 1');
+  });
+});

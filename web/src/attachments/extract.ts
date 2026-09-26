@@ -234,24 +234,40 @@ function findStations(text: string): { from: string | null; to: string | null } 
  */
 function findFlightNotes(text: string): string | null {
   const parts: string[] = [];
-  // Los nombres van marcados con «»» (o viñeta); asientos «23G» y billetes de 13 cifras aparecen donde el PDF los coloque:
-  // en la misma línea o en columnas aparte. Se emparejan por orden.
-  const names = [...text.matchAll(/^[»•>]\s*([A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ .'\-]{3,60}?)\s*(?=\s\d{1,3}[A-K]\b|\s\d{10,14}\b|$)/gm)].map((m) => m[1].trim());
-  const seatsFrom = Math.max(0, text.search(/\basientos?\b|\bseats?\b/i));
-  const seats = [...text.slice(seatsFrom).matchAll(/(?<![A-Z0-9])(\d{1,3}[A-K])(?![A-Z0-9])/g)].map((m) => m[1]);
-  const tickets = [...text.matchAll(/(?<!\d)(\d{13})(?!\d)/g)].map((m) => m[1]);
-  if (names.length > 0) {
-    const passengers = names.map((name, index) => (seats[index] ? `${name} (${seats[index]})` : name));
+  const NAME = String.raw`[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ .'\-]{3,60}?`;
+  let passengers: string[] = [];
+  let tickets: string[] = [];
+
+  // Formato «Nombre \n Asiento: \n 23G» (itinerarios web de aerolíneas), con los billetes en «Nombre: \n 0442167894233».
+  const blocks = [...text.matchAll(new RegExp(String.raw`^(${NAME})\s*\n\s*(?:asientos?|seats?)\s*:\s*\n?\s*([^\n]{1,20}?)\s*$`, 'gim'))];
+  if (blocks.length > 0) {
+    passengers = blocks.map((m) => `${m[1].trim()} (${m[2].trim()})`);
+    tickets = [...text.matchAll(new RegExp(String.raw`^(${NAME})\s*:\s*\n?\s*(\d{10,14})\b`, 'gm'))].map((m) => m[2]);
+  }
+
+  // Formato tabla: nombres marcados con «»»; asientos «23G» y billetes de 13 cifras en la misma línea o en columnas.
+  if (passengers.length === 0) {
+    const names = [...text.matchAll(new RegExp(String.raw`^[»•>]\s*(${NAME})\s*(?=\s\d{1,3}[A-K]\b|\s\d{10,14}\b|$)`, 'gm'))].map((m) => m[1].trim());
+    const seatsFrom = Math.max(0, text.search(/\basientos?\b|\bseats?\b/i));
+    const seats = [...text.slice(seatsFrom).matchAll(/(?<![A-Z0-9])(\d{1,3}[A-K])(?![A-Z0-9])/g)].map((m) => m[1]);
+    tickets = [...text.matchAll(/(?<!\d)(\d{13})(?!\d)/g)].map((m) => m[1]);
+    if (names.length > 0) {
+      passengers = names.map((name, index) => (seats[index] ? `${name} (${seats[index]})` : name));
+    } else if (seats.length > 0) {
+      parts.push(`Asientos ${seats.join(', ')}`);
+    }
+  }
+
+  if (passengers.length > 0) {
     parts.push(`${passengers.length === 1 ? 'Pasajero' : 'Pasajeros'}: ${passengers.join(', ')}`);
-  } else if (seats.length > 0) {
-    parts.push(`Asientos ${seats.join(', ')}`);
   }
   if (tickets.length > 0) {
     parts.push(`${tickets.length === 1 ? 'Billete' : 'Billetes'} ${tickets.join(', ')}`);
   }
   const terminal = /\bterminal\s*[:.]?\s*\n?\s*((?:terminal\s+)?[A-Z0-9][A-Za-z0-9 ]{0,20}?)\s*(?:\n|$)/i.exec(text);
   if (terminal) {
-    parts.push(`Salida: ${terminal[1].trim()}`);
+    const value = terminal[1].trim();
+    parts.push(`Salida: ${/^terminal/i.test(value) ? value : `Terminal ${value}`}`);
   }
   return parts.length > 0 ? parts.join(' · ') : null;
 }
