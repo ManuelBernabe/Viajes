@@ -49,27 +49,55 @@ function toJson(subscription: PushSubscription): { endpoint: string; keys: { p25
   return { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } };
 }
 
-/** Pide permiso, se suscribe y registra el dispositivo en el servidor. */
-export async function enablePush(): Promise<PushState> {
+/** Pide permiso, se suscribe y registra el dispositivo en el servidor. `onStep` recibe el paso en curso. */
+export async function enablePush(onStep?: (step: string) => void): Promise<PushState> {
   const support = pushSupport();
   if (!support.ok) {
     return { kind: 'unsupported', reason: support.reason };
   }
+  const step = onStep ?? (() => undefined);
+  step('pidiendo permiso');
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     return { kind: 'denied' };
   }
-  const { publicKey } = await api<{ publicKey: string }>('/api/push/public-key');
-  const registration = await navigator.serviceWorker.ready;
-  let subscription = await registration.pushManager.getSubscription();
+  step('pidiendo la clave al servidor');
+  const { publicKey } = await withTimeout(api<{ publicKey: string }>('/api/push/public-key'), 15_000, 'el servidor no responde');
+  step('esperando al service worker');
+  const registration = await withTimeout(navigator.serviceWorker.ready, 15_000, 'el service worker no llega a activarse');
+  step('consultando la suscripción actual');
+  let subscription = await withTimeout(registration.pushManager.getSubscription(), 15_000, 'getSubscription no responde');
   if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: toUint8(publicKey) as BufferSource,
-    });
+    step('suscribiendo el móvil al servicio push de Apple');
+    subscription = await withTimeout(
+      registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: toUint8(publicKey) as BufferSource,
+      }),
+      30_000,
+      'la suscripción push no responde',
+    );
   }
-  await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(toJson(subscription)) });
+  step('registrando el móvil en el servidor');
+  await withTimeout(api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(toJson(subscription)) }), 15_000, 'el servidor no responde');
   return { kind: 'on' };
+}
+
+/** Falla con un mensaje claro si un paso se queda colgado (pasa en iOS con el service worker o con subscribe). */
+function withTimeout<T>(promise: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Paso agotado: ${what}.`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
 }
 
 export async function disablePush(): Promise<PushState> {

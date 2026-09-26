@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
-import { describeError } from '../api';
+import { ApiError, describeError } from '../api';
+
+/** Los errores del navegador (permiso, suscripción, worker) se enseñan tal cual: son la pista para arreglarlo. */
+function describePushError(error: unknown): string {
+  if (error instanceof ApiError || error instanceof TypeError) {
+    return describeError(error);
+  }
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}`;
+  }
+  return describeError(error);
+}
 import {
   disablePush,
   enablePush,
@@ -28,7 +39,7 @@ export function PushSettings() {
     try {
       setDiagnostics(await pushDiagnostics());
     } catch (error) {
-      setMessage(describeError(error));
+      setMessage(describePushError(error));
     }
   }
 
@@ -54,7 +65,7 @@ export function PushSettings() {
         }
       }
     } catch (error) {
-      setMessage(describeError(error));
+      setMessage(describePushError(error));
     } finally {
       setBusy(false);
     }
@@ -73,7 +84,7 @@ export function PushSettings() {
         <p className="muted small">Permiso denegado. Actívalo en Ajustes del iPhone → Notificaciones → Viajes.</p>
       )}
       {state?.kind === 'off' && (
-        <button className="btn block" disabled={busy} onClick={() => void run(enablePush)}>
+        <button className="btn block" disabled={busy} onClick={() => void run(() => enablePush((step) => setMessage(`${step}…`)))}>
           Activar avisos en este móvil
         </button>
       )}
@@ -91,7 +102,7 @@ export function PushSettings() {
         </>
       )}
       {message && <p className="muted small">{message}</p>}
-      {state?.kind === 'on' && (
+      {(state?.kind === 'on' || state?.kind === 'off') && (
         <details onToggle={(event) => event.currentTarget.open && void refreshDiagnostics()}>
           <summary className="small">Diagnóstico de avisos</summary>
           {diagnostics ? (
