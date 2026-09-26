@@ -303,3 +303,11 @@ Seguinos:`;
     expect(suggestFromText(text).notes).toBe('Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: Terminal 1');
   });
 });
+
+describe('caracteres invisibles', () => {
+  it('lee igual con espacios duros, líneas en blanco dobles y guiones blandos', () => {
+    const text = `Vuelo AR 1133 MAD → EZE\n\n01 OCT 2026 20:05\n\nTerminal:\n\n1\n\nManuel Bernabe Escribano\n\nAsiento:\n\n23G\n\nFrancisco Jose Belso Alfonso\n\nAsiento:\n\n23H\n\nSu(s) boleto(s):\n\nManuel Bernabe Escribano:\n 0442167894233\n\nFrancisco Jose Belso Alfonso:\n 0442167894234\n`;
+
+    expect(suggestFromText(text).notes).toBe('Pasajeros: Manuel Bernabe Escribano (23G), Francisco Jose Belso Alfonso (23H) · Billetes 0442167894233, 0442167894234 · Salida: Terminal 1');
+  });
+});

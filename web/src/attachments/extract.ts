@@ -333,7 +333,18 @@ export function applySuggestion<T extends PrefillFields>(base: T, s: TextSuggest
   };
 }
 
-export function suggestFromText(text: string, fileName = ''): TextSuggestion {
+/** Espacios especiales → espacio normal; caracteres invisibles fuera; líneas en blanco de más, fuera. */
+export function normalizeText(text: string): string {
+  return text
+    .replace(/[  -   　]/g, ' ')
+    .replace(/[​-‍⁠﻿­]/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+}
+
+export function suggestFromText(rawText: string, fileName = ''): TextSuggestion {
+  const text = normalizeText(rawText);
   const type = detectType(text) ?? detectType(fileName);
   const dates = findDates(text);
   const times = findTimes(text);

@@ -343,6 +343,10 @@ export function BookingFormPage() {
           <details className="small muted" style={{ margin: '8px 0' }}>
             <summary>Texto leído del PDF (para afinar las reglas)</summary>
             <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>{rawText.slice(0, 4000)}</pre>
+            <p>En bruto, con los caracteres invisibles como códigos:</p>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.7rem', wordBreak: 'break-all' }}>
+              {JSON.stringify(rawText.slice(Math.max(0, rawText.search(/asiento/i) - 200), rawText.search(/asiento/i) + 700))}
+            </pre>
           </details>
         )}
         {error && <p className="error">{error}</p>}
