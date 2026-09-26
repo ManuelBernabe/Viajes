@@ -11,7 +11,9 @@ import { extractPdfText } from '../attachments/pdfText';
 import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAttachFiles';
 import { importInboxAttachments } from '../data/inboxImport';
 import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, timeOf, zoneLabel } from '../data/localTime';
-import { getBooking, saveBooking } from '../data/repo';
+import { getBooking, listAllBookings, saveBooking } from '../data/repo';
+import type { Booking } from '../data/types';
+import { applyChanges, diffBooking, findExistingBooking, type Change, type Proposal } from '../domain/changes';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
 import type { InboxPrefill } from './InboxItemPage';
@@ -75,6 +77,9 @@ export function BookingFormPage() {
   const [loaded, setLoaded] = useState(!bookingId);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  /** Al guardar una reserva nueva que ya existe (mismo localizador o misma ruta), se propone actualizar la existente. */
+  const [match, setMatch] = useState<{ existing: Booking; proposal: Proposal; changes: Change[] } | null>(null);
+  const [ignoreMatch, setIgnoreMatch] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -212,6 +217,26 @@ export function BookingFormPage() {
       setError(`La ${info.endLabel.toLowerCase()} no es válida.`);
       return;
     }
+    // Una reserva nueva que coincide con una ya cargada (cambio de horario recibido por PDF, por ejemplo) no se duplica.
+    if (!bookingId && !ignoreMatch) {
+      const proposal: Proposal = {
+        type,
+        title: title.trim(),
+        startLocal,
+        startTz,
+        startPlace: startPlace.trim() || null,
+        endLocal,
+        endTz: endLocal ? endTz : null,
+        endPlace: endLocal ? endPlace.trim() || null : null,
+        reference: reference.trim() || null,
+        notes: notes.trim() || null,
+      };
+      const existing = findExistingBooking(await listAllBookings(), proposal);
+      if (existing) {
+        setMatch({ existing, proposal, changes: diffBooking(existing, proposal) });
+        return;
+      }
+    }
     setSaving(true);
     try {
       const booking = await saveBooking(
@@ -247,6 +272,29 @@ export function BookingFormPage() {
     }
   }
 
+  /** Aplica a la reserva existente lo que trae el formulario, le añade los adjuntos y deja el aviso rojo. */
+  async function updateExisting() {
+    if (!match) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = applyChanges(match.existing, match.proposal, match.changes, new Date());
+      await saveBooking(body, session.email ?? '', match.existing.id);
+      if (pendingFiles.length > 0) {
+        await attachRead(match.existing.id, pendingFiles);
+      }
+      if (prefill?.inboxItemId) {
+        await importInboxAttachments(prefill.inboxItemId, match.existing.id, session.email ?? '', setReadMessage);
+      }
+      navigate(`/bookings/${match.existing.id}`, { replace: true });
+    } catch (error) {
+      setError(describeError(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!loaded) {
     return <main className="page muted">Cargando…</main>;
   }
@@ -257,6 +305,39 @@ export function BookingFormPage() {
         <BackLink to={bookingId ? `/bookings/${bookingId}` : `/trips/${tripId}`} />
         <h1>{bookingId ? 'Editar reserva' : 'Nueva reserva'}</h1>
       </div>
+      {match && (
+        <section className="card highlight">
+          <h3>Esta reserva ya está en la app</h3>
+          <p>
+            {TYPE_INFO[match.existing.type].icon} {match.existing.title}
+            {match.existing.reference && ` · ${match.existing.reference}`}
+          </p>
+          {match.changes.length > 0 ? (
+            <>
+              <p className="error">
+                <strong>Lo que has metido trae cambios:</strong>
+              </p>
+              <ul>
+                {match.changes.map((change) => (
+                  <li key={change.field}>
+                    {change.label}: {change.before} → <strong>{change.after}</strong>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="muted small">Los datos coinciden con los de la reserva guardada.</p>
+          )}
+          <div className="actions">
+            <button className="btn primary" type="button" disabled={saving} onClick={() => void updateExisting()}>
+              {match.changes.length > 0 ? 'Actualizar esa reserva' : 'Añadir los adjuntos a esa reserva'}
+            </button>
+            <button className="btn" type="button" disabled={saving} onClick={() => { setIgnoreMatch(true); setMatch(null); }}>
+              Crear otra de todos modos
+            </button>
+          </div>
+        </section>
+      )}
       {prefill && (
         <p className="notice">
           Datos propuestos a partir de {prefill.sources?.length ? prefill.sources.join(' y ') : 'el asunto del correo'}. Revisa la fecha, la hora y la zona
