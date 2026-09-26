@@ -82,4 +82,7 @@ export async function readQr(bytes: ArrayBuffer, mime: string): Promise<string |
 /** Redibuja el QR nítido al tamaño pedido (en píxeles). */
 export async function drawQr(canvas: HTMLCanvasElement, text: string, size: number): Promise<void> {
   await QRCode.toCanvas(canvas, text, { width: size, margin: 2, errorCorrectionLevel: 'M' });
+  // La librería fija el tamaño en pantalla a los píxeles dibujados (tres veces más en un iPhone): lo decide el CSS.
+  canvas.style.width = '';
+  canvas.style.height = '';
 }
