@@ -43,6 +43,33 @@ function polyfill(target: object): void {
 polyfill(Map.prototype);
 polyfill(WeakMap.prototype);
 
+// pdf.js recorre el texto con «for await (const chunk of readableStream)»: Safari aún no hace iterable un ReadableStream.
+const streamProto = (typeof ReadableStream === 'undefined' ? null : ReadableStream.prototype) as
+  | (Record<string | symbol, unknown> & { getReader(): { read(): Promise<{ done: boolean; value: unknown }>; cancel(): Promise<void>; releaseLock(): void } })
+  | null;
+if (streamProto && typeof streamProto[Symbol.asyncIterator] !== 'function') {
+  const values = function values(this: typeof streamProto, options?: { preventCancel?: boolean }) {
+    const reader = this.getReader();
+    const preventCancel = options?.preventCancel === true;
+    return {
+      next: () => reader.read(),
+      return: async (value?: unknown) => {
+        if (preventCancel) {
+          reader.releaseLock();
+        } else {
+          await reader.cancel();
+        }
+        return { done: true, value };
+      },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+  };
+  Object.defineProperty(streamProto, 'values', { configurable: true, writable: true, value: values });
+  Object.defineProperty(streamProto, Symbol.asyncIterator, { configurable: true, writable: true, value: values });
+}
+
 const promise = Promise as unknown as Record<string, unknown>;
 if (typeof promise.try !== 'function') {
   promise.try = function tryPromise<T>(fn: (...args: unknown[]) => T | Promise<T>, ...args: unknown[]): Promise<T> {
