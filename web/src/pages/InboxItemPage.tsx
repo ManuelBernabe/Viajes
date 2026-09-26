@@ -105,8 +105,12 @@ export function InboxItemPage() {
             warnings.push(`${attachment.name}: sin datos reconocibles (${text.length} caracteres de texto).`);
           }
         } catch (error) {
-          // Sin red o PDF ilegible: se sigue con lo que hay, pero se dice.
-          warnings.push(`${attachment.name}: ${error instanceof Error ? error.message : 'no se pudo leer'}.`);
+          // Sin red o PDF ilegible: se sigue con lo que hay, pero se dice, con detalle para poder arreglarlo.
+          const detail =
+            error instanceof Error
+              ? `${error.name}: ${error.message}${error.stack ? ` @ ${error.stack.split('\n').slice(0, 2).join(' / ').slice(0, 160)}` : ''}`
+              : String(error);
+          warnings.push(`${attachment.name}: ${detail}`);
         }
       }
       if (!complete() && item!.bodyText) {
