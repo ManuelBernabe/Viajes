@@ -62,7 +62,8 @@ export function findDates(text: string): { date: string; index: number }[] {
   };
   const numeric = /\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b/g;
   const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
-  const worded = /\b(\d{1,2})\s*(?:de\s+)?([a-záéíóú]{3,10})\.?\s*(?:de\s+|,\s*)?(\d{4})\b/gi;
+  // «01 oct 202614:35»: en algunos correos el año va pegado a la hora.
+  const worded = /\b(\d{1,2})\s*(?:de\s+)?([a-záéíóú]{3,10})\.?\s*(?:de\s+|,\s*)?(\d{4})(?=\d{1,2}[:.]\d{2}|\b)/gi;
   let match: RegExpExecArray | null;
   while ((match = numeric.exec(text))) {
     push(isoDate(Number(match[1]), Number(match[2]), Number(match[3])), match);
@@ -113,7 +114,8 @@ function findSeats(text: string): string | null {
 /** Horas «14:35» o «14.35 h», con posición. */
 export function findTimes(text: string): { time: string; index: number }[] {
   const found: { time: string; index: number }[] = [];
-  const re = /\b([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*h\b)?/g;
+  // Una hora empieza tras algo que no sea cifra ni separador… o tras un año pegado («202614:35»).
+  const re = /(?:(?<![\d:.])|(?<=\b\d{4}))([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*h\b)?/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
     // Descarta lo que parece una fecha con puntos (12.10.2026) o un importe.
@@ -138,7 +140,8 @@ function detectType(text: string): BookingType | null {
 
 function findReference(text: string): string | null {
   // Admite una palabra entre la etiqueta y el código («Localizador Renfe: C3BMDV»); el código lleva al menos una cifra o va en mayúsculas.
-  const re = /\b(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)(?:\s+[A-Za-z]{2,12})?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/i;
+  // Sin «\b» inicial: en algunos correos la etiqueta viene pegada a la palabra anterior («reservaCódigo de reserva:»).
+  const re = /(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)(?:\s+[A-Za-z]{2,12})?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/i;
   const match = re.exec(text);
   return match && /[0-9]|^[A-Z0-9]+$/.test(match[1]) ? match[1].toUpperCase() : null;
 }
@@ -171,7 +174,8 @@ function findStations(text: string): { from: string | null; to: string | null } 
 
 /** «AVE 05123» si aparece con número en algún sitio; si no, el tipo de tren más un número de tren en línea propia (Renfe). */
 function findTrain(text: string): string | null {
-  const re = /\b(AVE|ALVIA|AVLO|INTERCITY|EUROMED|MD|REGIONAL|IRYO|OUIGO|TALGO|AVANT)\b\s*(?:n[ºo.]?\s*)?(\d{3,5})?/gi;
+  // «AVE 05123», «AVE - 05143», «AVE nº 5123».
+  const re = /\b(AVE|ALVIA|AVLO|INTERCITY|EUROMED|MD|REGIONAL|IRYO|OUIGO|TALGO|AVANT)\b[\s\-–:]*(?:n[ºo.]?\s*)?(\d{3,5})?/gi;
   let first: string | null = null;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
@@ -262,7 +266,12 @@ export function suggestFromText(text: string, fileName = ''): TextSuggestion {
     const route = airports.length >= 2 ? `${airports[0]} → ${airports[1]}` : null;
     suggestion.title = [flight ? `${flight.carrier} ${flight.number}` : null, route].filter(Boolean).join(' ') || 'Vuelo';
   } else if (type === 'train') {
-    const stations = findStations(text);
+    let stations = findStations(text);
+    if (!stations.from || !stations.to) {
+      // Formato de correo: «14:35 Alicante / Alacant … 17:08Madrid Chamartín».
+      const afterTimes = [...text.matchAll(/\d{1,2}[:.]\d{2}\s*([^\n\d]{3,40}?)\s*(?:\n|$)/g)].map((m) => m[1].trim()).filter((s) => s.length > 2);
+      stations = { from: stations.from ?? afterTimes[0] ?? null, to: stations.to ?? afterTimes[1] ?? null };
+    }
     suggestion.startPlace = stations.from ? titleCase(stations.from) : null;
     suggestion.endPlace = stations.to ? titleCase(stations.to) : null;
     const route = stations.from && stations.to ? `${titleCase(stations.from)} → ${titleCase(stations.to)}` : null;

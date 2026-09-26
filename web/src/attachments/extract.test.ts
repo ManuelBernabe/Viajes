@@ -164,3 +164,30 @@ describe('localizador con palabra intermedia', () => {
     expect(suggestFromText('Localizador de vuelos baratos para tu viaje').reference).toBeNull();
   });
 });
+
+describe('cuerpo del correo de Trenes.com', () => {
+  const body = `Manuel, ¡todo ha ido sobre raíles!Has completado la compra de tu viaje de Alicante / Alacant a Madrid Chamartín
+Información sobre tu reservaCódigo de reserva: C3BMDV
+Viaje de ida
+jueves, 01 oct 202614:35 Alicante / Alacant
+2h 33m
+AVE - 05143 en clase Estándar
+17:08Madrid Chamartín
+2 x Elige
+Total: 66.19 €`;
+
+  it('lee fecha y hora pegadas, el localizador pegado y las estaciones tras la hora', () => {
+    const s = suggestFromText(body);
+
+    expect(s).toMatchObject({
+      type: 'train',
+      reference: 'C3BMDV',
+      startDate: '2026-10-01',
+      startTime: '14:35',
+      endTime: '17:08',
+      startPlace: 'Alicante / Alacant',
+      endPlace: 'Madrid Chamartín',
+      title: 'AVE 05143 Alicante / Alacant → Madrid Chamartín',
+    });
+  });
+});
