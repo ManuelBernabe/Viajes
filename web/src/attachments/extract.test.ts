@@ -191,3 +191,65 @@ Total: 66.19 €`;
     });
   });
 });
+
+describe('itinerario de Aerolíneas Argentinas', () => {
+  const text = `Millaje:
+01 OCT 2026 02 OCT 2026 DESTINO AEROPUERTO INTERNACIONAL DE
+EZEIZA
+PREPARADO PARA
+MANUEL BERNABE ESCRIBANO
+FRANCISCO JOSE BELSO
+ALFONSO
+CÓDIGO DE RESERVA DWYOLX
+PARTIDA: JUEVES 01 OCT ARRIBO: VIERNES 02 OCT
+AEROLINEAS
+ARGENTINAS
+AR 1133
+Duración:
+13horas 5minutos
+Cabina:
+Turista / Q
+Estado:
+Confirmado
+MAD
+MADRID,
+SPAIN
+EZE
+AEROPUERTO INTERNACIONAL DE
+EZEIZA
+Avión:
+AIRBUS INDUSTRIE
+A330 JET
+6251
+Sale a la(s):
+20:05
+(jue, oct 1)
+Terminal:
+TERMINAL 1
+Llega a la(s):
+04:10
+(vie, oct 2)
+Nombre del pasajero: Asientos: Recibo(s) de boleto(s) electrónico(s):
+» Manuel Bernabe Escribano 23G 0442167894233
+» Francisco Jose Belso Alfonso 23H 0442167894234`;
+
+  it('no confunde PARTIDA con el localizador y saca vuelo, aeropuertos, zonas y llegada al día siguiente', () => {
+    const s = suggestFromText(text, 'Reserva de viaje 01 octubre.pdf');
+
+    expect(s).toMatchObject({
+      type: 'flight',
+      reference: 'DWYOLX',
+      title: 'AR 1133 MAD → EZE',
+      startDate: '2026-10-01',
+      startTime: '20:05',
+      endDate: '2026-10-02',
+      endTime: '04:10',
+      startPlace: 'MAD',
+      endPlace: 'EZE',
+      startTz: 'Europe/Madrid',
+      endTz: 'America/Argentina/Buenos_Aires',
+    });
+    const filled = applySuggestion({ type: null, title: null, startLocal: null, startTz: null, startPlace: null, endLocal: null, endTz: null, endPlace: null, reference: null, address: null }, s);
+    expect(filled).toMatchObject({ startLocal: '2026-10-01T20:05', endLocal: '2026-10-02T04:10', endTz: 'America/Argentina/Buenos_Aires' });
+  });
+});

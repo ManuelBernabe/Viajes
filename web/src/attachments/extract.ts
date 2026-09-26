@@ -11,9 +11,12 @@ export interface TextSuggestion {
   startDate: string | null;
   startTime: string | null;
   startPlace: string | null;
+  /** Zona IANA del lugar cuando se deduce (aeropuertos conocidos). */
+  startTz: string | null;
   endDate: string | null;
   endTime: string | null;
   endPlace: string | null;
+  endTz: string | null;
   address: string | null;
   /** Coche y plazas, pasajeros… lo que conviene tener a mano pero no tiene campo propio. */
   notes: string | null;
@@ -131,32 +134,85 @@ export function findTimes(text: string): { time: string; index: number }[] {
 function detectType(text: string): BookingType | null {
   const t = text.toLowerCase();
   if (/\b(renfe|ave\b|alvia|avlo|iryo|ouigo|tren|train|coche\s+\d|vagón|wagon|rail)\b/.test(t)) return 'train';
-  if (/\b(vuelo|flight|boarding pass|tarjeta de embarque|aerol[ií]nea|airline|embarque|iberia|vueling|ryanair|easyjet|air europa|lufthansa|klm|british airways)\b/.test(t)) return 'flight';
+  if (/\b(vuelos?|flights?|boarding pass|tarjeta de embarque|aerol[ií]neas?|airlines?|embarque|itinerario|avi[oó]n|aeropuerto|airport|terminal|cabina|boleto|e-?ticket|iberia|vueling|ryanair|easyjet|air europa|lufthansa|klm|british airways)\b/.test(t)) return 'flight';
   if (/\b(hotel|check-?in|check-?out|habitaci[oó]n|room|noches?|nights?|apartamento|booking\.com|airbnb)\b/.test(t)) return 'hotel';
   if (/\b(alquiler de coche|rent a car|car rental|rental car|hertz|avis|europcar|sixt|recogida del veh[ií]culo|pick-?up)\b/.test(t)) return 'car';
   if (/\b(entrada|entradas|ticket|tickets|museo|concierto|espect[aá]culo|admission)\b/.test(t)) return 'ticket';
   return null;
 }
 
+/** Palabras que pueden seguir a «código de reserva» sin ser el código. */
+const NOT_A_CODE = new Set([
+  'PARTIDA', 'ARRIBO', 'SALIDA', 'LLEGADA', 'VUELO', 'FECHA', 'HOTEL', 'TREN', 'TOTAL', 'RESERVA', 'CODIGO', 'CÓDIGO', 'NUMERO', 'NÚMERO',
+  'BILLETE', 'TICKET', 'BOOKING', 'NOMBRE', 'ORIGEN', 'DESTINO', 'PASAJERO', 'CLIENTE', 'PRECIO', 'IMPORTE', 'ESTADO', 'CABINA', 'ASIENTO',
+]);
+
 function findReference(text: string): string | null {
-  // Admite una palabra entre la etiqueta y el código («Localizador Renfe: C3BMDV»); el código lleva al menos una cifra o va en mayúsculas.
-  // Sin «\b» inicial: en algunos correos la etiqueta viene pegada a la palabra anterior («reservaCódigo de reserva:»).
-  const re = /(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)(?:\s+[A-Za-z]{2,12})?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/i;
-  const match = re.exec(text);
-  return match && /[0-9]|^[A-Z0-9]+$/.test(match[1]) ? match[1].toUpperCase() : null;
+  // La etiqueta se busca sin distinguir mayúsculas (y puede venir pegada: «reservaCódigo de reserva:»); lo que sigue, sí:
+  // se admite una palabra con minúsculas («Localizador Renfe: C3BMDV») pero nunca un bloque en mayúsculas, que es el código.
+  const label = /(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)/gi;
+  const code = /^(?:\s+[A-Za-z]*[a-z][A-Za-z]*)?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/;
+  let match: RegExpExecArray | null;
+  while ((match = label.exec(text))) {
+    const rest = code.exec(text.slice(match.index + match[0].length, match.index + match[0].length + 60));
+    if (!rest) {
+      continue;
+    }
+    const candidate = rest[1];
+    if (NOT_A_CODE.has(candidate) || !/[0-9]|^[A-Z0-9]+$/.test(candidate)) {
+      continue;
+    }
+    return candidate;
+  }
+  return null;
 }
+
+/** Zona horaria de los aeropuertos más habituales: con ella la llegada sale en la hora del lugar. */
+export const AIRPORT_TZ: Record<string, string> = {
+  MAD: 'Europe/Madrid', BCN: 'Europe/Madrid', ALC: 'Europe/Madrid', VLC: 'Europe/Madrid', AGP: 'Europe/Madrid', PMI: 'Europe/Madrid',
+  SVQ: 'Europe/Madrid', BIO: 'Europe/Madrid', IBZ: 'Europe/Madrid', MAH: 'Europe/Madrid', LPA: 'Atlantic/Canary', TFS: 'Atlantic/Canary',
+  TFN: 'Atlantic/Canary', ACE: 'Atlantic/Canary', FUE: 'Atlantic/Canary', LIS: 'Europe/Lisbon', OPO: 'Europe/Lisbon',
+  LHR: 'Europe/London', LGW: 'Europe/London', STN: 'Europe/London', LTN: 'Europe/London', MAN: 'Europe/London', DUB: 'Europe/Dublin',
+  CDG: 'Europe/Paris', ORY: 'Europe/Paris', AMS: 'Europe/Amsterdam', BRU: 'Europe/Brussels', FRA: 'Europe/Berlin', MUC: 'Europe/Berlin',
+  BER: 'Europe/Berlin', ZRH: 'Europe/Zurich', GVA: 'Europe/Zurich', VIE: 'Europe/Vienna', FCO: 'Europe/Rome', MXP: 'Europe/Rome',
+  LIN: 'Europe/Rome', VCE: 'Europe/Rome', ATH: 'Europe/Athens', IST: 'Europe/Istanbul', CPH: 'Europe/Copenhagen', OSL: 'Europe/Oslo',
+  ARN: 'Europe/Stockholm', HEL: 'Europe/Helsinki', WAW: 'Europe/Warsaw', PRG: 'Europe/Prague', BUD: 'Europe/Budapest',
+  JFK: 'America/New_York', EWR: 'America/New_York', BOS: 'America/New_York', MIA: 'America/New_York', ATL: 'America/New_York',
+  ORD: 'America/Chicago', DFW: 'America/Chicago', DEN: 'America/Denver', LAX: 'America/Los_Angeles', SFO: 'America/Los_Angeles',
+  YYZ: 'America/Toronto', YUL: 'America/Toronto', MEX: 'America/Mexico_City', CUN: 'America/Cancun', BOG: 'America/Bogota',
+  LIM: 'America/Lima', SCL: 'America/Santiago', EZE: 'America/Argentina/Buenos_Aires', AEP: 'America/Argentina/Buenos_Aires',
+  GRU: 'America/Sao_Paulo', GIG: 'America/Sao_Paulo', MVD: 'America/Montevideo', HAV: 'America/Havana', PTY: 'America/Panama',
+  DXB: 'Asia/Dubai', DOH: 'Asia/Qatar', CAI: 'Africa/Cairo', RAK: 'Africa/Casablanca', CMN: 'Africa/Casablanca', JNB: 'Africa/Johannesburg',
+  DEL: 'Asia/Kolkata', BOM: 'Asia/Kolkata', BKK: 'Asia/Bangkok', SIN: 'Asia/Singapore', HKG: 'Asia/Hong_Kong', PEK: 'Asia/Shanghai',
+  PVG: 'Asia/Shanghai', ICN: 'Asia/Seoul', NRT: 'Asia/Tokyo', HND: 'Asia/Tokyo', KIX: 'Asia/Tokyo', SYD: 'Australia/Sydney',
+  MEL: 'Australia/Melbourne', AKL: 'Pacific/Auckland',
+};
+
+const NOT_AN_AIRPORT = new Set(['OCT', 'NOV', 'DEC', 'DIC', 'JAN', 'ENE', 'FEB', 'MAR', 'APR', 'ABR', 'MAY', 'JUN', 'JUL', 'AUG', 'AGO', 'SEP', 'SET', 'THE', 'AND', 'VIA', 'IVA', 'PDF', 'JET', 'TER', 'AIR', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN', 'LUN', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']);
 
 function findFlight(text: string): { carrier: string; number: string } | null {
   const match = /\b([A-Z][A-Z0-9])\s?(\d{3,4})\b/.exec(text.replace(/\bvuelo\b/gi, ''));
   return match && !/^\d\d$/.test(match[1]) ? { carrier: match[1], number: match[2] } : null;
 }
 
+/** Códigos IATA: entre paréntesis «(MAD)», o sueltos en su línea o tras «→» / «-» («MAD  EZE», «MAD → EZE»). */
 function findAirports(text: string): string[] {
   const codes: string[] = [];
-  const re = /\(([A-Z]{3})\)/g;
+  const add = (code: string) => {
+    if (!codes.includes(code) && !NOT_AN_AIRPORT.has(code)) {
+      codes.push(code);
+    }
+  };
   let match: RegExpExecArray | null;
-  while ((match = re.exec(text))) {
-    if (!codes.includes(match[1])) codes.push(match[1]);
+  const inParens = /\(([A-Z]{3})\)/g;
+  while ((match = inParens.exec(text))) add(match[1]);
+  if (codes.length >= 2) {
+    return codes;
+  }
+  // Solo códigos conocidos cuando van sueltos: evita coger siglas cualesquiera.
+  const loose = /(?:^|\n|\s[→\-–>]\s|\s{2,})([A-Z]{3})(?=\s|$)/g;
+  while ((match = loose.exec(text))) {
+    if (AIRPORT_TZ[match[1]]) add(match[1]);
   }
   return codes;
 }
@@ -222,8 +278,10 @@ export function applySuggestion<T extends PrefillFields>(base: T, s: TextSuggest
     type: base.type ?? s.type,
     title: s.type && s.title ? (base.type ? base.title ?? s.title : s.title) : base.title ?? s.title,
     startLocal: base.startLocal ?? startLocal,
+    startTz: base.startTz ?? s.startTz,
     startPlace: base.startPlace ?? s.startPlace,
     endLocal: base.endLocal ?? endLocal,
+    endTz: base.endTz ?? s.endTz,
     endPlace: base.endPlace ?? s.endPlace,
     reference: base.reference ?? s.reference,
     address: base.address ?? s.address,
@@ -244,9 +302,11 @@ export function suggestFromText(text: string, fileName = ''): TextSuggestion {
     startDate: start?.date ?? null,
     startTime: null,
     startPlace: null,
+    startTz: null,
     endDate: null,
     endTime: null,
     endPlace: null,
+    endTz: null,
     address: null,
     notes: findSeats(text),
   };
@@ -263,6 +323,10 @@ export function suggestFromText(text: string, fileName = ''): TextSuggestion {
     const airports = findAirports(text);
     suggestion.startPlace = airports[0] ?? null;
     suggestion.endPlace = airports[1] ?? null;
+    suggestion.startTz = airports[0] ? (AIRPORT_TZ[airports[0]] ?? null) : null;
+    suggestion.endTz = airports[1] ? (AIRPORT_TZ[airports[1]] ?? null) : null;
+    // Un vuelo que llega al día siguiente: la fecha posterior del billete.
+    suggestion.endDate = later?.date ?? null;
     const route = airports.length >= 2 ? `${airports[0]} → ${airports[1]}` : null;
     suggestion.title = [flight ? `${flight.carrier} ${flight.number}` : null, route].filter(Boolean).join(' ') || 'Vuelo';
   } else if (type === 'train') {

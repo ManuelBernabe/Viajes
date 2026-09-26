@@ -146,6 +146,8 @@ export function BookingFormPage() {
         }
       };
       if (s.type) setType(s.type);
+      if (s.startTz) setStartTz(s.startTz);
+      if (s.endTz) setEndTz(s.endTz);
       fill(title, s.title, setTitle);
       fill(reference, s.reference, setReference);
       fill(startDate, s.startDate, setStartDate);
