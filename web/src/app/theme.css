@@ -258,3 +258,9 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 
 .center { text-align: center; }
 .spacer { height: 12px; }
+
+/* Capturas de pantalla de la guía de uso. */
+.guide-shot { margin: 10px 0 4px; }
+.guide-shot img { display: block; width: 100%; max-width: 320px; margin: 0 auto; border: 1px solid var(--border); border-radius: 18px; }
+.guide-shot figcaption { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+.guide-shot.wide img { max-width: 100%; border-radius: 12px; }

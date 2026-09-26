@@ -26,6 +26,8 @@ export default defineConfig({
         // El manifest.webmanifest lo añade el propio plugin; si además lo recoge el glob, queda duplicado con otra
         // revisión y Workbox aborta el worker al arrancar («conflicting entries»): sin popup de versión ni avisos.
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,woff2}'],
+        // Las capturas de la guía se ven con red; no merece la pena guardarlas en todos los móviles.
+        globIgnores: ['**/guia/**'],
         maximumFileSizeToCacheInBytes: 5_000_000,
       },
     }),

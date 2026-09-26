@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { describeError } from '../api';
 import { useSession } from '../app/SessionContext';
 import { acceptInvitation, describeInvitationState, lookupInvitation, type InvitationInfo } from '../household/household';
@@ -115,7 +115,8 @@ export function InvitationPage() {
         )}
         {message && <p className="error">{message}</p>}
         <p className="small muted" style={{ marginTop: 12 }}>
-          Después, añade la app a la pantalla de inicio (Compartir → Añadir a pantalla de inicio) y activa los avisos en Ajustes.
+          Después, añade la app a la pantalla de inicio (Compartir → Añadir a pantalla de inicio) y activa los avisos en Ajustes. Todo
+          está explicado en la <Link to="/guia">guía de uso</Link>.
         </p>
       </section>
     </main>

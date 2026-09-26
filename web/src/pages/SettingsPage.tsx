@@ -109,6 +109,14 @@ export function SettingsPage() {
       </section>
 
       <section className="card">
+        <h3>Ayuda</h3>
+        <p className="small muted">Cómo instalar la app, añadir reservas, usar los QR sin conexión, los correos y los avisos.</p>
+        <Link to="/guia" className="btn block">
+          Guía de uso
+        </Link>
+      </section>
+
+      <section className="card">
         <h3>Versión</h3>
         <p className="small">App: {APP_VERSION}</p>
         <p className="small">Servidor: {server}</p>
