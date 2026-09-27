@@ -114,8 +114,8 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
       <TypeChips types={typesPresent} value={filter} onChange={setFilter} />
 
       {next && info && (
-        <section className="card highlight">
-          <div className="muted small">Lo siguiente</div>
+        <section className={`card highlight type-${next.type}`}>
+          <div className="small eyebrow-type">Lo siguiente · {info.label}</div>
           <h3>
             {info.icon} {next.title}
           </h3>

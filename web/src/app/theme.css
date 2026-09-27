@@ -353,3 +353,12 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 .booking[class*="type-"] .icon { align-self: flex-start; width: fit-content; }
 /* La tarjeta de reserva es un enlace: sin esto, «a.card» (bloque) gana a «.booking» (fila). */
 a.card.booking { display: flex; }
+/* El color del tipo también vale para cualquier otra tarjeta (por ejemplo «Lo siguiente» en Inicio). */
+.type-flight { --type: var(--type-flight); }
+.type-train { --type: var(--type-train); }
+.type-hotel { --type: var(--type-hotel); }
+.type-car { --type: var(--type-car); }
+.type-ticket { --type: var(--type-ticket); }
+.type-other { --type: var(--type-other); }
+.card.highlight[class*="type-"] { border-color: var(--type); box-shadow: inset 4px 0 0 var(--type); }
+.card.highlight[class*="type-"] .eyebrow-type { color: var(--type); }
