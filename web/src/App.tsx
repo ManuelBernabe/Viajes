@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { Layout } from './app/Layout';
@@ -18,6 +19,15 @@ import { TripFormPage } from './pages/TripFormPage';
 import { TripPage } from './pages/TripPage';
 import { UpdatePrompt } from './UpdatePrompt';
 import './app/theme.css';
+
+/** Con el desplazamiento en un contenedor interior, cada pantalla nueva empieza arriba (el navegador ya no lo hace solo). */
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    document.querySelector('.shell > .scroll')?.scrollTo({ top: 0 });
+  }, [location.pathname]);
+  return null;
+}
 
 function Gate() {
   const session = useSession();
@@ -66,7 +76,12 @@ export default function App() {
     <BrowserRouter>
       <SessionProvider>
         <ErrorBoundary>
-          <Gate />
+          <div className="shell">
+            <div className="scroll">
+              <ScrollToTop />
+              <Gate />
+            </div>
+          </div>
         </ErrorBoundary>
         <UpdatePrompt />
       </SessionProvider>
