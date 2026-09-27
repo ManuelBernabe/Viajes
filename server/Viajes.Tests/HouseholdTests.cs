@@ -148,3 +148,50 @@ public sealed class AdminOnlySettingsTests(TestApp app) : IClassFixture<TestApp>
         Assert.Equal(HttpStatusCode.NoContent, (await admin.Client.DeleteAsync($"/api/import-tokens/{id}")).StatusCode);
     }
 }
+
+public sealed class SharedHouseholdDataTests(TestApp app) : IClassFixture<TestApp>
+{
+    private static async Task<TripsApi> Join(TestApp app, TripsApi admin, string email)
+    {
+        var invite = await admin.Client.PostAsJsonAsync("/api/household/invitations", new { });
+        var token = (await invite.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+        var client = app.CreateHttpsClient();
+        (await client.PostAsJsonAsync("/api/auth/register", new { email, password = Auth.Password, invitation = token })).EnsureSuccessStatusCode();
+        return new TripsApi(client);
+    }
+
+    [Fact]
+    public async Task What_one_member_adds_is_seen_by_the_admin_and_by_every_other_member()
+    {
+        var admin = await TripsApi.SignUp(app, "compartido-admin@example.com");
+        var tripId = Guid.NewGuid();
+        await admin.PutTrip(tripId, "Viaje del administrador");
+        var ana = await Join(app, admin, "compartido-ana@example.com");
+        var luis = await Join(app, admin, "compartido-luis@example.com");
+
+        // Ana añade una reserva al viaje del administrador y crea un viaje nuevo con otra reserva.
+        var bookingInAdminTrip = Guid.NewGuid();
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(bookingInAdminTrip, tripId, new { title = "Hotel de Ana" })).StatusCode);
+        var anaTrip = Guid.NewGuid();
+        var anaBooking = Guid.NewGuid();
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutTrip(anaTrip, "Viaje de Ana")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana" })).StatusCode);
+
+        foreach (var api in new[] { admin, ana, luis })
+        {
+            var sync = await api.GetSync();
+            Assert.Equal([tripId, anaTrip], sync.TripIds.OrderBy(id => id == anaTrip));
+            Assert.Contains(sync.Bookings, b => b.Id == bookingInAdminTrip && b.Title == "Hotel de Ana");
+            Assert.Contains(sync.Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana");
+        }
+
+        // Luis puede editar la reserva de Ana (mismo hogar) y Ana la del administrador; el cambio lo ven todos.
+        Assert.Equal(HttpStatusCode.NoContent, (await luis.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana (editado por Luis)" })).StatusCode);
+        Assert.Contains((await admin.GetSync()).Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana (editado por Luis)");
+
+        // Alguien de otro hogar no ve nada de esto.
+        var outsider = await TripsApi.SignUp(app, "compartido-ajeno@example.com");
+        Assert.Empty((await outsider.GetSync()).TripIds);
+        Assert.Equal(HttpStatusCode.NotFound, (await outsider.PutBooking(Guid.NewGuid(), tripId)).StatusCode);
+    }
+}
