@@ -17,7 +17,8 @@ public sealed record BookingBody(
     string? Reference,
     string? Address,
     string? Notes,
-    string? ChangeNote);
+    string? ChangeNote,
+    bool? Shared = null);
 
 public sealed record AttachmentBody(Guid BookingId, string? Name, string? Mime, long Size, string? QrText);
 
@@ -51,13 +52,14 @@ public sealed record BookingDto(
     string? Address,
     string? Notes,
     string? ChangeNote,
+    bool Shared,
     string CreatedBy,
     long Version,
     long? DeletedAtMs)
 {
     public static BookingDto From(Booking b) => new(
         b.Id, b.TripId, b.Type, b.Title, b.StartLocal, b.StartTz, b.StartPlace, b.EndLocal, b.EndTz, b.EndPlace,
-        b.StartUtcMs, b.Reference, b.Address, b.Notes, b.ChangeNote, b.CreatedBy, b.Version, b.DeletedAtMs);
+        b.StartUtcMs, b.Reference, b.Address, b.Notes, b.ChangeNote, b.Shared, b.CreatedBy, b.Version, b.DeletedAtMs);
 }
 
 public sealed record AttachmentDto(

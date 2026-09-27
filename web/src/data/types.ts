@@ -34,6 +34,8 @@ export interface Booking {
   notes: string | null;
   /** Aviso visible hasta que alguien lo quita: «Modificada el 27/09 según correo: …». */
   changeNote: string | null;
+  /** Un invitado puede compartir una reserva suya con todo el hogar. */
+  shared: boolean;
   createdBy: string;
   version: number;
   deletedAtMs: number | null;
@@ -125,6 +127,7 @@ export interface BookingBody {
   address: string | null;
   notes: string | null;
   changeNote: string | null;
+  shared?: boolean;
 }
 
 export interface AttachmentBody {

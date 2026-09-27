@@ -67,6 +67,7 @@ public sealed class AccessService(AppDbContext db)
         where member.UserId == userId && member.DeletedAtMs == null
         where member.Role == HouseholdMember.Admin
             || booking.CreatedBy == userId
+            || booking.Shared
             || db.HouseholdMembers.Any(a => a.HouseholdId == trip.HouseholdId && a.UserId == booking.CreatedBy && a.Role == HouseholdMember.Admin && a.DeletedAtMs == null)
         select booking;
 
@@ -80,9 +81,9 @@ public sealed class AccessService(AppDbContext db)
         }
 
         var members = await db.HouseholdMembers.Where(m => m.HouseholdId == trip.HouseholdId && m.DeletedAtMs == null).ToListAsync();
-        var creatorIsAdmin = members.Any(m => m.UserId == booking.CreatedBy && m.Role == HouseholdMember.Admin);
+        var everyone = booking.Shared || members.Any(m => m.UserId == booking.CreatedBy && m.Role == HouseholdMember.Admin);
         return members
-            .Where(m => creatorIsAdmin || m.Role == HouseholdMember.Admin || m.UserId == booking.CreatedBy)
+            .Where(m => everyone || m.Role == HouseholdMember.Admin || m.UserId == booking.CreatedBy)
             .Select(m => m.UserId)
             .Distinct()
             .ToList();

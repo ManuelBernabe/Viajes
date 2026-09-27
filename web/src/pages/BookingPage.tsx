@@ -43,6 +43,7 @@ export function BookingPage() {
       {
         tripId: b.tripId, type: b.type, title: b.title, startLocal: b.startLocal, startTz: b.startTz, startPlace: b.startPlace,
         endLocal: b.endLocal, endTz: b.endTz, endPlace: b.endPlace, reference: b.reference, address: b.address, notes: b.notes, changeNote: null,
+        shared: b.shared,
       },
       session.email ?? '',
       b.id,
@@ -98,6 +99,12 @@ export function BookingPage() {
               {formatLongDay(booking.endLocal)} · {timeOf(booking.endLocal)} hora de {zoneLabel(booking.endTz ?? booking.startTz)}
               {booking.endPlace && <div>{booking.endPlace}</div>}
             </dd>
+          </>
+        )}
+        {booking.shared && (
+          <>
+            <dt>Visibilidad</dt>
+            <dd>Compartida con todo el hogar</dd>
           </>
         )}
         {booking.reference && (

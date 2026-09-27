@@ -19,6 +19,7 @@ export function BookingCard({ booking, showDay }: { booking: Booking; showDay?: 
         <div className="title">
           {booking.title}
           {booking.changeNote && <span className="badge danger"> ⚠️ Modificada</span>}
+          {booking.shared && <span className="badge"> Compartida</span>}
         </div>
         {showDay && <div className="sub">{showDay}</div>}
         {route && <div className="sub">{route}</div>}

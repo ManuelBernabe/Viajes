@@ -12,6 +12,7 @@ import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAtta
 import { importInboxAttachments } from '../data/inboxImport';
 import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, timeOf, zoneLabel } from '../data/localTime';
 import { getBooking, listAllBookings, saveBooking } from '../data/repo';
+import { loadHousehold } from '../household/household';
 import type { Booking } from '../data/types';
 import { applyChanges, diffBooking, findExistingBooking, type Change, type Proposal } from '../domain/changes';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
@@ -67,6 +68,12 @@ export function BookingFormPage() {
   const [address, setAddress] = useState(prefill?.address ?? '');
   const [notes, setNotes] = useState(prefill?.notes ?? '');
   const [changeNote, setChangeNote] = useState<string | null>(null);
+  // Solo los invitados deciden si comparten una reserva; las de quien administra ya las ve todo el hogar.
+  const [shared, setShared] = useState(false);
+  const [admin, setAdmin] = useState(true);
+  useEffect(() => {
+    loadHousehold().then((home) => setAdmin(home.iAmAdmin), () => setAdmin(true));
+  }, []);
 
   useEffect(() => {
     if (prefill?.rawText) {
@@ -103,6 +110,7 @@ export function BookingFormPage() {
         setAddress(booking.address ?? '');
         setNotes(booking.notes ?? '');
         setChangeNote(booking.changeNote);
+        setShared(booking.shared);
       }
       setLoaded(true);
     });
@@ -254,6 +262,7 @@ export function BookingFormPage() {
           address: address.trim() || null,
           notes: notes.trim() || null,
           changeNote,
+          shared,
         },
         session.email ?? '',
         bookingId,
@@ -419,6 +428,12 @@ export function BookingFormPage() {
           <label htmlFor="notes">Notas</label>
           <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
+        {!admin && (
+          <label className="row small" style={{ gap: 10, margin: '12px 0' }}>
+            <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
+            Compartir con el hogar (si no, solo la veis tú y quien administra)
+          </label>
+        )}
         {!bookingId && (
           <div className="field">
             <label htmlFor="files">Adjuntos (tarjetas de embarque, PDF, fotos)</label>

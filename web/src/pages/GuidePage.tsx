@@ -181,7 +181,8 @@ export function GuidePage() {
           <li>
             Cada persona tiene su cuenta y su contraseña. Los viajes son del hogar y los ven todos. Las reservas que crea quien
             administra las ven todos; las que añade un invitado solo las ven ese invitado y quien administra, que es el único con la
-            foto completa.
+            foto completa. Un invitado puede marcar una reserva suya como <strong>Compartir con el hogar</strong> al crearla o
+            editarla, y entonces la ven todos.
           </li>
           <li>
             En Ajustes → Hogar cualquiera puede <strong>Invitar a alguien</strong>: se genera un enlace de un solo uso que caduca a los

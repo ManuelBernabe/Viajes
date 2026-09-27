@@ -5,7 +5,7 @@ import { applyChanges, describeChanges, diffBooking, findExistingBooking, type P
 const booking = (overrides: Partial<Booking> = {}): Booking => ({
   id: 'b1', tripId: 't1', type: 'train', title: 'AVE 05143 Alicante → Chamartín', startLocal: '2026-10-01T14:35', startTz: 'Europe/Madrid',
   startPlace: 'Alicante-Termin', endLocal: '2026-10-01T17:08', endTz: 'Europe/Madrid', endPlace: 'Chamartin', startUtcMs: 1,
-  reference: 'C3BMDV', address: null, notes: 'Coche 8 · Plazas 6B, 6A', changeNote: null, createdBy: 'yo', version: 1, deletedAtMs: null, ...overrides,
+  reference: 'C3BMDV', address: null, notes: 'Coche 8 · Plazas 6B, 6A', changeNote: null, shared: false, createdBy: 'yo', version: 1, deletedAtMs: null, ...overrides,
 });
 
 const proposal = (overrides: Partial<Proposal> = {}): Proposal => ({

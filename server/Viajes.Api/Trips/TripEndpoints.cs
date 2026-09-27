@@ -195,6 +195,7 @@ public static partial class TripEndpoints
         booking.Notes = Clean(body.Notes, 4000);
         var previousNote = booking.ChangeNote;
         booking.ChangeNote = Clean(body.ChangeNote, 1000);
+        booking.Shared = body.Shared ?? booking.Shared;
 
         await db.SaveChangesAsync(ct);
 

@@ -13,7 +13,7 @@ const trip = (id: string, extra: Partial<Trip> = {}): Trip => ({
 });
 const booking = (id: string, tripId: string, extra: Partial<Booking> = {}): Booking => ({
   id, tripId, type: 'flight', title: id, startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null,
-  endLocal: null, endTz: null, endPlace: null, startUtcMs: 1, reference: null, address: null, notes: null, changeNote: null,
+  endLocal: null, endTz: null, endPlace: null, startUtcMs: 1, reference: null, address: null, notes: null, changeNote: null, shared: false,
   createdBy: 'yo', version: 1, deletedAtMs: null, ...extra,
 });
 const attachment = (id: string, bookingId: string, extra: Partial<Attachment> = {}): Attachment => ({

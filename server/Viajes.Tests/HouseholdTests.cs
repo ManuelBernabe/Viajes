@@ -201,6 +201,13 @@ public sealed class SharedHouseholdDataTests(TestApp app) : IClassFixture<TestAp
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana (revisado)" })).StatusCode);
         Assert.Contains((await ana.GetSync()).Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana (revisado)");
 
+        // Si Ana marca una reserva como compartida, Luis pasa a verla (y a poder editarla); si la desmarca, deja de verla.
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana", shared = true })).StatusCode);
+        Assert.Contains((await luis.GetSync()).Bookings, b => b.Id == anaInAdminTrip);
+        Assert.Equal(HttpStatusCode.NoContent, (await luis.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana (visto por Luis)", shared = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana", shared = false })).StatusCode);
+        Assert.DoesNotContain((await luis.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == anaInAdminTrip);
+
         // Alguien de otro hogar no ve nada de esto.
         var outsider = await TripsApi.SignUp(app, "compartido-ajeno@example.com");
         Assert.Empty((await outsider.GetSync()).TripIds);

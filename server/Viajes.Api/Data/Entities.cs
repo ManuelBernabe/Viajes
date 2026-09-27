@@ -101,6 +101,9 @@ public sealed class Booking : IVersioned
     /// <summary>Aviso visible («Modificada el 27/09 según correo: salida 14:35 → 16:10») hasta que alguien lo quita.</summary>
     public string? ChangeNote { get; set; }
 
+    /// <summary>Un invitado puede compartir una reserva suya con todo el hogar (las de quien administra ya lo están).</summary>
+    public bool Shared { get; set; }
+
     public required string CreatedBy { get; set; }
 
     public long Version { get; set; }
