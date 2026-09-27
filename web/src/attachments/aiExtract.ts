@@ -1,5 +1,21 @@
 import { ApiError } from '../api';
+import { getMeta, setMeta } from '../data/db';
 import type { TextSuggestion } from './extract';
+
+/** Ajuste «Leer sin IA»: la app se comporta como si el servidor no tuviera clave, para probar las reglas locales. */
+export const AI_OFF_KEY = 'ai.off';
+
+export async function isAiOff(): Promise<boolean> {
+  try {
+    return (await getMeta<boolean>(AI_OFF_KEY)) === true;
+  } catch {
+    return false;
+  }
+}
+
+export function setAiOff(off: boolean): Promise<void> {
+  return setMeta(AI_OFF_KEY, off);
+}
 
 /** Lo que devuelve el servidor tras leer el documento con IA. */
 export interface AiExtraction {
@@ -23,6 +39,9 @@ export type AiResult = { status: 'ok'; extraction: AiExtraction } | { status: 'u
  * «offline» si no hay red o el servidor falla: en ambos casos la app sigue con sus reglas locales.
  */
 export async function extractWithAi(bytes: ArrayBuffer, mime: string, name: string): Promise<AiResult> {
+  if (await isAiOff()) {
+    return { status: 'unavailable' };
+  }
   try {
     const response = await fetch(`/api/extract?name=${encodeURIComponent(name)}`, {
       method: 'POST',

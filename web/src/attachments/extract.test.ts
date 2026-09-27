@@ -454,3 +454,82 @@ Código de confirmación: HMSR4NN3H9`;
     });
   });
 });
+
+describe('fechas y horas en portugués e inglés', () => {
+  it('lee «6 de outubro de 2026», «October 6, 2026» y «9:10 PM»', () => {
+    expect(findDates('Embarque: 6 de outubro de 2026. Departure: October 9, 2026. Volta em 19 dez 2026').map((d) => d.date)).toEqual([
+      '2026-10-06', '2026-10-09', '2026-12-19',
+    ]);
+    expect(findTimes('Departs 9:10 PM, arrives 12:05 AM, price 45.90 $').map((t) => t.time)).toEqual(['21:10', '00:05']);
+  });
+});
+
+describe('confirmação da GOL (portugués)', () => {
+  const text = `GOL Linhas Aéreas
+Sua reserva está confirmada
+Código da reserva: RJX4T7
+Voo G3 2115
+Data: 9 de outubro de 2026
+Partida 12:30 Foz do Iguaçu (IGU)
+Chegada 15:20 Rio de Janeiro (GIG)
+Passageiro: MANUEL BERNABE  Assento 14C`;
+
+  it('saca tipo, vuelo, localizador, aeropuertos con zona horaria y horas', () => {
+    const s = suggestFromText(text);
+    expect(s.type).toBe('flight');
+    expect(s.title).toBe('G3 2115 IGU → GIG');
+    expect(s.reference).toBe('RJX4T7');
+    expect(s.startDate).toBe('2026-10-09');
+    expect(s.startTime).toBe('12:30');
+    expect(s.endTime).toBe('15:20');
+    expect(s.startTz).toBe('America/Sao_Paulo');
+    expect(s.endTz).toBe('America/Sao_Paulo');
+  });
+});
+
+describe('itinerario de Aerolíneas con terminal y año cerca', () => {
+  it('no toma «T4 2026» por un vuelo y prefiere la compañía conocida', () => {
+    const s = suggestFromText(`Aerolíneas Argentinas · Itinerario
+Terminal T4 2026 · Vuelo AR 1728 Buenos Aires (AEP) → Puerto Iguazú (IGR)
+06/10/2026 16:10 → 18:00
+Código de reserva: KQ8R2M`);
+    expect(s.title).toBe('AR 1728 AEP → IGR');
+    expect(s.startTz).toBe('America/Argentina/Buenos_Aires');
+    expect(s.reference).toBe('KQ8R2M');
+  });
+});
+
+describe('reserva de hotel en portugués (Booking)', () => {
+  it('lee pousada, check-in y check-out con sus horas, endereço y número de confirmação', () => {
+    const s = suggestFromText(`Booking.com
+Pousada Ipanema Mar
+Endereço: Rua Visconde de Pirajá 400, Ipanema, Rio de Janeiro
+Check-in: 9 de outubro de 2026 a partir das 15:00
+Check-out: 19 de outubro de 2026 até as 10:00
+Número de confirmação: 4471820`);
+    expect(s.type).toBe('hotel');
+    expect(s.title).toBe('Pousada Ipanema Mar');
+    expect(s.address).toBe('Rua Visconde de Pirajá 400, Ipanema, Rio de Janeiro');
+    expect(s.startDate).toBe('2026-10-09');
+    expect(s.startTime).toBe('15:00');
+    expect(s.endDate).toBe('2026-10-19');
+    expect(s.endTime).toBe('10:00');
+    expect(s.reference).toBe('4471820');
+  });
+});
+
+describe('confirmación en inglés', () => {
+  it('lee «Reservation number», mes primero y AM/PM', () => {
+    const s = suggestFromText(`Your flight is confirmed
+Reservation number: HX9K2L
+Flight JA 3120 Santiago (SCL) to Lima (LIM)
+Departure: October 12, 2026 at 7:45 AM · Arrival: 10:30 AM`);
+    expect(s.type).toBe('flight');
+    expect(s.reference).toBe('HX9K2L');
+    expect(s.title).toBe('JA 3120 SCL → LIM');
+    expect(s.startDate).toBe('2026-10-12');
+    expect(s.startTime).toBe('07:45');
+    expect(s.endTime).toBe('10:30');
+    expect(s.startTz).toBe('America/Santiago');
+  });
+});

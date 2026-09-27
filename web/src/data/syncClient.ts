@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { api, ApiError } from '../api';
+import { isAiOff } from '../attachments/aiExtract';
 import { subscribe } from './bus';
 import { getMeta, openDb } from './db';
 import { todayLocal } from '../domain/agenda';
@@ -135,6 +136,9 @@ export async function downloadInboxAttachment(itemId: string, attachmentId: stri
 
 /** Pide al servidor que vuelva a leer el borrador con IA; null si no hay IA, no reconoce nada o no hay red. */
 export async function reExtractInbox(itemId: string): Promise<InboxItem | null> {
+  if (await isAiOff()) {
+    return null;
+  }
   try {
     const item = await api<InboxItem>(`/api/inbox/${itemId}/extract`, { method: 'POST' });
     await (await openDb()).put('inbox', item);

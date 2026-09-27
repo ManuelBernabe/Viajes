@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { formatSize } from '../attachments/files';
+import { AiSettings } from '../components/AiSettings';
 import { HouseholdSettings } from '../components/HouseholdSettings';
 import { ImportTokens } from '../components/ImportTokens';
 import { PushSettings } from '../components/PushSettings';
@@ -98,6 +99,8 @@ export function SettingsPage() {
       <PushSettings />
 
       <ImportTokens />
+
+      <AiSettings />
 
       <section className="card">
         <h3>Espacio en el móvil</h3>

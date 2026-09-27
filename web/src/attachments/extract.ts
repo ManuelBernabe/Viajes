@@ -22,20 +22,26 @@ export interface TextSuggestion {
   notes: string | null;
 }
 
+/** Meses en español, portugués e inglés, sin acentos (el texto se normaliza antes de buscar). */
 const MONTHS: Record<string, number> = {
-  ene: 1, enero: 1, jan: 1, january: 1,
-  feb: 2, febrero: 2, february: 2,
-  mar: 3, marzo: 3, march: 3,
+  ene: 1, enero: 1, jan: 1, janeiro: 1, january: 1,
+  feb: 2, febrero: 2, fev: 2, fevereiro: 2, february: 2,
+  mar: 3, marzo: 3, marco: 3, march: 3,
   abr: 4, abril: 4, apr: 4, april: 4,
-  may: 5, mayo: 5,
-  jun: 6, junio: 6, june: 6,
-  jul: 7, julio: 7, july: 7,
+  may: 5, mayo: 5, mai: 5, maio: 5,
+  jun: 6, junio: 6, junho: 6, june: 6,
+  jul: 7, julio: 7, julho: 7, july: 7,
   ago: 8, agosto: 8, aug: 8, august: 8,
-  sep: 9, sept: 9, septiembre: 9, september: 9,
-  oct: 10, octubre: 10, october: 10,
-  nov: 11, noviembre: 11, november: 11,
-  dic: 12, diciembre: 12, dec: 12, december: 12,
+  sep: 9, sept: 9, septiembre: 9, set: 9, setembro: 9, september: 9,
+  oct: 10, octubre: 10, out: 10, outubro: 10, october: 10,
+  nov: 11, noviembre: 11, novembro: 11, november: 11,
+  dic: 12, diciembre: 12, dez: 12, dezembro: 12, dec: 12, december: 12,
 };
+
+/** «março» → «marco», «Sept.» → «sept». */
+function monthOf(word: string): number | undefined {
+  return MONTHS[word.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
+}
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
@@ -70,8 +76,10 @@ export function findDates(text: string): { date: string; index: number }[] {
   };
   const numeric = /\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b/g;
   const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
-  // «01 oct 202614:35»: en algunos correos el año va pegado a la hora.
-  const worded = /\b(\d{1,2})\s*(?:de\s+)?([a-záéíóú]{3,10})\.?\s*(?:de\s+|,\s*)?(\d{4})(?=\d{1,2}[:.]\d{2}|\b)/gi;
+  // «01 oct 202614:35»: en algunos correos el año va pegado a la hora. «6 de outubro de 2026» (portugués) entra igual.
+  const worded = /\b(\d{1,2})\s*(?:de\s+)?([a-záéíóúãç]{3,10})\.?\s*(?:de\s+|,\s*)?(\d{4})(?=\d{1,2}[:.]\d{2}|\b)/gi;
+  // «October 6, 2026» / «Oct 6 2026» (inglés, mes primero).
+  const monthFirst = /\b([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/gi;
   let match: RegExpExecArray | null;
   while ((match = numeric.exec(text))) {
     push(isoDate(Number(match[1]), Number(match[2]), Number(match[3])), match);
@@ -80,16 +88,22 @@ export function findDates(text: string): { date: string; index: number }[] {
     push(isoDate(Number(match[3]), Number(match[2]), Number(match[1])), match);
   }
   while ((match = worded.exec(text))) {
-    const month = MONTHS[match[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
+    const month = monthOf(match[2]);
     if (month) {
       push(isoDate(Number(match[1]), month, Number(match[3])), match);
     }
   }
+  while ((match = monthFirst.exec(text))) {
+    const month = monthOf(match[1]);
+    if (month && !found.some((d) => Math.abs(d.index - match!.index) < 3)) {
+      push(isoDate(Number(match[2]), month, Number(match[3])), match);
+    }
+  }
   // «jueves, 01 octubre» sin año: la próxima vez que caiga esa fecha (el año en curso, o el siguiente si ya pasó hace más de 60 días).
   // Se admiten siempre (un reenvío trae la fecha del reenvío con año y las del viaje sin él), pero sin duplicar las que ya tienen año.
-  const noYear = /\b(\d{1,2})\s+(?:de\s+)?([a-záéíóú]{3,10})\b\.?(?!\s*(?:de\s+)?\d{4})/gi;
+  const noYear = /\b(\d{1,2})\s+(?:de\s+)?([a-záéíóúãç]{3,10})\b\.?(?!\s*(?:de\s+)?\d{4})/gi;
   while ((match = noYear.exec(text))) {
-    const month = MONTHS[match[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')];
+    const month = monthOf(match[2]);
     if (month && !found.some((d) => Math.abs(d.index - match!.index) < 3)) {
       push(isoDate(Number(match[1]), month, inferYear(month, Number(match[1]))), match);
     }
@@ -130,7 +144,7 @@ function travelDate(dates: { date: string; index: number }[]): { date: string; i
 
 /** «Coche: 8 Plaza: 6B» (uno por pasajero) → «Coche 8 · Plazas 6B, 6A». */
 function findSeats(text: string): string | null {
-  const re = /\b(?:coche|car|wagon|vag[oó]n)\s*[:.]?\s*(\w+)\s*[,·]?\s*(?:plaza|asiento|seat)\s*[:.]?\s*(\w+)/gi;
+  const re = /\b(?:coche|car|wagon|vag[oó]n|carro|vag[aã]o)\s*[:.]?\s*(\w+)\s*[,·]?\s*(?:plaza|asiento|seat|assento|poltrona)\s*[:.]?\s*(\w+)/gi;
   const coaches = new Set<string>();
   const seats: string[] = [];
   let match: RegExpExecArray | null;
@@ -146,30 +160,35 @@ function findSeats(text: string): string | null {
   return `Coche ${[...coaches].join('/')} · ${seats.length === 1 ? 'Plaza' : 'Plazas'} ${seats.join(', ')}`;
 }
 
-/** Horas «14:35» o «14.35 h», con posición. */
+/** Horas «14:35», «14.35 h» o «9:10 PM» (inglés), con posición. */
 export function findTimes(text: string): { time: string; index: number }[] {
   const found: { time: string; index: number }[] = [];
   // Una hora empieza tras algo que no sea cifra ni separador… o tras un año pegado («202614:35»).
-  const re = /(?:(?<![\d:.])|(?<=\b\d{4}))([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*h\b)?/g;
+  const re = /(?:(?<![\d:.])|(?<=\b\d{4}))([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*h\b|\s*([ap])\.?m\.?\b)?/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
     // Descarta lo que parece una fecha con puntos (12.10.2026) o un importe.
     const after = text.slice(match.index + match[0].length, match.index + match[0].length + 3);
-    if (/^[.:]\d/.test(after) || /^\s*€/.test(after)) {
+    if (/^[.:]\d/.test(after) || /^\s*(€|R\$|US\$|\$)/.test(after)) {
       continue;
     }
-    found.push({ time: `${pad(Number(match[1]))}:${match[2]}`, index: match.index });
+    let hour = Number(match[1]);
+    const meridian = match[3]?.toLowerCase();
+    if (meridian === 'p' && hour < 12) hour += 12;
+    if (meridian === 'a' && hour === 12) hour = 0;
+    found.push({ time: `${pad(hour)}:${match[2]}`, index: match.index });
   }
   return found;
 }
 
 function detectType(text: string): BookingType | null {
   const t = text.toLowerCase();
-  if (/\b(renfe|ave\b|alvia|avlo|iryo|ouigo|tren|train|coche\s+\d|vagón|wagon|rail)\b/.test(t)) return 'train';
-  if (/\b(vuelos?|flights?|boarding pass|tarjeta de embarque|aerol[ií]neas?|airlines?|embarque|itinerario|avi[oó]n|aeropuerto|airport|terminal|cabina|boleto|e-?ticket|iberia|vueling|ryanair|easyjet|air europa|lufthansa|klm|british airways)\b/.test(t)) return 'flight';
-  if (/\b(hotel|check-?in|check-?out|habitaci[oó]n|room|noches?|nights?|apartamento|booking\.com|airbnb)\b/.test(t)) return 'hotel';
-  if (/\b(alquiler de coche|rent a car|car rental|rental car|hertz|avis|europcar|sixt|recogida del veh[ií]culo|pick-?up)\b/.test(t)) return 'car';
-  if (/\b(entrada|entradas|ticket|tickets|museo|concierto|espect[aá]culo|admission)\b/.test(t)) return 'ticket';
+  // Español, portugués e inglés, por este orden de prioridad (un hotel cerca del aeropuerto sigue siendo un hotel: se mira antes lo específico).
+  if (/\b(renfe|ave\b|alvia|avlo|iryo|ouigo|tren|train|trem|coche\s+\d|vagón|vag[aã]o|wagon|rail)\b/.test(t)) return 'train';
+  if (/\b(vuelos?|flights?|voos?|boarding pass|tarjeta de embarque|cart[aã]o de embarque|aerol[ií]neas?|airlines?|linhas a[eé]reas|companhia a[eé]rea|embarque|itinerario|itiner[aá]rio|avi[oó]n|aeropuerto|aeroporto|airport|terminal|cabina|boleto|passagem a[eé]rea|e-?ticket|iberia|vueling|ryanair|easyjet|air europa|lufthansa|klm|british airways|latam|jetsmart|flybondi|voegol|gol linhas|azul linhas|sky airline|aerol[ií]neas argentinas)\b/.test(t)) return 'flight';
+  if (/\b(hotel|hostel|pousada|resort|check-?in|check-?out|habitaci[oó]n|quarto|room|noches?|noites?|nights?|di[aá]rias?|hospedagem|estadia|apartamento|booking\.com|airbnb|expedia|hoteles\.com|hotels\.com)\b/.test(t)) return 'hotel';
+  if (/\b(alquiler de coche|aluguel de carro|locadora|rent a car|car rental|rental car|hertz|avis|europcar|sixt|localiza|movida|recogida del veh[ií]culo|pick-?up)\b/.test(t)) return 'car';
+  if (/\b(entrada|entradas|ingressos?|ticket|tickets|museo|museu|concierto|espect[aá]culo|admission|excursi[oó]n|tour)\b/.test(t)) return 'ticket';
   return null;
 }
 
@@ -177,12 +196,16 @@ function detectType(text: string): BookingType | null {
 const NOT_A_CODE = new Set([
   'PARTIDA', 'ARRIBO', 'SALIDA', 'LLEGADA', 'VUELO', 'FECHA', 'HOTEL', 'TREN', 'TOTAL', 'RESERVA', 'CODIGO', 'CÓDIGO', 'NUMERO', 'NÚMERO',
   'BILLETE', 'TICKET', 'BOOKING', 'NOMBRE', 'ORIGEN', 'DESTINO', 'PASAJERO', 'CLIENTE', 'PRECIO', 'IMPORTE', 'ESTADO', 'CABINA', 'ASIENTO',
+  // Portugués e inglés.
+  'CHEGADA', 'SAIDA', 'SAÍDA', 'EMBARQUE', 'DATA', 'ORIGEM', 'PASSAGEIRO', 'ASSENTO', 'VALOR', 'STATUS', 'CONFIRMADO', 'CONFIRMADA',
+  'DEPARTURE', 'ARRIVAL', 'FLIGHT', 'DATE', 'PASSENGER', 'SEAT', 'CONFIRMED', 'GUEST', 'CHECK', 'TRAVEL', 'TRIP', 'PRICE', 'AMOUNT',
 ]);
 
 function findReference(text: string): string | null {
   // La etiqueta se busca sin distinguir mayúsculas (y puede venir pegada: «reservaCódigo de reserva:»); lo que sigue, sí:
   // se admite una palabra con minúsculas («Localizador Renfe: C3BMDV») pero nunca un bloque en mayúsculas, que es el código.
-  const label = /(?:localizador|localizer|locator|c[oó]digo de reserva|n[uú]mero de reserva|reserva n[.ºo]?|booking (?:reference|number|code)|reference|referencia|confirmation (?:number|code)|confirmaci[oó]n|pnr|record locator)/gi;
+  // Etiquetas en español, portugués e inglés.
+  const label = /(?:localizador|localizer|locator|c[oó]digo (?:de|da) reserva|n[uú]mero (?:de|da) reserva|reserva n[.ºo]?|c[oó]digo de confirma[cç][aã]o|n[uú]mero de confirma[cç][aã]o|booking (?:reference|number|code|id)|reservation (?:number|code|id)|reference|referencia|refer[eê]ncia|confirmation (?:number|code)|confirmaci[oó]n|confirma[cç][aã]o|pnr|record locator)/gi;
   const code = /^(?:\s+[A-Za-z]*[a-z][A-Za-z]*)?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/;
   let match: RegExpExecArray | null;
   while ((match = label.exec(text))) {
@@ -202,8 +225,19 @@ function findReference(text: string): string | null {
 /** Zona horaria de los aeropuertos más habituales: con ella la llegada sale en la hora del lugar. */
 export const AIRPORT_TZ: Record<string, string> = {
   MAD: 'Europe/Madrid', BCN: 'Europe/Madrid', ALC: 'Europe/Madrid', VLC: 'Europe/Madrid', AGP: 'Europe/Madrid', PMI: 'Europe/Madrid',
-  SVQ: 'Europe/Madrid', BIO: 'Europe/Madrid', IBZ: 'Europe/Madrid', MAH: 'Europe/Madrid', LPA: 'Atlantic/Canary', TFS: 'Atlantic/Canary',
-  TFN: 'Atlantic/Canary', ACE: 'Atlantic/Canary', FUE: 'Atlantic/Canary', LIS: 'Europe/Lisbon', OPO: 'Europe/Lisbon',
+  SVQ: 'Europe/Madrid', BIO: 'Europe/Madrid', IBZ: 'Europe/Madrid', MAH: 'Europe/Madrid', SCQ: 'Europe/Madrid', OVD: 'Europe/Madrid',
+  XRY: 'Europe/Madrid', GRX: 'Europe/Madrid', VGO: 'Europe/Madrid', LCG: 'Europe/Madrid', SDR: 'Europe/Madrid', ZAZ: 'Europe/Madrid',
+  RMU: 'Europe/Madrid', REU: 'Europe/Madrid', EAS: 'Europe/Madrid', LEI: 'Europe/Madrid', VLL: 'Europe/Madrid', PNA: 'Europe/Madrid',
+  LPA: 'Atlantic/Canary', TFS: 'Atlantic/Canary', TFN: 'Atlantic/Canary', ACE: 'Atlantic/Canary', FUE: 'Atlantic/Canary', SPC: 'Atlantic/Canary',
+  LIS: 'Europe/Lisbon', OPO: 'Europe/Lisbon', FAO: 'Europe/Lisbon', FNC: 'Atlantic/Madeira', PDL: 'Atlantic/Azores',
+  NAP: 'Europe/Rome', BLQ: 'Europe/Rome', PSA: 'Europe/Rome', CTA: 'Europe/Rome', PMO: 'Europe/Rome', BRI: 'Europe/Rome', FLR: 'Europe/Rome',
+  NCE: 'Europe/Paris', LYS: 'Europe/Paris', MRS: 'Europe/Paris', TLS: 'Europe/Paris', BOD: 'Europe/Paris', DUS: 'Europe/Berlin',
+  HAM: 'Europe/Berlin', STR: 'Europe/Berlin', CGN: 'Europe/Berlin', EDI: 'Europe/London', BHX: 'Europe/London', BRS: 'Europe/London',
+  GLA: 'Europe/London', KRK: 'Europe/Warsaw', OTP: 'Europe/Bucharest', SOF: 'Europe/Sofia', ZAG: 'Europe/Zagreb', SPU: 'Europe/Zagreb',
+  DBV: 'Europe/Zagreb', LJU: 'Europe/Ljubljana', BTS: 'Europe/Bratislava', KEF: 'Atlantic/Reykjavik', TLV: 'Asia/Jerusalem',
+  IAD: 'America/New_York', DCA: 'America/New_York', PHL: 'America/New_York', MCO: 'America/New_York', FLL: 'America/New_York',
+  IAH: 'America/Chicago', MSP: 'America/Chicago', LAS: 'America/Los_Angeles', SEA: 'America/Los_Angeles', SAN: 'America/Los_Angeles',
+  PHX: 'America/Phoenix', YVR: 'America/Vancouver', GDL: 'America/Mexico_City', MTY: 'America/Monterrey',
   LHR: 'Europe/London', LGW: 'Europe/London', STN: 'Europe/London', LTN: 'Europe/London', MAN: 'Europe/London', DUB: 'Europe/Dublin',
   CDG: 'Europe/Paris', ORY: 'Europe/Paris', AMS: 'Europe/Amsterdam', BRU: 'Europe/Brussels', FRA: 'Europe/Berlin', MUC: 'Europe/Berlin',
   BER: 'Europe/Berlin', ZRH: 'Europe/Zurich', GVA: 'Europe/Zurich', VIE: 'Europe/Vienna', FCO: 'Europe/Rome', MXP: 'Europe/Rome',
@@ -212,8 +246,24 @@ export const AIRPORT_TZ: Record<string, string> = {
   JFK: 'America/New_York', EWR: 'America/New_York', BOS: 'America/New_York', MIA: 'America/New_York', ATL: 'America/New_York',
   ORD: 'America/Chicago', DFW: 'America/Chicago', DEN: 'America/Denver', LAX: 'America/Los_Angeles', SFO: 'America/Los_Angeles',
   YYZ: 'America/Toronto', YUL: 'America/Toronto', MEX: 'America/Mexico_City', CUN: 'America/Cancun', BOG: 'America/Bogota',
-  LIM: 'America/Lima', SCL: 'America/Santiago', EZE: 'America/Argentina/Buenos_Aires', AEP: 'America/Argentina/Buenos_Aires',
-  GRU: 'America/Sao_Paulo', GIG: 'America/Sao_Paulo', MVD: 'America/Montevideo', HAV: 'America/Havana', PTY: 'America/Panama',
+  LIM: 'America/Lima', CUZ: 'America/Lima', AQP: 'America/Lima', SCL: 'America/Santiago', ANF: 'America/Santiago', CJC: 'America/Santiago',
+  PUQ: 'America/Punta_Arenas', IPC: 'Pacific/Easter',
+  // Argentina: cada provincia tiene su zona IANA, aunque hoy todas marcan la misma hora.
+  EZE: 'America/Argentina/Buenos_Aires', AEP: 'America/Argentina/Buenos_Aires', IGR: 'America/Argentina/Buenos_Aires',
+  COR: 'America/Argentina/Cordoba', ROS: 'America/Argentina/Cordoba', MDZ: 'America/Argentina/Mendoza', SLA: 'America/Argentina/Salta',
+  BRC: 'America/Argentina/Salta', USH: 'America/Argentina/Ushuaia', FTE: 'America/Argentina/Rio_Gallegos', TUC: 'America/Argentina/Tucuman',
+  REL: 'America/Argentina/Catamarca', NQN: 'America/Argentina/Salta', JUJ: 'America/Argentina/Jujuy',
+  // Brasil.
+  GRU: 'America/Sao_Paulo', CGH: 'America/Sao_Paulo', VCP: 'America/Sao_Paulo', GIG: 'America/Sao_Paulo', SDU: 'America/Sao_Paulo',
+  BSB: 'America/Sao_Paulo', CNF: 'America/Sao_Paulo', IGU: 'America/Sao_Paulo', FLN: 'America/Sao_Paulo', POA: 'America/Sao_Paulo',
+  CWB: 'America/Sao_Paulo', VIX: 'America/Sao_Paulo', GYN: 'America/Sao_Paulo', SSA: 'America/Bahia', REC: 'America/Recife',
+  FOR: 'America/Fortaleza', NAT: 'America/Fortaleza', MCZ: 'America/Maceio', BEL: 'America/Belem', MAO: 'America/Manaus',
+  CGB: 'America/Cuiaba', FEN: 'America/Noronha',
+  // Resto de Sudamérica y Caribe.
+  MVD: 'America/Montevideo', PDP: 'America/Montevideo', ASU: 'America/Asuncion', LPB: 'America/La_Paz', VVI: 'America/La_Paz',
+  UIO: 'America/Guayaquil', GYE: 'America/Guayaquil', GPS: 'Pacific/Galapagos', MDE: 'America/Bogota', CTG: 'America/Bogota',
+  CCS: 'America/Caracas', HAV: 'America/Havana', PTY: 'America/Panama', SJO: 'America/Costa_Rica', PUJ: 'America/Santo_Domingo',
+  SDQ: 'America/Santo_Domingo', SJU: 'America/Puerto_Rico',
   DXB: 'Asia/Dubai', DOH: 'Asia/Qatar', CAI: 'Africa/Cairo', RAK: 'Africa/Casablanca', CMN: 'Africa/Casablanca', JNB: 'Africa/Johannesburg',
   DEL: 'Asia/Kolkata', BOM: 'Asia/Kolkata', BKK: 'Asia/Bangkok', SIN: 'Asia/Singapore', HKG: 'Asia/Hong_Kong', PEK: 'Asia/Shanghai',
   PVG: 'Asia/Shanghai', ICN: 'Asia/Seoul', NRT: 'Asia/Tokyo', HND: 'Asia/Tokyo', KIX: 'Asia/Tokyo', SYD: 'Australia/Sydney',
@@ -222,9 +272,22 @@ export const AIRPORT_TZ: Record<string, string> = {
 
 const NOT_AN_AIRPORT = new Set(['OCT', 'NOV', 'DEC', 'DIC', 'JAN', 'ENE', 'FEB', 'MAR', 'APR', 'ABR', 'MAY', 'JUN', 'JUL', 'AUG', 'AGO', 'SEP', 'SET', 'THE', 'AND', 'VIA', 'IVA', 'PDF', 'JET', 'TER', 'AIR', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN', 'LUN', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']);
 
+/** Compañías habituales (código IATA): con ellas «T4 2026» o «A1 2026» no se toman por un vuelo. */
+const CARRIERS = [
+  'IB', 'I2', 'UX', 'VY', 'FR', 'U2', 'EJU', 'TP', 'BA', 'AF', 'KL', 'LH', 'LX', 'OS', 'SN', 'EI', 'AZ', 'TK', 'EK', 'QR', 'EY', 'SK', 'AY',
+  'AA', 'DL', 'UA', 'AC', 'AM', 'AV', 'CM', 'LA', 'JJ', 'LP', 'XL', '4C', '4M', 'AR', 'G3', 'JA', 'AD', 'FO', 'H2', 'WJ', 'OB', 'Z8', 'P9',
+  'JU', 'CX', 'SQ', 'NH', 'JL', 'KE', 'QF', 'NZ', 'ET', 'MS', 'SA', 'AT',
+];
+
 function findFlight(text: string): { carrier: string; number: string } | null {
-  const match = /\b([A-Z][A-Z0-9])\s?(\d{3,4})\b/.exec(text.replace(/\bvuelo\b/gi, ''));
-  return match && !/^\d\d$/.test(match[1]) ? { carrier: match[1], number: match[2] } : null;
+  const clean = text.replace(/\b(?:vuelo|voo|flight)\b/gi, '');
+  // Primero una compañía conocida; si no hay, cualquier par letra+letra/cifra seguido de 3 o 4 cifras.
+  const known = new RegExp(String.raw`(?<![A-Z0-9])(${CARRIERS.join('|')})\s?(\d{2,4})\b`).exec(clean);
+  if (known) {
+    return { carrier: known[1], number: known[2] };
+  }
+  const match = /\b([A-Z][A-Z0-9])\s?(\d{3,4})\b/.exec(clean);
+  return match && !/^\d\d$/.test(match[1]) && !/^T\d$/.test(match[1]) ? { carrier: match[1], number: match[2] } : null;
 }
 
 /** Códigos IATA: entre paréntesis «(MAD)», o sueltos en su línea o tras «→» / «-» («MAD  EZE», «MAD → EZE»). */
@@ -430,18 +493,18 @@ export function suggestFromText(rawText: string, fileName = ''): TextSuggestion 
     suggestion.title = [findTrain(text), route].filter(Boolean).join(' ') || 'Tren';
   } else if (type === 'hotel') {
     // Entrada y salida por sus etiquetas («Llegada jue, 15 oct», «Check-in: 26/09/2026»); si no, por orden.
-    const checkIn = labeledDate(text, /\b(?:llegada|entrada|check-?in)\b/i);
-    const checkOut = labeledDate(text, /\b(?:salida|check-?out)\b/i);
+    const checkIn = labeledDate(text, /\b(?:llegada|entrada|chegada|check-?in|arrival)\b/i);
+    const checkOut = labeledDate(text, /\b(?:salida|sa[ií]da|check-?out|departure)\b/i);
     suggestion.startDate = checkIn?.date ?? suggestion.startDate;
     suggestion.endDate = checkOut?.date ?? later?.date ?? null;
     const timeAfter = (index: number | undefined) => (index === undefined ? null : findTimes(text.slice(index, index + 80))[0]?.time ?? null);
     suggestion.startTime = timeAfter(checkIn?.index);
     suggestion.endTime = timeAfter(checkOut?.index);
-    const name = /\b(?:hotel|hostal|apartamentos?|parador)\s+([A-ZÁÉÍÓÚÑ][^\n,]{2,50})/i.exec(text);
-    const airbnb = /airbnb/i.test(text) ? /^(.{6,80})\n+\s*(?:casa|apto|apartamento|habitaci[oó]n|alojamiento entero)[^\n]*anfitri[oó]n/im.exec(text) : null;
-    const city = /reserva en ([A-ZÁÉÍÓÚÑ][^\n.!]{2,40})/i.exec(text);
+    const name = /\b(?:hotel|hostal|hostel|pousada|resort|apartamentos?|parador)\s+([A-ZÁÉÍÓÚÑ][^\n,]{2,50})/i.exec(text);
+    const airbnb = /airbnb/i.test(text) ? /^(.{6,80})\n+\s*(?:casa|apto|apartamento|habitaci[oó]n|alojamiento entero|quarto|entire home|room)[^\n]*(?:anfitri[oó]n|anfitri[aã]o|host)/im.exec(text) : null;
+    const city = /reserva (?:en|em) ([A-ZÁÉÍÓÚÑ][^\n.!]{2,40})/i.exec(text);
     suggestion.title = airbnb ? `Airbnb · ${airbnb[1].trim()}` : name ? name[0].trim() : city ? `Alojamiento en ${city[1].trim()}` : 'Alojamiento';
-    const address = /\b(?:direcci[oó]n|address)\s*[:\-]?\s*([^\n]{8,120})/i.exec(text);
+    const address = /\b(?:direcci[oó]n|endere[cç]o|address)\s*[:\-]?\s*([^\n]{8,120})/i.exec(text);
     suggestion.address = address ? address[1].trim() : null;
     suggestion.startPlace = suggestion.title;
   } else if (type === 'car') {
