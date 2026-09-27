@@ -362,3 +362,15 @@ a.card.booking { display: flex; }
 .type-other { --type: var(--type-other); }
 .card.highlight[class*="type-"] { border-color: var(--type); box-shadow: inset 4px 0 0 var(--type); }
 .card.highlight[class*="type-"] .eyebrow-type { color: var(--type); }
+
+/* Las casillas y radios no son campos de texto: tamaño fijo y color de acento (el estilo global de «input» las estiraba a todo el ancho). */
+input[type='checkbox'], input[type='radio'] {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  accent-color: var(--primary);
+}
+label.row { color: var(--text); font-size: 1rem; }
