@@ -76,8 +76,8 @@ export function findDates(text: string): { date: string; index: number }[] {
   };
   const numeric = /\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b/g;
   const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
-  // «01 oct 202614:35»: en algunos correos el año va pegado a la hora. «6 de outubro de 2026» (portugués) entra igual.
-  const worded = /\b(\d{1,2})\s*(?:de\s+)?([a-záéíóúãç]{3,10})\.?\s*(?:de\s+|,\s*)?(\d{4})(?=\d{1,2}[:.]\d{2}|\b)/gi;
+  // «01 oct 202614:35»: en algunos correos el año va pegado a la hora. «6 de outubro de 2026» (portugués) y «15/oct/2026» entran igual.
+  const worded = /\b(\d{1,2})[\s/\-]*(?:de\s+)?([a-záéíóúãç]{3,10})\.?[\s/\-]*(?:de\s+|,\s*)?(\d{4})(?=\d{1,2}[:.]\d{2}|\b)/gi;
   // «October 6, 2026» / «Oct 6 2026» (inglés, mes primero).
   const monthFirst = /\b([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/gi;
   let match: RegExpExecArray | null;
@@ -129,22 +129,33 @@ export function inferYear(month: number, day: number, now = new Date()): number 
   return today - candidate > 60 * 86_400_000 ? year + 1 : year;
 }
 
-/** La fecha del viaje: la que más se repite (un billete por pasajero la repite); en empate, la primera. */
-function travelDate(dates: { date: string; index: number }[]): { date: string; index: number } | undefined {
+/**
+ * La fecha del viaje: la que sigue a una etiqueta («Fecha:», «Data:», «PARTIDA:») si la hay; si no, la que más se repite
+ * (un billete por pasajero la repite); en empate, la primera. Las fechas de hace más de 60 días (emisión, pago) no cuentan
+ * si hay otras, salvo que se pida lo contrario.
+ */
+function travelDate(dates: { date: string; index: number }[], text = '', now = new Date()): { date: string; index: number } | undefined {
   if (dates.length === 0) {
     return undefined;
   }
+  const labeled = labeledDate(text, /\b(?:fecha|data|date|partida|salida|departure|embarque|ida)\s*(?:d[eo]\s+(?:salida|viaje|vuelo|voo|ida|partida))?\s*:/i);
+  if (labeled) {
+    return labeled;
+  }
+  const cutoff = new Date(now.getTime() - 60 * 86_400_000).toISOString().slice(0, 10);
+  const recent = dates.filter((d) => d.date >= cutoff);
+  const pool = recent.length > 0 ? recent : dates;
   const counts = new Map<string, number>();
-  for (const d of dates) {
+  for (const d of pool) {
     counts.set(d.date, (counts.get(d.date) ?? 0) + 1);
   }
   const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-  return dates.find((d) => d.date === best);
+  return pool.find((d) => d.date === best);
 }
 
 /** «Coche: 8 Plaza: 6B» (uno por pasajero) → «Coche 8 · Plazas 6B, 6A». */
 function findSeats(text: string): string | null {
-  const re = /\b(?:coche|car|wagon|vag[oó]n|carro|vag[aã]o)\s*[:.]?\s*(\w+)\s*[,·]?\s*(?:plaza|asiento|seat|assento|poltrona)\s*[:.]?\s*(\w+)/gi;
+  const re = /\b(?:coche|car|wagon|vag[oó]n|carro|vag[aã]o)\b\s*[:.]?\s*(\w+)\s*[,·]?\s*(?:plaza|asiento|seat|assento|poltrona)\b\s*[:.]?\s*(\w+)/gi;
   const coaches = new Set<string>();
   const seats: string[] = [];
   let match: RegExpExecArray | null;
@@ -163,8 +174,9 @@ function findSeats(text: string): string | null {
 /** Horas «14:35», «14.35 h» o «9:10 PM» (inglés), con posición. */
 export function findTimes(text: string): { time: string; index: number }[] {
   const found: { time: string; index: number }[] = [];
-  // Una hora empieza tras algo que no sea cifra ni separador… o tras un año pegado («202614:35»).
-  const re = /(?:(?<![\d:.])|(?<=\b\d{4}))([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*h\b|\s*([ap])\.?m\.?\b)?/gi;
+  // Una hora empieza tras algo que no sea cifra ni separador… o tras un año pegado («202614:35»), o tras una etiqueta
+  // pegada con dos puntos («Partida:11:55», «Hora de salida:16:39»).
+  const re = /(?:(?<![\d:.])|(?<=\b\d{4})|(?<=[a-záéíóúñ)]:))([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*h\b|\s*([ap])\.?m\.?\b)?/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
     // Descarta lo que parece una fecha con puntos (12.10.2026) o un importe.
@@ -205,8 +217,9 @@ function findReference(text: string): string | null {
   // La etiqueta se busca sin distinguir mayúsculas (y puede venir pegada: «reservaCódigo de reserva:»); lo que sigue, sí:
   // se admite una palabra con minúsculas («Localizador Renfe: C3BMDV») pero nunca un bloque en mayúsculas, que es el código.
   // Etiquetas en español, portugués e inglés.
-  const label = /(?:localizador|localizer|locator|c[oó]digo (?:de|da) reserva|n[uú]mero (?:de|da) reserva|reserva n[.ºo]?|c[oó]digo de confirma[cç][aã]o|n[uú]mero de confirma[cç][aã]o|booking (?:reference|number|code|id)|reservation (?:number|code|id)|reference|referencia|refer[eê]ncia|confirmation (?:number|code)|confirmaci[oó]n|confirma[cç][aã]o|pnr|record locator)/gi;
-  const code = /^(?:\s+[A-Za-z]*[a-z][A-Za-z]*)?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/;
+  const label = /(?:localizador|localizer|locator|c[oó]digo (?:de|da) reserva(?:ci[oó]n)?|n[uú]mero (?:de|da) reserva|reserva n[.ºo]?|reserva confirmada|confirmaci[oó]n de (?:tu|la|su) reserva|c[oó]digo de confirma[cç][aã]o|n[uú]mero de confirma[cç][aã]o|booking (?:reference|number|code|id)|reservation (?:number|code|id)|reference|referencia|refer[eê]ncia|confirmation (?:number|code)|confirmaci[oó]n|confirma[cç][aã]o|pnr|record locator|asociad[oa] a)/gi;
+  // Entre etiqueta y código puede ir una palabra («Renfe», «GOL», «Reserva»), nunca un bloque largo en mayúsculas.
+  const code = /^(?:\s+(?:[A-Za-z]*[a-z][A-Za-z]*|[A-Z]{2,4}))?\s*[:#nº.]*\s*([A-Z0-9]{5,10})\b/;
   let match: RegExpExecArray | null;
   while ((match = label.exec(text))) {
     const rest = code.exec(text.slice(match.index + match[0].length, match.index + match[0].length + 60));
@@ -279,37 +292,65 @@ const CARRIERS = [
   'JU', 'CX', 'SQ', 'NH', 'JL', 'KE', 'QF', 'NZ', 'ET', 'MS', 'SA', 'AT',
 ];
 
+/** Nombre de la compañía → código IATA, para cuando el número de vuelo va sin él («Voo:1890» de GOL). */
+const AIRLINE_CODES: [RegExp, string][] = [
+  [/\bgol\b|voegol/i, 'G3'], [/aerol[ií]neas argentinas/i, 'AR'], [/jetsmart/i, 'JA'], [/\blatam\b/i, 'LA'], [/\bazul\b/i, 'AD'],
+  [/flybondi/i, 'FO'], [/\biberia\b/i, 'IB'], [/air europa/i, 'UX'], [/vueling/i, 'VY'], [/ryanair/i, 'FR'], [/easyjet/i, 'U2'],
+  [/\btap\b|air portugal/i, 'TP'], [/lufthansa/i, 'LH'], [/british airways/i, 'BA'], [/air france/i, 'AF'], [/\bklm\b/i, 'KL'],
+  [/sky airline/i, 'H2'], [/avianca/i, 'AV'], [/\bcopa\b/i, 'CM'], [/aerom[eé]xico/i, 'AM'], [/american airlines/i, 'AA'],
+];
+
 function findFlight(text: string): { carrier: string; number: string } | null {
   const clean = text.replace(/\b(?:vuelo|voo|flight)\b/gi, '');
   // Primero una compañía conocida; si no hay, cualquier par letra+letra/cifra seguido de 3 o 4 cifras.
-  const known = new RegExp(String.raw`(?<![A-Z0-9])(${CARRIERS.join('|')})\s?(\d{2,4})\b`).exec(clean);
+  const known = new RegExp(String.raw`(?<![A-Z0-9])(${CARRIERS.join('|')})[ \t]{0,6}(\d{2,4})\b`).exec(clean);
   if (known) {
     return { carrier: known[1], number: known[2] };
   }
   const match = /\b([A-Z][A-Z0-9])\s?(\d{3,4})\b/.exec(clean);
-  return match && !/^\d\d$/.test(match[1]) && !/^T\d$/.test(match[1]) ? { carrier: match[1], number: match[2] } : null;
+  if (match && !/^\d\d$/.test(match[1]) && !/^T\d$/.test(match[1])) {
+    return { carrier: match[1], number: match[2] };
+  }
+  // «Voo:1890» / «Número de vuelo 1133» sin compañía: se deduce de la aerolínea que firma el correo.
+  const bare = /\b(?:voo|vuelo|flight)(?:\s+n[úu]mero|\s+number|\s+n[ºo.]?)?\s*:?\s*(\d{3,4})\b/i.exec(text);
+  if (bare) {
+    const airline = AIRLINE_CODES.find(([pattern]) => pattern.test(text));
+    if (airline) {
+      return { carrier: airline[1], number: bare[1] };
+    }
+  }
+  return null;
 }
 
-/** Códigos IATA: entre paréntesis «(MAD)», o sueltos en su línea o tras «→» / «-» («MAD  EZE», «MAD → EZE»). */
-function findAirports(text: string): string[] {
-  const codes: string[] = [];
-  const add = (code: string) => {
-    if (!codes.includes(code) && !NOT_AN_AIRPORT.has(code)) {
-      codes.push(code);
+/**
+ * Códigos IATA: tras una etiqueta («Origem:GIG», «Salida: MAD MADRID»), entre paréntesis «(MAD)», o sueltos en su línea
+ * o tras «→» / «-» («MAD  EZE», «MAD → EZE»).
+ */
+function findAirports(text: string, anchor?: number): string[] {
+  const found: { code: string; index: number }[] = [];
+  const add = (code: string, index: number) => {
+    if (!found.some((f) => f.code === code) && !NOT_AN_AIRPORT.has(code)) {
+      found.push({ code, index });
     }
   };
   let match: RegExpExecArray | null;
-  const inParens = /\(([A-Z]{3})\)/g;
-  while ((match = inParens.exec(text))) add(match[1]);
-  if (codes.length >= 2) {
-    return codes;
+  const from = /\b(?:origem|origen|desde|from|salida|partida|departure|sa[ií]da)\s*:\s*([A-Z]{3})\b/i.exec(text);
+  const to = /\b(?:destino|destination|hasta|to|llegada|chegada|arrival)\s*:\s*([A-Z]{3})\b/i.exec(text);
+  if (from && to && from[1] !== to[1] && AIRPORT_TZ[from[1]] && AIRPORT_TZ[to[1]]) {
+    return [from[1], to[1]];
   }
+  const inParens = /\(([A-Z]{3})\)/g;
+  while ((match = inParens.exec(text))) add(match[1], match.index);
   // Solo códigos conocidos cuando van sueltos: evita coger siglas cualesquiera.
   const loose = /(?:^|\n|\s[→\-–>]\s|\s{2,})([A-Z]{3})(?=\s|$)/g;
   while ((match = loose.exec(text))) {
-    if (AIRPORT_TZ[match[1]]) add(match[1]);
+    if (AIRPORT_TZ[match[1]]) add(match[1], match.index + match[0].length - 3);
   }
-  return codes;
+  // Con una hora de salida como ancla, los dos códigos más cercanos a ella son los del tramo (las tasas «(PSA)» quedan lejos).
+  const chosen = anchor === undefined
+    ? found.slice(0, 2)
+    : [...found].sort((a, b) => Math.abs(a.index - anchor) - Math.abs(b.index - anchor)).slice(0, 2).sort((a, b) => a.index - b.index);
+  return chosen.map((f) => f.code);
 }
 
 /** «Origen: ALICANTE TERMINAL» / «Salida ... Llegada ...» / «Destino: MADRID-PUERTA DE ATOCHA». */
@@ -336,16 +377,21 @@ function findFlightNotes(text: string): string | null {
   // Formato «Nombre \n Asiento: \n 23G» (itinerarios web de aerolíneas), con los billetes en «Nombre: \n 0442167894233».
   const blocks = [...text.matchAll(new RegExp(String.raw`^(${NAME})\s*\n\s*(?:asientos?|seats?)\s*:\s*\n?\s*([^\n]{1,20}?)\s*$`, 'gim'))];
   if (blocks.length > 0) {
-    passengers = blocks.map((m) => `${m[1].trim()} (${m[2].trim()})`);
+    passengers = blocks.map((m) => `${m[1].trim().replace(/\s+/g, ' ')} (${m[2].trim()})`);
     tickets = [...text.matchAll(new RegExp(String.raw`^(${NAME})\s*:\s*\n?\s*(\d{10,14})\b`, 'gm'))].map((m) => m[2]);
   }
 
   // Formato tabla: nombres marcados con «»»; asientos «23G» y billetes de 13 cifras en la misma línea o en columnas.
   if (passengers.length === 0) {
-    const names = [...text.matchAll(new RegExp(String.raw`^[»•>]\s*(${NAME})\s*(?=\s\d{1,3}[A-K]\b|\s\d{10,14}\b|$)`, 'gm'))].map((m) => m[1].trim());
-    const seatsFrom = Math.max(0, text.search(/\basientos?\b|\bseats?\b/i));
-    const seats = [...text.slice(seatsFrom).matchAll(/(?<![A-Z0-9])(\d{1,3}[A-K])(?![A-Z0-9])/g)].map((m) => m[1]);
-    tickets = [...text.matchAll(/(?<!\d)(\d{13})(?!\d)/g)].map((m) => m[1]);
+    const names = [...text.matchAll(new RegExp(String.raw`^[»•>]\s*(${NAME})\s*(?=\s\d{1,3}[A-K]\b|\s\d{10,14}\b|$)`, 'gm'))].map((m) => m[1].trim().replace(/\s+/g, ' '));
+    // Los asientos solo se buscan desde la palabra «asiento»; sin ella, cualquier «3B» del texto sería ruido.
+    const seatsFrom = text.search(/\basientos?\b|\bseats?\b|\bassentos?\b/i);
+    const seats = seatsFrom < 0 ? [] : [...text.slice(seatsFrom, seatsFrom + 600).matchAll(/(?<![A-Z0-9])(\d{1,3}[A-K])(?![A-Z0-9])/g)].map((m) => m[1]);
+    // Un número de 13 cifras solo es un billete si cerca se habla de billetes (un CIF o un RUC también tienen 13).
+    tickets = [...text.matchAll(/(?<!\d)(\d{13})(?!\d)/g)]
+      .filter((m) => /billete|boleto|ticket|recibo|e-?ticket/i.test(text.slice(Math.max(0, m.index - 400), m.index)))
+      .filter((m) => !/\b(?:RUC|CIF|NIF|CNPJ|CUIT|NIT|IBAN)\b[:\s]*$/i.test(text.slice(Math.max(0, m.index - 12), m.index)))
+      .map((m) => m[1]);
     if (names.length > 0) {
       passengers = names.map((name, index) => (seats[index] ? `${name} (${seats[index]})` : name));
     } else if (seats.length > 0) {
@@ -428,23 +474,123 @@ export function applySuggestion<T extends PrefillFields>(base: T, s: TextSuggest
   };
 }
 
-/** Espacios especiales → espacio normal; caracteres invisibles fuera; líneas en blanco de más, fuera. */
-export function normalizeText(text: string): string {
+const ENTITIES: Record<string, string> = {
+  nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", ndash: '–', mdash: '—', hellip: '…', bull: '•', middot: '·', euro: '€',
+  laquo: '«', raquo: '»', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', iexcl: '¡', iquest: '¿', copy: '©', reg: '®', deg: '°',
+  aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú', ntilde: 'ñ', uuml: 'ü', ccedil: 'ç', atilde: 'ã', otilde: 'õ',
+  Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú', Ntilde: 'Ñ', Uuml: 'Ü', Ccedil: 'Ç', Atilde: 'Ã', Otilde: 'Õ',
+  agrave: 'à', egrave: 'è', ograve: 'ò', acirc: 'â', ecirc: 'ê', ocirc: 'ô',
+};
+
+/** «&#243;», «&eacute;», «&nbsp;»… → el carácter. Algunos correos llegan con las entidades sin decodificar. */
+function decodeEntities(text: string): string {
   return text
+    .replace(/&#(\d{1,7});/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&([a-z]{2,8});/gi, (m, name: string) => ENTITIES[name] ?? m);
+}
+
+/** Un correo que llega como HTML crudo (JetSMART manda la «parte de texto» en HTML) se convierte a texto por líneas y celdas. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6]|table|ul|ol|section|article|header|footer)>/gi, '\n')
+    .replace(/<\/t[dh]>/gi, '  ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[ \t]*\n[ \t]*/g, '\n');
+}
+
+function looksLikeHtml(text: string): boolean {
+  return /<\s*(html|body|table|td|div|p|br)\b/i.test(text) && (text.match(/<\/?[a-z][^>]*>/gi)?.length ?? 0) > 5;
+}
+
+/**
+ * HTML crudo → texto; entidades → caracteres; asteriscos de negrita (Gmail al reenviar) → espacio; espacios especiales → espacio
+ * normal; caracteres invisibles fuera; líneas en blanco de más, fuera.
+ */
+export function normalizeText(text: string): string {
+  const plain = decodeEntities(looksLikeHtml(text) ? htmlToText(text) : text);
+  return plain
+    // Los enlaces de seguimiento llevan códigos que parecen asientos, localizadores o aeropuertos.
+    .replace(/<?https?:\/\/\S+>?/g, ' ')
+    .replace(/\*/g, ' ')
+    .replace(/[ \t]{3,}/g, '  ')
     .replace(/[  -   　]/g, ' ')
-    .replace(/[​-‍⁠﻿­]/g, '')
+    .replace(/[​-‍⁠﻿­͏᠎]/g, '')
     .replace(/\r\n?/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
     .replace(/\n{2,}/g, '\n');
 }
 
+/** Ciudades habituales sin código IATA en el correo («Salvador de Bahía (22:45) - Madrid (12:15)») → zona horaria. */
+const CITY_TZ: [RegExp, string][] = [
+  [/^(madrid|barcelona|alicante|valencia|m[aá]laga|sevilla|bilbao|palma|ibiza|menorca|santiago de compostela|zaragoza)\b/i, 'Europe/Madrid'],
+  [/^(las palmas|tenerife|lanzarote|fuerteventura)\b/i, 'Atlantic/Canary'],
+  [/^(lisboa|lisbon|oporto|porto|faro)\b/i, 'Europe/Lisbon'],
+  [/^(par[ií]s|niza|lyon|marsella)\b/i, 'Europe/Paris'],
+  [/^(londres|london|manchester|edimburgo)\b/i, 'Europe/London'],
+  [/^(roma|rome|mil[aá]n|milano|venecia|n[aá]poles)\b/i, 'Europe/Rome'],
+  [/^(buenos aires|aeroparque|ezeiza|iguaz[uú]|puerto iguaz[uú]|c[oó]rdoba|mendoza|bariloche|ushuaia|salta)\b/i, 'America/Argentina/Buenos_Aires'],
+  [/^(r[ií]o de janeiro|rio de janeiro|s[aã]o paulo|sao paulo|foz do igua[cç]u|florian[oó]polis|curitiba|bras[ií]lia|belo horizonte)\b/i, 'America/Sao_Paulo'],
+  [/^(salvador|salvador de bah[ií]a)\b/i, 'America/Bahia'],
+  [/^(recife|fortaleza|natal)\b/i, 'America/Recife'],
+  [/^(montevideo|punta del este)\b/i, 'America/Montevideo'],
+  [/^(santiago( de chile)?)\b/i, 'America/Santiago'],
+  [/^(lima|cusco|cuzco)\b/i, 'America/Lima'],
+  [/^(bogot[aá]|medell[ií]n|cartagena)\b/i, 'America/Bogota'],
+  [/^(ciudad de m[eé]xico|m[eé]xico|canc[uú]n)\b/i, 'America/Mexico_City'],
+  [/^(miami|nueva york|new york|orlando)\b/i, 'America/New_York'],
+];
+
+function cityTz(place: string | null): string | null {
+  if (!place) {
+    return null;
+  }
+  return CITY_TZ.find(([pattern]) => pattern.test(place.trim()))?.[1] ?? null;
+}
+
+/**
+ * Tramo «Ciudad (HH:MM) - Ciudad (HH:MM)» (Air Europa y otros correos sin códigos IATA): lugares y horas del primer tramo.
+ */
+function findCityLeg(text: string): { from: string; fromTime: string; to: string; toTime: string; index: number } | null {
+  const leg = /([A-ZÁÉÍÓÚÑ][\p{L} .'\-]{2,40}?)\s*\((\d{1,2}[:.]\d{2})\)\s*[-–→]\s*([A-ZÁÉÍÓÚÑ][\p{L} .'\-]{2,40}?)\s*\((\d{1,2}[:.]\d{2})\)/u.exec(text);
+  if (!leg) {
+    return null;
+  }
+  const time = (t: string) => `${pad(Number(t.split(/[:.]/)[0]))}:${t.split(/[:.]/)[1]}`;
+  return { from: leg[1].trim(), fromTime: time(leg[2]), to: leg[3].trim(), toTime: time(leg[4]), index: leg.index };
+}
+
+/**
+ * Un aviso de cambio trae el vuelo antiguo y el nuevo: fechas, horas y lugares se leen solo desde donde empieza el nuevo.
+ * El localizador y el tipo se buscan en todo el texto.
+ */
+function updatedSection(text: string): string | null {
+  const markers = /\b(?:voo\s+novo|novo\s+voo|nuevo\s+vuelo|vuelo\s+nuevo|new\s+flight|itinerario\s+actualizado|detalles\s+actualizados\s+de\s+tu\s+itinerario|informa[cç][õo]es\s+atualizadas|updated\s+itinerary|nuevo\s+itinerario)\b/gi;
+  // Vale el último marcador al que de verdad sigue un itinerario (una hora en los 600 caracteres siguientes): la introducción
+  // («confira as informações atualizadas») va antes del vuelo antiguo, y las condiciones legales hablan de «nuevo vuelo» sin datos.
+  let section: string | null = null;
+  let match: RegExpExecArray | null;
+  while ((match = markers.exec(text))) {
+    const candidate = text.slice(match.index);
+    if (findTimes(candidate.slice(0, 600)).length > 0) {
+      section = candidate;
+    }
+  }
+  return section;
+}
+
 export function suggestFromText(rawText: string, fileName = ''): TextSuggestion {
-  const text = normalizeText(rawText);
-  const type = detectType(text) ?? detectType(fileName);
+  const whole = normalizeText(rawText);
+  const type = detectType(whole) ?? detectType(fileName);
+  const reference = findReference(whole);
+  const text = updatedSection(whole) ?? whole;
   const dates = findDates(text);
   const times = findTimes(text);
-  const reference = findReference(text);
-  const start = travelDate(dates);
+  const start = travelDate(dates, text);
   const suggestion: TextSuggestion = {
     type,
     title: null,
@@ -465,21 +611,27 @@ export function suggestFromText(rawText: string, fileName = ''): TextSuggestion 
   const afterDate = times.filter((t) => !start || t.index > start.index);
   suggestion.startTime = afterDate[0]?.time ?? times[0]?.time ?? null;
   suggestion.endTime = afterDate[1]?.time ?? null;
-  // Fechas distintas de la del viaje que vengan después: la vuelta o la salida del hotel.
-  const later = dates.find((d) => start && d.index > start.index && d.date > start.date);
+  // Fechas distintas de la del viaje que vengan poco después: la vuelta o la salida del hotel (no las de las condiciones legales).
+  const later = dates.find((d) => start && d.index > start.index && d.index - start.index < 2500 && d.date > start.date);
 
   if (type === 'flight') {
-    const flight = findFlight(text);
-    const airports = findAirports(text);
-    suggestion.startPlace = airports[0] ?? null;
-    suggestion.endPlace = airports[1] ?? null;
-    suggestion.startTz = airports[0] ? (AIRPORT_TZ[airports[0]] ?? null) : null;
-    suggestion.endTz = airports[1] ? (AIRPORT_TZ[airports[1]] ?? null) : null;
+    const flight = findFlight(text) ?? findFlight(whole);
+    const departure = afterDate[0] ?? times[0];
+    const airports = findAirports(text, departure?.index);
+    const leg = airports.length < 2 ? findCityLeg(text) : null;
+    suggestion.startPlace = airports[0] ?? leg?.from ?? null;
+    suggestion.endPlace = airports[1] ?? leg?.to ?? null;
+    suggestion.startTz = airports[0] ? (AIRPORT_TZ[airports[0]] ?? null) : cityTz(leg?.from ?? null);
+    suggestion.endTz = airports[1] ? (AIRPORT_TZ[airports[1]] ?? null) : cityTz(leg?.to ?? null);
+    if (leg) {
+      suggestion.startTime = leg.fromTime;
+      suggestion.endTime = leg.toTime;
+    }
     // Un vuelo que llega al día siguiente: la fecha posterior del billete.
     suggestion.endDate = later?.date ?? null;
-    const route = airports.length >= 2 ? `${airports[0]} → ${airports[1]}` : null;
+    const route = suggestion.startPlace && suggestion.endPlace ? `${suggestion.startPlace} → ${suggestion.endPlace}` : null;
     suggestion.title = [flight ? `${flight.carrier} ${flight.number}` : null, route].filter(Boolean).join(' ') || 'Vuelo';
-    suggestion.notes ??= findFlightNotes(text);
+    suggestion.notes ??= findFlightNotes(whole);
   } else if (type === 'train') {
     let stations = findStations(text);
     if (!stations.from || !stations.to) {

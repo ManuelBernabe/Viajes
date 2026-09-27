@@ -533,3 +533,141 @@ Departure: October 12, 2026 at 7:45 AM · Arrival: 10:30 AM`);
     expect(s.startTz).toBe('America/Santiago');
   });
 });
+
+describe('aviso de cambio de GOL (portugués, vuelo antiguo y nuevo)', () => {
+  it('coge la hora del vuelo nuevo, no la del antiguo, y no inventa asientos con los códigos de los enlaces', () => {
+    const s = suggestFromText(`Olá, ANA!
+Houve uma pequena alteração no horário do seu voo. Confira abaixo as informações atualizadas e considere-as para o embarque.
+Código de Reserva: IFOXRO
+Plane icon [https://images.example.com/LinkTracking?q=Wxo3ckL8BwPkHf5w57E4bkT0pkmkpmPFNRbLXHPc3B] Voo
+antigo
+Data Voo Origem 09/10/26 G3 7651 Argentina - Aeroparque (AEP)
+Partida Chegada Destino 10:20 13:20 Brasil - Rio de Janeiro - Galeão (GIG)
+Plane icon [https://images.example.com/LinkTracking?q=7MqiqYwVIaMKTNV5jLaoYpvk5ZcLuy9Ms4I] Voo
+novo
+Data Voo Origem 09/10/26 G3 7651 Argentina - Aeroparque (AEP)
+Partida Chegada Destino 10:20 13:10 Brasil - Rio de Janeiro - Galeão (GIG)
+Clientes
+ANA EJEMPLO`);
+    expect(s.type).toBe('flight');
+    expect(s.title).toBe('G3 7651 AEP → GIG');
+    expect(s.reference).toBe('IFOXRO');
+    expect(s.startDate).toBe('2026-10-09');
+    expect(s.startTime).toBe('10:20');
+    expect(s.endTime).toBe('13:10');
+    expect(s.notes).toBeNull();
+  });
+});
+
+describe('confirmação de pagamento de GOL (etiquetas pegadas, vuelo sin compañía)', () => {
+  it('lee «Partida:11:55», «Origem:GIG» y deduce G3 del nombre de la aerolínea', () => {
+    const s = suggestFromText(`GOL Linhas Aéreas
+Olá, ANA. Está tudo certo com a sua compra! Veja abaixo os detalhes do seu voo:
+LOCALIZADOR GOL: EXDYMG
+Passageiros:ANA EJEMPLO
+Data:15/10/2026
+Voo:1890
+Origem:GIG
+Destino:SSA
+Partida:11:55
+Chegada:13:55`);
+    expect(s.title).toBe('G3 1890 GIG → SSA');
+    expect(s.reference).toBe('EXDYMG');
+    expect(s.startDate).toBe('2026-10-15');
+    expect(s.startTime).toBe('11:55');
+    expect(s.endTime).toBe('13:55');
+    expect(s.startTz).toBe('America/Sao_Paulo');
+    expect(s.endTz).toBe('America/Bahia');
+  });
+});
+
+describe('confirmación de Air Europa (entidades HTML y ciudades sin código)', () => {
+  it('lee el localizador tras «Reserva confirmada», el tramo «Ciudad (hora) - Ciudad (hora)» y el vuelo UX', () => {
+    const s = suggestFromText(` Confirmaci&#243;n de tu reserva 8UNAMP
+ Recuerda, este correo electr&#243;nico no es v&#225;lido como tarjeta de embarque
+ &#8199;&#847; &#8199;&#847;
+ Reserva confirmada
+
+ 8UNAMP
+
+ Tus vuelos
+ Salvador de Bah&#237;a - Alicante
+ 18/10/26 | Salvador de Bah&#237;a (22:45) - Madrid (12:15) | UX0084<br />19/10/26 | Madrid (15:10) - Alicante (16:20) | UX4049<br />
+ Informaci&#243;n de pasajeros
+ ANA EJEMPLO`);
+    expect(s.type).toBe('flight');
+    expect(s.reference).toBe('8UNAMP');
+    expect(s.title).toBe('UX 0084 Salvador de Bahía → Madrid');
+    expect(s.startDate).toBe('2026-10-18');
+    expect(s.startTime).toBe('22:45');
+    expect(s.endTime).toBe('12:15');
+    expect(s.endDate).toBe('2026-10-19');
+    expect(s.startTz).toBe('America/Bahia');
+    expect(s.endTz).toBe('Europe/Madrid');
+  });
+});
+
+describe('itinerario de JetSMART que llega como HTML crudo', () => {
+  it('convierte el HTML, ignora la fecha de emisión y las tasas «(PSA)», y lee vuelo, aeropuertos y horas', () => {
+    const s = suggestFromText(`<html><head><style>p { margin: 0 }</style></head><body>
+<table><tr><td>Confirmación Reserva <span style="font-weight:bold;">OEGC6H</span></td><td>¡Gracias por escogernos!</td></tr></table>
+<table><tr><td>NOMBRE PASAJERO</td><td>№ TICKET</td><td>FECHA EMISIÓN</td></tr>
+<tr><td> MR ANA EJEMPLO</td><td>3602593359410954</td><td>11/07/2026</td></tr></table>
+<td>DETALLE RESERVA</td>
+<td> Fecha: 08/10/2026</td>
+<table><tr><td><table><tr><td>Iguazu</td></tr><tr><td>IGR</td></tr><tr><td><span>Hora de salida:</span>16:39</td></tr></table></td>
+<td><table><tr><td>Buenos Aires, Aeroparque</td></tr><tr><td>AEP</td></tr><tr><td><span>Hora de llegada:</span>18:39</td></tr></table></td></tr>
+<tr><td colspan="3"><span>*Vuelo </span>JA<span></span>3149 (WJ)<span> - </span>Operado por JetSMART Airlines SA</td></tr></table>
+<tr><td>Tasa de Seguridad de Aviación (PSA):</td><td>ARS $ 1.725,00</td></tr>
+<tr><td>TRANSACCIONES</td></tr><tr><td>11/07/2026</td><td>ARS $ 404.111,04</td><td>Aprobado</td></tr>
+<p>Si el vuelo se cancela se ofrecerá un nuevo vuelo. RUC: 0993377110001</p>
+</body></html>`);
+    expect(s.type).toBe('flight');
+    expect(s.reference).toBe('OEGC6H');
+    expect(s.title).toBe('JA 3149 IGR → AEP');
+    expect(s.startDate).toBe('2026-10-08');
+    expect(s.startTime).toBe('16:39');
+    expect(s.endTime).toBe('18:39');
+    expect(s.startTz).toBe('America/Argentina/Buenos_Aires');
+    expect(s.notes).toBeNull();
+  });
+
+  it('en el aviso de modificación lee el localizador tras «asociado a» y el itinerario actualizado', () => {
+    const s = suggestFromText(`HOLA, ANA EJEMPLO
+Queremos informarte que, por motivos operacionales, tu itinerario asociado a
+OEGC6H sufrió una modificación.
+Aquí tienes los detalles actualizados de tu itinerario:
+JA3157 - Puerto Iguazú (IGR) - 08/10/2026 08:59 - → - Buenos Aires (AEP) -
+08/10/2026 10:59 ✈️`);
+    expect(s.reference).toBe('OEGC6H');
+    expect(s.title).toBe('JA 3157 IGR → AEP');
+    expect(s.startDate).toBe('2026-10-08');
+    expect(s.startTime).toBe('08:59');
+    expect(s.endTime).toBe('10:59');
+  });
+});
+
+describe('reserva de GOL reenviada desde Gmail (negritas con asteriscos)', () => {
+  it('lee el vuelo «* G3 * * 1890 *», los aeropuertos entre asteriscos y los pasajeros con asiento', () => {
+    const s = suggestFromText(`*Tu compra ha sido confirmada!*
+Código de reserva EXDYMG
+* GIG * RIO JANEIRO GIG, BRAZIL - * SSA * SALVADOR, BRAZIL
+Jue, 15 Oct  ⋅  2hr(s).  ⋅  Sin escalas
+* GOL LINHAS AEREAS, * * G3 * * 1890 * Verifique el horario de vuelo antes de la salida
+*11:55*, 15 Oct *13:55*, 15 Oct
+TERMINAL 2   * Tipo de tarifa: * CLASSIC
+* ANA * * EJEMPLO *
+Asiento: 15F
+* LUIS * * EJEMPLO *
+Asiento: 17F
+*Tu(s) boleto(s):*
+*Ana Ejemplo:* 1272307909640`);
+    expect(s.title).toBe('G3 1890 GIG → SSA');
+    expect(s.reference).toBe('EXDYMG');
+    expect(s.startDate).toBe('2026-10-15');
+    expect(s.startTime).toBe('11:55');
+    expect(s.endTime).toBe('13:55');
+    expect(s.notes).toContain('ANA EJEMPLO (15F)');
+    expect(s.notes).toContain('LUIS EJEMPLO (17F)');
+  });
+});
