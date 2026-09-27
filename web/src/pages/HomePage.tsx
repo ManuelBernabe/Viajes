@@ -1,73 +1,166 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
-import { listAllBookings, listAttachments, listInbox, listTrips } from '../data/repo';
+import { BookingCard } from '../components/BookingCard';
+import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
+import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
+import { listAttachments, listBookings, listInbox, listTrips } from '../data/repo';
 import { useSyncStatus } from '../data/syncClient';
 import type { Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
-import { BookingCard } from '../components/BookingCard';
-import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
+import { groupByDay, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
 
-function TripCard({ trip, highlight = false }: { trip: Trip; highlight?: boolean }) {
+function TripCard({ trip, done = false }: { trip: Trip; done?: boolean }) {
   const offline = useTripOffline(trip);
   return (
-    <Link className={`card${highlight ? ' highlight' : ''}`} to={`/trips/${trip.id}`}>
+    <Link className={`card${done ? ' done' : ''}`} to={`/trips/${trip.id}`}>
       <div className="row between">
         <div className="grow">
-          <h3>{trip.title}</h3>
+          <h3>
+            {trip.title}
+            {done && <span className="badge done">Realizado</span>}
+          </h3>
           <div className="muted small">
             {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
           </div>
         </div>
-        <OfflineBadge state={offline} />
+        {!done && <OfflineBadge state={offline} />}
       </div>
     </Link>
   );
 }
 
-function NextUp() {
-  const upcoming = useLiveQuery(async () => {
-    const bookings = upcomingBookings(await listAllBookings(), Date.now(), 3);
-    return Promise.all(
-      bookings.map(async (booking) => ({ booking, qr: (await listAttachments(booking.id)).some((a) => a.qrText) })),
-    );
-  }, []);
-
-  if (!upcoming || upcoming.length === 0) {
+/** Los viajes realizados, plegados al final y agrupados por año, del más reciente al más antiguo. */
+function History({ trips }: { trips: Trip[] }) {
+  const [open, setOpen] = useState(false);
+  if (trips.length === 0) {
     return null;
   }
-  const [{ booking, qr }, ...rest] = upcoming;
-  const info = TYPE_INFO[booking.type];
+  const years = new Map<string, Trip[]>();
+  for (const trip of trips) {
+    const year = (trip.endDate ?? trip.startDate ?? '').slice(0, 4) || 'Sin fecha';
+    years.set(year, [...(years.get(year) ?? []), trip]);
+  }
   return (
     <>
-      <section className="card highlight">
-        <div className="muted small">Lo siguiente</div>
-        <h3>
-          {info.icon} {booking.title}
-        </h3>
-        {booking.changeNote && <div className="error small" style={{ whiteSpace: 'pre-line' }}>⚠️ {booking.changeNote}</div>}
-        <div>
-          {formatDay(booking.startLocal)} · {timeOf(booking.startLocal)} hora de {zoneLabel(booking.startTz)}
-          {booking.startPlace && ` · ${booking.startPlace}`}
+      <h2>Histórico</h2>
+      {!open ? (
+        <button className="btn block" type="button" onClick={() => setOpen(true)}>
+          Ver el histórico ({trips.length} {trips.length === 1 ? 'viaje realizado' : 'viajes realizados'})
+        </button>
+      ) : (
+        <>
+          {[...years.entries()].map(([year, list]) => (
+            <section key={year}>
+              <div className="year">{year}</div>
+              {list.map((trip) => (
+                <TripCard key={trip.id} trip={trip} done />
+              ))}
+            </section>
+          ))}
+          <button className="btn block" type="button" onClick={() => setOpen(false)}>
+            Plegar el histórico
+          </button>
+        </>
+      )}
+    </>
+  );
+}
+
+const PREVIEW = 3;
+
+/**
+ * El viaje que toca, entero en Inicio: cabecera (enlace al viaje para editarlo o guardarlo en el móvil), la próxima
+ * reserva destacada con su QR, las dos siguientes y, plegadas, todas las reservas del viaje por días.
+ */
+function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) {
+  const offline = useTripOffline(trip);
+  const [expanded, setExpanded] = useState(false);
+  const data = useLiveQuery(async () => {
+    const bookings = await listBookings(trip.id);
+    const upcoming = upcomingBookings(bookings, Date.now(), PREVIEW);
+    const next = upcoming[0];
+    const qr = next ? (await listAttachments(next.id)).some((a) => a.qrText) : false;
+    return { bookings, upcoming, qr };
+  }, [trip.id]);
+
+  if (!data) {
+    return null;
+  }
+  const { bookings, upcoming, qr } = data;
+  const [next, ...after] = upcoming;
+  const info = next ? TYPE_INFO[next.type] : null;
+  const hidden = bookings.length - upcoming.length;
+
+  return (
+    <>
+      <h2>{inProgress ? 'Viaje en curso' : 'Próximo viaje'}</h2>
+      <Link className="card" to={`/trips/${trip.id}`}>
+        <div className="row between">
+          <div className="grow">
+            <h3>{trip.title}</h3>
+            <div className="muted small">
+              {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+          <OfflineBadge state={offline} />
+          <span className="muted">›</span>
         </div>
-        <div className="actions">
-          {qr && (
-            <Link className="btn primary" to={`/bookings/${booking.id}/qr`}>
-              Ver QR
+      </Link>
+
+      {next && info && (
+        <section className="card highlight">
+          <div className="muted small">Lo siguiente</div>
+          <h3>
+            {info.icon} {next.title}
+          </h3>
+          {next.changeNote && <div className="error small" style={{ whiteSpace: 'pre-line' }}>⚠️ {next.changeNote}</div>}
+          <div>
+            {formatDay(next.startLocal)} · {timeOf(next.startLocal)} hora de {zoneLabel(next.startTz)}
+            {next.startPlace && ` · ${next.startPlace}`}
+          </div>
+          <div className="actions">
+            {qr && (
+              <Link className="btn primary" to={`/bookings/${next.id}/qr`}>
+                Ver QR
+              </Link>
+            )}
+            <Link className="btn" to={`/bookings/${next.id}`}>
+              Ver reserva
             </Link>
-          )}
-          <Link className="btn" to={`/bookings/${booking.id}`}>
-            Ver reserva
-          </Link>
-        </div>
-      </section>
-      {rest.length > 0 && (
+          </div>
+        </section>
+      )}
+
+      {bookings.length === 0 && (
+        <p className="muted small">
+          Este viaje no tiene reservas todavía.{' '}
+          <Link to={`/trips/${trip.id}/bookings/new`}>Añadir la primera</Link>
+        </p>
+      )}
+
+      {!expanded && after.length > 0 && (
         <>
           <div className="muted small" style={{ margin: '4px 0' }}>Después</div>
-          {rest.map((item) => (
-            <BookingCard key={item.booking.id} booking={item.booking} showDay={formatDay(item.booking.startLocal)} />
+          {after.map((booking) => (
+            <BookingCard key={booking.id} booking={booking} showDay={formatDay(booking.startLocal)} />
           ))}
         </>
+      )}
+
+      {expanded &&
+        groupByDay(bookings).map((day) => (
+          <section key={day.date}>
+            <div className="day">{formatLongDay(day.date)}</div>
+            {day.bookings.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} />
+            ))}
+          </section>
+        ))}
+
+      {bookings.length > 0 && (hidden > 0 || expanded) && (
+        <button className="btn block" type="button" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Mostrar menos' : `Ver las ${bookings.length} reservas del viaje por días`}
+        </button>
       )}
     </>
   );
@@ -79,7 +172,7 @@ export function HomePage() {
   const sync = useSyncStatus();
   const today = todayLocal();
   const sorted = trips ? sortTrips(trips, today) : null;
-  // El viaje que toca (en curso, o el más cercano) va arriba del todo; los demás, debajo de «Lo siguiente».
+  // El viaje que toca (en curso, o el más cercano) va arriba con sus reservas; los demás, debajo.
   const [current, ...others] = sorted?.active ?? [];
   const inProgress = !!current && !!current.startDate && current.startDate <= today && (!current.endDate || current.endDate >= today);
 
@@ -107,13 +200,7 @@ export function HomePage() {
           </div>
         </Link>
       )}
-      {current && (
-        <>
-          <h2>{inProgress ? 'Viaje en curso' : 'Próximo viaje'}</h2>
-          <TripCard trip={current} highlight />
-        </>
-      )}
-      <NextUp />
+      {current && <CurrentTrip trip={current} inProgress={inProgress} />}
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (
         <div className="empty">
           <p>Todavía no hay viajes.</p>
@@ -130,14 +217,7 @@ export function HomePage() {
           ))}
         </>
       )}
-      {sorted && sorted.past.length > 0 && (
-        <>
-          <h2>Pasados</h2>
-          {sorted.past.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
-          ))}
-        </>
-      )}
+      {sorted && <History trips={sorted.past} />}
     </main>
   );
 }

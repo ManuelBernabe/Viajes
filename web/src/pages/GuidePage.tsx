@@ -49,18 +49,29 @@ export function GuidePage() {
         <h3>2. Inicio</h3>
         <ul className="small">
           <li>
-            <strong>Lo siguiente</strong>: la próxima reserva con sus botones <strong>Ver QR</strong> y <strong>Ver reserva</strong>, y debajo
-            las dos siguientes. Tocando una se abre.
+            Arriba, el <strong>viaje en curso</strong> (o el próximo): tocando su tarjeta se abre el viaje para editarlo, añadir reservas o
+            guardarlo en el móvil.
           </li>
           <li>
-            <strong>Próximos</strong> y <strong>Pasados</strong>: los viajes. Con <strong>+ Viaje</strong> creas uno (título, destino y fechas).
+            Debajo, <strong>Lo siguiente</strong>: la próxima reserva de ese viaje con sus botones <strong>Ver QR</strong> y{' '}
+            <strong>Ver reserva</strong>, y las dos siguientes. Con <strong>Ver las N reservas del viaje por días</strong> se despliegan
+            todas sin salir de Inicio; <strong>Mostrar menos</strong> las vuelve a plegar.
+          </li>
+          <li>
+            <strong>Más adelante</strong>: los demás viajes por venir. Con <strong>+ Viaje</strong> creas uno (título, destino y fechas).
+          </li>
+          <li>
+            <strong>Histórico</strong>, al final: los viajes ya realizados, plegados y agrupados por año, marcados en naranja como
+            «Realizado». Se abren igual para consultar sus reservas y billetes.
           </li>
           <li>
             Si aparece <strong>«N correos por revisar»</strong>, han llegado correos de reservas que esperan que alguien los confirme
             (apartado 5).
           </li>
         </ul>
-        <Shot file="01-inicio.png" caption="Inicio: correos por revisar, lo siguiente y los viajes." />
+        <Shot file="01-inicio.png" caption="Inicio: correos por revisar, el viaje en curso, lo siguiente y el botón para desplegar todas sus reservas." />
+        <Shot file="14-inicio-desplegado.png" caption="Con las reservas del viaje desplegadas por días, sin salir de Inicio." />
+        <Shot file="15-historico.png" caption="El histórico al final: viajes realizados por año, en naranja." />
       </section>
 
       <section className="card">

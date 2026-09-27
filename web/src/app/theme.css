@@ -264,3 +264,8 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 .guide-shot img { display: block; width: 100%; max-width: 320px; margin: 0 auto; border: 1px solid var(--border); border-radius: 18px; }
 .guide-shot figcaption { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
 .guide-shot.wide img { max-width: 100%; border-radius: 12px; }
+
+/* Histórico: viajes realizados, en naranja y plegados al final de Inicio. */
+.card.done { border-left: 4px solid var(--warn); }
+.badge.done { color: var(--warn); border-color: var(--warn); margin-left: 6px; }
+.year { font-size: 0.8rem; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; }
