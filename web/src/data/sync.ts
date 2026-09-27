@@ -44,7 +44,7 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     if (booking.deletedAtMs !== null) {
       await removeBooking(booking.id);
     } else if (keep.has(booking.tripId)) {
-      await database.put('bookings', booking);
+      await database.put('bookings', { ...booking, visibility: booking.visibility ?? 'household', sharedWith: booking.sharedWith ?? [] });
     }
   }
 

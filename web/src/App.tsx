@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from './app/ErrorBoundary';
 import { Layout } from './app/Layout';
 import { SessionProvider, useSession } from './app/SessionContext';
 import { LoginPage } from './auth/LoginPage';
@@ -64,7 +65,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <SessionProvider>
-        <Gate />
+        <ErrorBoundary>
+          <Gate />
+        </ErrorBoundary>
         <UpdatePrompt />
       </SessionProvider>
     </BrowserRouter>

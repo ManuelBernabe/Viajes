@@ -54,17 +54,23 @@ export async function deleteTrip(id: string): Promise<void> {
 
 // ---- Reservas ----
 
+/** Las reservas guardadas antes de que existiera «quién la ve» no traen esos campos: se completan al leer. */
+export function normalizeBooking(booking: Booking): Booking {
+  return { ...booking, visibility: booking.visibility ?? 'household', sharedWith: booking.sharedWith ?? [] };
+}
+
 export async function listBookings(tripId: string): Promise<Booking[]> {
   const bookings = await (await openDb()).getAllFromIndex('bookings', 'tripId', tripId);
-  return bookings.sort((a, b) => a.startUtcMs - b.startUtcMs);
+  return bookings.map(normalizeBooking).sort((a, b) => a.startUtcMs - b.startUtcMs);
 }
 
 export async function listAllBookings(): Promise<Booking[]> {
-  return (await (await openDb()).getAll('bookings')).sort((a, b) => a.startUtcMs - b.startUtcMs);
+  return (await (await openDb()).getAll('bookings')).map(normalizeBooking).sort((a, b) => a.startUtcMs - b.startUtcMs);
 }
 
 export async function getBooking(id: string): Promise<Booking | undefined> {
-  return (await openDb()).get('bookings', id);
+  const booking = await (await openDb()).get('bookings', id);
+  return booking ? normalizeBooking(booking) : undefined;
 }
 
 export async function saveBooking(body: BookingBody, createdBy: string, id = newId()): Promise<Booking> {

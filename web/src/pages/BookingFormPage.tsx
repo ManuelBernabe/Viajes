@@ -119,8 +119,8 @@ export function BookingFormPage() {
         setAddress(booking.address ?? '');
         setNotes(booking.notes ?? '');
         setChangeNote(booking.changeNote);
-        setVisibility(booking.visibility);
-        setSharedWith(booking.sharedWith);
+        setVisibility(booking.visibility ?? 'household');
+        setSharedWith(booking.sharedWith ?? []);
       }
       setLoaded(true);
     });
