@@ -38,7 +38,7 @@ describe('downloadMissing y dropBlobs', () => {
   async function seed() {
     const database = await openDb();
     const trip: Trip = { id: 't1', title: 't', destination: null, startDate: null, endDate: null, createdBy: 'yo', version: 1, deletedAtMs: null };
-    const booking: Booking = { id: 'b1', tripId: 't1', type: 'flight', title: 'v', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, startUtcMs: 1, reference: null, address: null, notes: null, changeNote: null, shared: false, createdBy: 'yo', version: 1, deletedAtMs: null };
+    const booking: Booking = { id: 'b1', tripId: 't1', type: 'flight', title: 'v', startLocal: '2026-10-12T10:05', startTz: 'Europe/Madrid', startPlace: null, endLocal: null, endTz: null, endPlace: null, startUtcMs: 1, reference: null, address: null, notes: null, changeNote: null, visibility: 'household', sharedWith: [], createdBy: 'yo', version: 1, deletedAtMs: null };
     await database.put('trips', trip);
     await database.put('bookings', booking);
     await database.put('attachments', attachment('ya'));

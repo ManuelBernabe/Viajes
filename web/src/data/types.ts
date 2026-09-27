@@ -14,6 +14,8 @@ export interface Trip {
   deletedAtMs: number | null;
 }
 
+export type BookingVisibility = 'household' | 'private' | 'some';
+
 export interface Booking {
   id: string;
   tripId: string;
@@ -34,8 +36,10 @@ export interface Booking {
   notes: string | null;
   /** Aviso visible hasta que alguien lo quita: «Modificada el 27/09 según correo: …». */
   changeNote: string | null;
-  /** Un invitado puede compartir una reserva suya con todo el hogar. */
-  shared: boolean;
+  /** Quién la ve: todo el hogar, solo su creador (y quien administra) o personas concretas. */
+  visibility: BookingVisibility;
+  /** Con visibilidad «some»: ids de las personas que la ven además del creador y quien administra. */
+  sharedWith: string[];
   createdBy: string;
   version: number;
   deletedAtMs: number | null;
@@ -127,7 +131,8 @@ export interface BookingBody {
   address: string | null;
   notes: string | null;
   changeNote: string | null;
-  shared?: boolean;
+  visibility?: BookingVisibility;
+  sharedWith?: string[];
 }
 
 export interface AttachmentBody {

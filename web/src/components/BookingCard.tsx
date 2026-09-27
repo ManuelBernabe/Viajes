@@ -19,7 +19,8 @@ export function BookingCard({ booking, showDay }: { booking: Booking; showDay?: 
         <div className="title">
           {booking.title}
           {booking.changeNote && <span className="badge danger"> ⚠️ Modificada</span>}
-          {booking.shared && <span className="badge"> Compartida</span>}
+          {booking.visibility === 'private' && <span className="badge"> Privada</span>}
+          {booking.visibility === 'some' && <span className="badge"> Compartida con {booking.sharedWith.length}</span>}
         </div>
         {showDay && <div className="sub">{showDay}</div>}
         {route && <div className="sub">{route}</div>}

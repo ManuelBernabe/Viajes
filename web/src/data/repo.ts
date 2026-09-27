@@ -73,7 +73,8 @@ export async function saveBooking(body: BookingBody, createdBy: string, id = new
   const booking: Booking = {
     id,
     ...body,
-    shared: body.shared ?? existing?.shared ?? false,
+    visibility: body.visibility ?? existing?.visibility ?? 'household',
+    sharedWith: body.sharedWith ?? existing?.sharedWith ?? [],
     startUtcMs: toUtcMs(body.startLocal, body.startTz),
     createdBy: existing?.createdBy ?? createdBy,
     version: existing?.version ?? 0,

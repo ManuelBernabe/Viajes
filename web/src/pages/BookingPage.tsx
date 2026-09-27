@@ -43,7 +43,7 @@ export function BookingPage() {
       {
         tripId: b.tripId, type: b.type, title: b.title, startLocal: b.startLocal, startTz: b.startTz, startPlace: b.startPlace,
         endLocal: b.endLocal, endTz: b.endTz, endPlace: b.endPlace, reference: b.reference, address: b.address, notes: b.notes, changeNote: null,
-        shared: b.shared,
+        visibility: b.visibility, sharedWith: b.sharedWith,
       },
       session.email ?? '',
       b.id,
@@ -101,10 +101,10 @@ export function BookingPage() {
             </dd>
           </>
         )}
-        {booking.shared && (
+        {booking.visibility !== 'household' && (
           <>
-            <dt>Visibilidad</dt>
-            <dd>Compartida con todo el hogar</dd>
+            <dt>Quién la ve</dt>
+            <dd>{booking.visibility === 'private' ? 'Solo quien la creó y quien administra' : `Personas concretas (${booking.sharedWith.length}) además de quien la creó y quien administra`}</dd>
           </>
         )}
         {booking.reference && (

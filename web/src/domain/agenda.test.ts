@@ -4,7 +4,7 @@ import { groupByDay, nextBooking, sortTrips, todayLocal, tripStatus, upcomingBoo
 
 const booking = (id: string, startLocal: string, startUtcMs: number): Booking => ({
   id, tripId: 't', type: 'flight', title: id, startLocal, startTz: 'Europe/Madrid', startPlace: null, endLocal: null,
-  endTz: null, endPlace: null, startUtcMs, reference: null, address: null, notes: null, changeNote: null, shared: false, createdBy: 'yo', version: 1, deletedAtMs: null,
+  endTz: null, endPlace: null, startUtcMs, reference: null, address: null, notes: null, changeNote: null, visibility: 'household', sharedWith: [], createdBy: 'yo', version: 1, deletedAtMs: null,
 });
 const trip = (id: string, startDate: string | null, endDate: string | null): Trip => ({
   id, title: id, destination: null, startDate, endDate, createdBy: 'yo', version: 1, deletedAtMs: null,

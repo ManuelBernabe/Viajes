@@ -201,12 +201,27 @@ public sealed class SharedHouseholdDataTests(TestApp app) : IClassFixture<TestAp
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana (revisado)" })).StatusCode);
         Assert.Contains((await ana.GetSync()).Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana (revisado)");
 
-        // Si Ana marca una reserva como compartida, Luis pasa a verla (y a poder editarla); si la desmarca, deja de verla.
-        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana", shared = true })).StatusCode);
+        // Si Ana comparte una reserva con todo el hogar, Luis pasa a verla (y a poder editarla); si vuelve a privada, deja de verla.
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana", visibility = "household" })).StatusCode);
         Assert.Contains((await luis.GetSync()).Bookings, b => b.Id == anaInAdminTrip);
-        Assert.Equal(HttpStatusCode.NoContent, (await luis.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana (visto por Luis)", shared = true })).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana", shared = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await luis.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana (visto por Luis)" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana", visibility = "private" })).StatusCode);
         Assert.DoesNotContain((await luis.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == anaInAdminTrip);
+
+        // El administrador restringe su vuelo común a «solo yo»: nadie más lo ve; luego lo comparte solo con Luis.
+        var luisId = (await luis.Client.GetFromJsonAsync<JsonElement>("/api/household/")).GetProperty("members").EnumerateArray()
+            .Single(m => m.GetProperty("me").GetBoolean()).GetProperty("userId").GetString()!;
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(adminBooking, tripId, new { title = "Vuelo común", visibility = "private" })).StatusCode);
+        Assert.DoesNotContain((await ana.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == adminBooking);
+        Assert.DoesNotContain((await luis.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == adminBooking);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(adminBooking, tripId, new { title = "Vuelo común", visibility = "some", sharedWith = new[] { luisId, "nadie" } })).StatusCode);
+        var luisView = (await luis.GetSync()).Bookings.Single(b => b.Id == adminBooking);
+        Assert.Equal("some", luisView.Visibility);
+        Assert.Equal([luisId], luisView.SharedWith);
+        Assert.DoesNotContain((await ana.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == adminBooking);
+        // Luis la ve, pero no puede cambiar quién la ve.
+        Assert.Equal(HttpStatusCode.NoContent, (await luis.PutBooking(adminBooking, tripId, new { title = "Vuelo común", visibility = "household" })).StatusCode);
+        Assert.DoesNotContain((await ana.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == adminBooking);
 
         // Alguien de otro hogar no ve nada de esto.
         var outsider = await TripsApi.SignUp(app, "compartido-ajeno@example.com");

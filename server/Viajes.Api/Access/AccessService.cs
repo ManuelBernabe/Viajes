@@ -57,8 +57,8 @@ public sealed class AccessService(AppDbContext db)
         VisibleTrips(userId).FirstOrDefaultAsync(t => t.Id == tripId);
 
     /// <summary>
-    /// Regla de las reservas (decidida por Manuel el 27/09/2026): quien administra el hogar ve todas; las que crea quien
-    /// administra las ve todo el hogar; las que crea un invitado solo las ven ese invitado y quien administra.
+    /// Regla de las reservas (decidida por Manuel el 27/09/2026): quien administra el hogar ve todas; una reserva la ven además
+    /// su creador, todo el hogar si es «household», y las personas concretas con las que se comparte si es «some».
     /// </summary>
     public IQueryable<Booking> VisibleBookings(string userId) =>
         from booking in db.Bookings
@@ -67,11 +67,11 @@ public sealed class AccessService(AppDbContext db)
         where member.UserId == userId && member.DeletedAtMs == null
         where member.Role == HouseholdMember.Admin
             || booking.CreatedBy == userId
-            || booking.Shared
-            || db.HouseholdMembers.Any(a => a.HouseholdId == trip.HouseholdId && a.UserId == booking.CreatedBy && a.Role == HouseholdMember.Admin && a.DeletedAtMs == null)
+            || booking.Visibility == Booking.VisibleToHousehold
+            || (booking.Visibility == Booking.VisibleToSome && db.BookingShares.Any(s => s.BookingId == booking.Id && s.UserId == userId))
         select booking;
 
-    /// <summary>Quiénes pueden ver una reserva (para los avisos): el hogar entero si la creó quien administra; si no, su creador y quien administra.</summary>
+    /// <summary>Quiénes pueden ver una reserva (para los avisos), según la misma regla.</summary>
     public async Task<List<string>> BookingAudience(Booking booking)
     {
         var trip = await db.Trips.FirstOrDefaultAsync(t => t.Id == booking.TripId);
@@ -81,9 +81,11 @@ public sealed class AccessService(AppDbContext db)
         }
 
         var members = await db.HouseholdMembers.Where(m => m.HouseholdId == trip.HouseholdId && m.DeletedAtMs == null).ToListAsync();
-        var everyone = booking.Shared || members.Any(m => m.UserId == booking.CreatedBy && m.Role == HouseholdMember.Admin);
+        var sharedWith = booking.Visibility == Booking.VisibleToSome
+            ? await db.BookingShares.Where(s => s.BookingId == booking.Id).Select(s => s.UserId).ToListAsync()
+            : [];
         return members
-            .Where(m => everyone || m.Role == HouseholdMember.Admin || m.UserId == booking.CreatedBy)
+            .Where(m => booking.Visibility == Booking.VisibleToHousehold || m.Role == HouseholdMember.Admin || m.UserId == booking.CreatedBy || sharedWith.Contains(m.UserId))
             .Select(m => m.UserId)
             .Distinct()
             .ToList();

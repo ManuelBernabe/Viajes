@@ -101,8 +101,19 @@ public sealed class Booking : IVersioned
     /// <summary>Aviso visible («Modificada el 27/09 según correo: salida 14:35 → 16:10») hasta que alguien lo quita.</summary>
     public string? ChangeNote { get; set; }
 
-    /// <summary>Un invitado puede compartir una reserva suya con todo el hogar (las de quien administra ya lo están).</summary>
-    public bool Shared { get; set; }
+    /// <summary>Todo el hogar la ve.</summary>
+    public const string VisibleToHousehold = "household";
+
+    /// <summary>Solo su creador y quien administra.</summary>
+    public const string VisibleToCreator = "private";
+
+    /// <summary>Su creador, quien administra y las personas de <see cref="BookingShare"/>.</summary>
+    public const string VisibleToSome = "some";
+
+    public static readonly IReadOnlySet<string> Visibilities = new HashSet<string> { VisibleToHousehold, VisibleToCreator, VisibleToSome };
+
+    /// <summary>Quién ve la reserva (regla de Manuel, 27/09/2026): las de quien administra nacen para todo el hogar; las de un invitado, privadas.</summary>
+    public string Visibility { get; set; } = VisibleToHousehold;
 
     public required string CreatedBy { get; set; }
 
@@ -234,6 +245,14 @@ public sealed class InboxAttachment
 
     /// <summary>Texto del código de barras cuando viene en un pase de Apple Wallet (.pkpass).</summary>
     public string? QrText { get; set; }
+}
+
+/// <summary>Persona concreta con la que se comparte una reserva de visibilidad «some».</summary>
+public sealed class BookingShare
+{
+    public Guid BookingId { get; set; }
+
+    public required string UserId { get; set; }
 }
 
 /// <summary>Enlace de un solo uso para unirse a un hogar; en la base solo queda el hash del token.</summary>

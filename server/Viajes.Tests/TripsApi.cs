@@ -84,7 +84,7 @@ public sealed class TripsApi(HttpClient client)
 
     public sealed record TripRow(Guid Id, string Title, string? Destination, string? StartDate, string? EndDate, long Version, long? DeletedAtMs);
 
-    public sealed record BookingRow(Guid Id, Guid TripId, string Type, string Title, string StartLocal, string StartTz, string? EndLocal, string? EndTz, long StartUtcMs, string? Reference, string? ChangeNote, long Version, long? DeletedAtMs);
+    public sealed record BookingRow(Guid Id, Guid TripId, string Type, string Title, string StartLocal, string StartTz, string? EndLocal, string? EndTz, long StartUtcMs, string? Reference, string? ChangeNote, string Visibility, List<string> SharedWith, long Version, long? DeletedAtMs);
 
     public sealed record AttachmentRow(Guid Id, Guid BookingId, string Name, string Mime, long Size, string? QrText, bool Uploaded, long Version, long? DeletedAtMs);
 }

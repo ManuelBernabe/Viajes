@@ -12,8 +12,8 @@ import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAtta
 import { importInboxAttachments } from '../data/inboxImport';
 import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, timeOf, zoneLabel } from '../data/localTime';
 import { getBooking, listAllBookings, saveBooking } from '../data/repo';
-import { loadHousehold } from '../household/household';
-import type { Booking } from '../data/types';
+import { loadHousehold, type Household } from '../household/household';
+import type { Booking, BookingVisibility } from '../data/types';
 import { applyChanges, diffBooking, findExistingBooking, type Change, type Proposal } from '../domain/changes';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
@@ -68,12 +68,21 @@ export function BookingFormPage() {
   const [address, setAddress] = useState(prefill?.address ?? '');
   const [notes, setNotes] = useState(prefill?.notes ?? '');
   const [changeNote, setChangeNote] = useState<string | null>(null);
-  // Solo los invitados deciden si comparten una reserva; las de quien administra ya las ve todo el hogar.
-  const [shared, setShared] = useState(false);
-  const [admin, setAdmin] = useState(true);
+  // Quién la ve: las de quien administra nacen para todo el hogar; las de un invitado, solo para él y quien administra.
+  const [visibility, setVisibility] = useState<BookingVisibility>('household');
+  const [sharedWith, setSharedWith] = useState<string[]>([]);
+  const [home, setHome] = useState<Household | null>(null);
   useEffect(() => {
-    loadHousehold().then((home) => setAdmin(home.iAmAdmin), () => setAdmin(true));
-  }, []);
+    loadHousehold().then(
+      (h) => {
+        setHome(h);
+        if (!bookingId && !h.iAmAdmin) {
+          setVisibility('private');
+        }
+      },
+      () => setHome(null),
+    );
+  }, [bookingId]);
 
   useEffect(() => {
     if (prefill?.rawText) {
@@ -110,7 +119,8 @@ export function BookingFormPage() {
         setAddress(booking.address ?? '');
         setNotes(booking.notes ?? '');
         setChangeNote(booking.changeNote);
-        setShared(booking.shared);
+        setVisibility(booking.visibility);
+        setSharedWith(booking.sharedWith);
       }
       setLoaded(true);
     });
@@ -262,7 +272,8 @@ export function BookingFormPage() {
           address: address.trim() || null,
           notes: notes.trim() || null,
           changeNote,
-          shared,
+          visibility,
+          sharedWith: visibility === 'some' ? sharedWith : [],
         },
         session.email ?? '',
         bookingId,
@@ -428,11 +439,43 @@ export function BookingFormPage() {
           <label htmlFor="notes">Notas</label>
           <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
-        {!admin && (
-          <label className="row small" style={{ gap: 10, margin: '12px 0' }}>
-            <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
-            Compartir con el hogar (si no, solo la veis tú y quien administra)
-          </label>
+        {home && (
+          <div className="field">
+            <label>Quién la ve</label>
+            <div className="segmented">
+              {(
+                [
+                  ['household', 'Todo el hogar'],
+                  ['private', home.iAmAdmin ? 'Solo yo' : 'Solo yo y quien administra'],
+                  ['some', 'Personas concretas'],
+                ] as [BookingVisibility, string][]
+              ).map(([value, label]) => (
+                <button key={value} type="button" className={visibility === value ? 'on' : ''} onClick={() => setVisibility(value)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {visibility === 'some' && (
+              <div style={{ marginTop: 8 }}>
+                {home.members.filter((m) => !m.me && m.role !== 'admin').length === 0 && (
+                  <p className="muted small">Todavía no hay más personas en el hogar con quien compartirla.</p>
+                )}
+                {home.members
+                  .filter((m) => !m.me && m.role !== 'admin')
+                  .map((m) => (
+                    <label key={m.userId} className="row small" style={{ gap: 10, margin: '6px 0' }}>
+                      <input
+                        type="checkbox"
+                        checked={sharedWith.includes(m.userId)}
+                        onChange={(e) => setSharedWith(e.target.checked ? [...sharedWith, m.userId] : sharedWith.filter((id) => id !== m.userId))}
+                      />
+                      {m.email ?? m.userId}
+                    </label>
+                  ))}
+                <p className="muted small">Quien administra el hogar la ve siempre.</p>
+              </div>
+            )}
+          </div>
         )}
         {!bookingId && (
           <div className="field">

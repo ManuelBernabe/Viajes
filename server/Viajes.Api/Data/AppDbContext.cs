@@ -28,6 +28,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<Invitation> Invitations => Set<Invitation>();
 
+    public DbSet<BookingShare> BookingShares => Set<BookingShare>();
+
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
@@ -81,6 +83,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         {
             booking.HasKey(b => b.Id);
             booking.Property(b => b.Type).HasMaxLength(20);
+            booking.Property(b => b.Visibility).HasMaxLength(20).HasDefaultValue(Booking.VisibleToHousehold);
             booking.Property(b => b.Title).HasMaxLength(200);
             booking.Property(b => b.StartLocal).HasMaxLength(19);
             booking.Property(b => b.StartTz).HasMaxLength(64);
@@ -94,6 +97,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             booking.Property(b => b.ChangeNote).HasMaxLength(1000);
             booking.HasIndex(b => b.TripId);
             booking.HasIndex(b => b.Version);
+        });
+
+        builder.Entity<BookingShare>(share =>
+        {
+            share.HasKey(s => new { s.BookingId, s.UserId });
+            share.HasIndex(s => s.UserId);
         });
 
         builder.Entity<Invitation>(invitation =>

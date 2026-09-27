@@ -195,7 +195,36 @@ public static partial class TripEndpoints
         booking.Notes = Clean(body.Notes, 4000);
         var previousNote = booking.ChangeNote;
         booking.ChangeNote = Clean(body.ChangeNote, 1000);
-        booking.Shared = body.Shared ?? booking.Shared;
+
+        // Quién la ve: al crearla, todo el hogar si la crea quien administra y solo su creador si la crea un invitado.
+        // Solo su creador o quien administra pueden cambiarlo; quien la ve por estar compartida con él, no.
+        var isNew = db.Entry(booking).State == EntityState.Added;
+        var isAdmin = await access.IsAdmin(userId);
+        if (isNew)
+        {
+            booking.Visibility = isAdmin ? Booking.VisibleToHousehold : Booking.VisibleToCreator;
+        }
+
+        if (body.Visibility is not null && (isAdmin || booking.CreatedBy == userId))
+        {
+            if (!Booking.Visibilities.Contains(body.Visibility))
+            {
+                return Problem("Visibilidad desconocida.", StatusCodes.Status400BadRequest);
+            }
+
+            booking.Visibility = body.Visibility;
+            if (body.SharedWith is not null)
+            {
+                // Solo personas del hogar; se sustituye la lista entera.
+                var memberIds = await db.HouseholdMembers
+                    .Where(m => m.HouseholdId == trip.HouseholdId && m.DeletedAtMs == null && body.SharedWith.Contains(m.UserId))
+                    .Select(m => m.UserId)
+                    .ToListAsync(ct);
+                var current = await db.BookingShares.Where(s => s.BookingId == booking.Id).ToListAsync(ct);
+                db.BookingShares.RemoveRange(current.Where(s => !memberIds.Contains(s.UserId)));
+                db.BookingShares.AddRange(memberIds.Where(m => current.All(s => s.UserId != m)).Select(m => new BookingShare { BookingId = booking.Id, UserId = m }));
+            }
+        }
 
         await db.SaveChangesAsync(ct);
 
@@ -385,6 +414,10 @@ public static partial class TripEndpoints
         var trips = await visibleTrips.Where(t => t.Version > from).OrderBy(t => t.Version).ToListAsync(ct);
         var bookings = await access.VisibleBookings(userId).Where(b => b.Version > from).OrderBy(b => b.Version).ToListAsync(ct);
         var attachments = await access.VisibleAttachments(userId).Where(a => a.Version > from).OrderBy(a => a.Version).ToListAsync(ct);
+        var bookingIds = bookings.Select(b => b.Id).ToList();
+        var shares = (await db.BookingShares.Where(s => bookingIds.Contains(s.BookingId)).ToListAsync(ct))
+            .GroupBy(s => s.BookingId)
+            .ToDictionary(g => g.Key, g => g.Select(s => s.UserId).ToList());
         var inbox = await access.VisibleInboxItems(userId).Where(i => i.Version > from).OrderBy(i => i.Version).ToListAsync(ct);
         var inboxIds = inbox.Select(i => i.Id).ToList();
         var inboxAttachments = await db.InboxAttachments.Where(a => inboxIds.Contains(a.InboxItemId)).ToListAsync(ct);
@@ -394,7 +427,7 @@ public static partial class TripEndpoints
             version,
             tripIds,
             trips.Select(TripDto.From).ToList(),
-            bookings.Select(BookingDto.From).ToList(),
+            bookings.Select(b => BookingDto.From(b, shares.GetValueOrDefault(b.Id))).ToList(),
             attachments.Select(AttachmentDto.From).ToList(),
             inbox.Select(i => Inbox.InboxEndpoints.ToDto(i, inboxAttachments.Where(a => a.InboxItemId == i.Id))).ToList()));
     }
