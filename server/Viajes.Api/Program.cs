@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Viajes.Api.Ai;
 using Viajes.Api.Auth;
+using Viajes.Api.Backup;
 using Viajes.Api.Data;
 using Viajes.Api.Diag;
 using Viajes.Api.Hosting;
@@ -29,6 +30,7 @@ builder.Services.AddSingleton<VersionInfo>();
 builder.Services.AddBookingExtractor(builder.Configuration);
 builder.Services.AddPush();
 builder.Services.AddHouseholds();
+builder.Services.AddBackups(dataDir);
 
 // Railway pone dos saltos en X-Forwarded-For (cliente, borde); con el límite por defecto de uno
 // la IP «remota» sería la del borde y el límite de intentos compartiría un contador para todos.
@@ -59,6 +61,7 @@ app.MapInboxEndpoints();
 app.MapExtractionEndpoints();
 app.MapPushEndpoints();
 app.MapHouseholdEndpoints();
+app.MapBackupEndpoints();
 app.Map("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html", SpaHosting.StaticOptions(spa));
 

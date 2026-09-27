@@ -126,6 +126,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             token.HasKey(t => t.Id);
             token.Property(t => t.TokenHash).HasMaxLength(64);
             token.Property(t => t.Label).HasMaxLength(100);
+            token.Property(t => t.Scope).HasMaxLength(20).HasDefaultValue(ImportToken.ImportScope);
             token.HasIndex(t => t.TokenHash).IsUnique();
             token.HasIndex(t => t.UserId);
         });

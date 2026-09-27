@@ -15,7 +15,8 @@ public static class InboxEndpoints
 {
     public const long MaxMessageBytes = 25_000_000;
 
-    public sealed record TokenRequest(string? Label);
+    /// <summary>Scope: «import» (por defecto) o «backup» (solo quien administra el hogar).</summary>
+    public sealed record TokenRequest(string? Label, string? Scope = null);
 
     public sealed record StatusRequest(string Status, Guid? BookingId);
 
@@ -43,28 +44,47 @@ public static class InboxEndpoints
         var list = await db.ImportTokens
             .Where(t => t.UserId == userId)
             .OrderByDescending(t => t.CreatedMs)
-            .Select(t => new { t.Id, t.Label, t.CreatedMs, t.RevokedMs, t.LastUsedMs })
+            .Select(t => new { t.Id, t.Label, t.Scope, t.CreatedMs, t.RevokedMs, t.LastUsedMs })
             .ToListAsync();
         return Results.Ok(list);
     }
 
-    private static async Task<IResult> CreateToken(TokenRequest body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db)
+    private static async Task<IResult> CreateToken(TokenRequest body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db, AccessService access)
     {
         var userId = users.GetUserId(principal)!;
+        var scope = body.Scope ?? ImportToken.ImportScope;
+        if (scope != ImportToken.ImportScope && scope != ImportToken.BackupScope)
+        {
+            return Results.Problem("Tipo de token desconocido.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (scope == ImportToken.BackupScope)
+        {
+            // La copia lleva los datos de todo el hogar: solo quien lo administra puede crear el token.
+            var householdId = await access.EnsureHousehold(userId);
+            var admin = await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == householdId && m.UserId == userId && m.Role == HouseholdMember.Admin && m.DeletedAtMs == null);
+            if (!admin)
+            {
+                return Results.Problem("Solo quien administra el hogar puede crear tokens de copia de seguridad.", statusCode: StatusCodes.Status403Forbidden);
+            }
+        }
+
         var secret = RandomNumberGenerator.GetBytes(32);
         var token = Convert.ToHexString(secret).ToLowerInvariant();
+        var defaultLabel = scope == ImportToken.BackupScope ? "Copia en Drive" : "Gmail";
         var entity = new ImportToken
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            Scope = scope,
             TokenHash = Hash(token),
-            Label = string.IsNullOrWhiteSpace(body.Label) ? "Gmail" : body.Label.Trim()[..Math.Min(100, body.Label.Trim().Length)],
+            Label = string.IsNullOrWhiteSpace(body.Label) ? defaultLabel : body.Label.Trim()[..Math.Min(100, body.Label.Trim().Length)],
             CreatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
         db.ImportTokens.Add(entity);
         await db.SaveChangesAsync();
         // El token solo se enseña ahora: en la base queda su hash.
-        return Results.Ok(new { id = entity.Id, label = entity.Label, token });
+        return Results.Ok(new { id = entity.Id, label = entity.Label, scope = entity.Scope, token });
     }
 
     private static async Task<IResult> RevokeToken(Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db)
@@ -96,9 +116,9 @@ public static class InboxEndpoints
 
         var hash = Hash(header[7..].Trim());
         var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
-        if (token is null || token.RevokedMs is not null)
+        if (token is null || token.RevokedMs is not null || token.Scope != ImportToken.ImportScope)
         {
-            log.LogWarning("Importación rechazada: token {Estado}.", token is null ? "desconocido" : "revocado");
+            log.LogWarning("Importación rechazada: token {Estado}.", token is null ? "desconocido" : token.RevokedMs is not null ? "revocado" : "de otro tipo");
             return Results.Problem("Token no válido o revocado.", statusCode: StatusCodes.Status401Unauthorized);
         }
 

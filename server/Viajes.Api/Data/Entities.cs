@@ -136,7 +136,15 @@ public sealed class Attachment : IVersioned
 /// <summary>Token personal para que el script de Gmail pueda crear borradores. Solo se guarda su hash.</summary>
 public sealed class ImportToken
 {
+    /// <summary>Permite crear borradores desde el correo (script de Gmail).</summary>
+    public const string ImportScope = "import";
+
+    /// <summary>Permite descargar la copia de seguridad completa (script que la guarda en Drive).</summary>
+    public const string BackupScope = "backup";
+
     public Guid Id { get; set; }
+
+    public string Scope { get; set; } = ImportScope;
 
     public required string UserId { get; set; }
 

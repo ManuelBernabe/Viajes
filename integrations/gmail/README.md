@@ -71,3 +71,23 @@ Sin datos estructurados, el borrador trae igualmente el asunto, el texto y los a
 - El mismo correo dos veces no duplica nada.
 - El HTML nunca llega al móvil: se guarda el texto plano y el `.eml` original en el almacenamiento.
 - Nada del correo se envía a terceros.
+
+## Copia de seguridad diaria en Google Drive
+
+La app guarda cada día una copia de su base de datos en el propio servidor (se conservan las 14 últimas; se ven en
+Ajustes → Copias de seguridad). Para tener además una copia **fuera** del servidor, el mismo script puede bajar cada
+noche un zip completo (base de datos, billetes adjuntos y claves de sesión) a tu Drive:
+
+1. En la app → **Ajustes → Copias de seguridad → Generar token de copia para Drive**. Cópialo (solo se muestra una
+   vez). Solo quien administra el hogar puede crearlo, y se revoca ahí mismo.
+2. En el script, **Propiedades del script** → añade `VIAJES_BACKUP_TOKEN` = ese token. `VIAJES_URL` ya está.
+3. Pega el contenido actualizado de `Code.gs` (incluye la función `copiaDeSeguridad`) y guarda.
+4. **Activadores** → **Añadir activador**: función `copiaDeSeguridad`, «Basado en tiempo», «Temporizador diario»,
+   entre las 3 y las 4 de la madrugada. Al guardar, Google pedirá permiso para Drive.
+5. Prueba: en el editor, elige `copiaDeSeguridad` y pulsa **Ejecutar**. En Drive aparecerá la carpeta
+   «Viajes - copias de seguridad» con `viajes-AAAA-MM-DD-HHMM.zip`.
+
+Se conservan las 14 copias más recientes; las demás van a la papelera de Drive.
+
+**Restaurar**: descomprime el zip y copia `viajes.db`, la carpeta `files` y la carpeta `keys` en el volumen de datos
+del servidor (`/data`), con la app parada. En el servidor las copias diarias están en `/data/backups/viajes-AAAA-MM-DD.db`.

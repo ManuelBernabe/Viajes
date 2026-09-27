@@ -4,6 +4,7 @@ import { api, describeError } from '../api';
 interface TokenRow {
   id: string;
   label: string;
+  scope?: 'import' | 'backup';
   createdMs: number;
   revokedMs: number | null;
   lastUsedMs: number | null;
@@ -71,7 +72,7 @@ export function ImportTokens() {
     }
   }
 
-  const active = tokens?.filter((t) => !t.revokedMs) ?? [];
+  const active = tokens?.filter((t) => !t.revokedMs && (t.scope ?? 'import') === 'import') ?? [];
 
   return (
     <section className="card">

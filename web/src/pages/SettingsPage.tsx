@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { formatSize } from '../attachments/files';
 import { AiSettings } from '../components/AiSettings';
+import { BackupSettings } from '../components/BackupSettings';
 import { HouseholdSettings } from '../components/HouseholdSettings';
 import { ImportTokens } from '../components/ImportTokens';
 import { PushSettings } from '../components/PushSettings';
@@ -101,6 +102,8 @@ export function SettingsPage() {
       <ImportTokens />
 
       <AiSettings />
+
+      <BackupSettings />
 
       <section className="card">
         <h3>Espacio en el móvil</h3>

@@ -8,10 +8,10 @@ import { sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/ag
 import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 
-function TripCard({ trip }: { trip: Trip }) {
+function TripCard({ trip, highlight = false }: { trip: Trip; highlight?: boolean }) {
   const offline = useTripOffline(trip);
   return (
-    <Link className="card" to={`/trips/${trip.id}`}>
+    <Link className={`card${highlight ? ' highlight' : ''}`} to={`/trips/${trip.id}`}>
       <div className="row between">
         <div className="grow">
           <h3>{trip.title}</h3>
@@ -77,7 +77,11 @@ export function HomePage() {
   const trips = useLiveQuery(listTrips, []);
   const inboxCount = useLiveQuery(async () => (await listInbox()).length, []) ?? 0;
   const sync = useSyncStatus();
-  const sorted = trips ? sortTrips(trips, todayLocal()) : null;
+  const today = todayLocal();
+  const sorted = trips ? sortTrips(trips, today) : null;
+  // El viaje que toca (en curso, o el más cercano) va arriba del todo; los demás, debajo de «Lo siguiente».
+  const [current, ...others] = sorted?.active ?? [];
+  const inProgress = !!current && !!current.startDate && current.startDate <= today && (!current.endDate || current.endDate >= today);
 
   return (
     <main className="page">
@@ -103,6 +107,12 @@ export function HomePage() {
           </div>
         </Link>
       )}
+      {current && (
+        <>
+          <h2>{inProgress ? 'Viaje en curso' : 'Próximo viaje'}</h2>
+          <TripCard trip={current} highlight />
+        </>
+      )}
       <NextUp />
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (
         <div className="empty">
@@ -112,10 +122,10 @@ export function HomePage() {
           </Link>
         </div>
       )}
-      {sorted && sorted.active.length > 0 && (
+      {others.length > 0 && (
         <>
-          <h2>Próximos</h2>
-          {sorted.active.map((trip) => (
+          <h2>Más adelante</h2>
+          {others.map((trip) => (
             <TripCard key={trip.id} trip={trip} />
           ))}
         </>
