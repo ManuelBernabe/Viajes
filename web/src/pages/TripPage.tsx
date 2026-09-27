@@ -3,13 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BackLink } from '../app/Layout';
 import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
+import { TypeChips } from '../components/TypeChips';
 import { formatLongDay, formatRange } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
 import { deleteTrip, getTrip, listBookings } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, TYPE_INFO } from '../domain/agenda';
+import { groupByDay } from '../domain/agenda';
 
 export function TripPage() {
   const { tripId = '' } = useParams();
@@ -103,18 +104,9 @@ export function TripPage() {
         + Añadir reserva
       </Link>
 
-      {typesPresent.size > 1 && (
-        <div className="chips" style={{ marginTop: 12 }}>
-          <button className={filter === null ? 'on' : ''} onClick={() => setFilter(null)}>
-            Todo
-          </button>
-          {[...typesPresent].map((type) => (
-            <button key={type} className={filter === type ? 'on' : ''} onClick={() => setFilter(filter === type ? null : type)}>
-              {TYPE_INFO[type].icon} {TYPE_INFO[type].label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div style={{ marginTop: 12 }}>
+        <TypeChips types={typesPresent} value={filter} onChange={setFilter} />
+      </div>
 
       {days.length === 0 && <p className="empty">Sin reservas todavía.</p>}
       {days.map((day) => (

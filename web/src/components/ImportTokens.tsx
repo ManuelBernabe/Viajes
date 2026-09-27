@@ -15,7 +15,7 @@ function when(ms: number | null): string {
 }
 
 /** Tokens con los que el script de Gmail puede crear borradores. El valor solo se enseña al crearlo. */
-export function ImportTokens() {
+export function ImportTokens({ admin = false }: { admin?: boolean }) {
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
   const [fresh, setFresh] = useState<{ label: string; token: string } | null>(null);
   const [message, setMessage] = useState('');
@@ -94,14 +94,20 @@ export function ImportTokens() {
           <span>
             {token.label} · creado {when(token.createdMs)} · último uso {when(token.lastUsedMs)}
           </span>
-          <button className="btn small danger" type="button" onClick={() => void revoke(token.id)}>
-            Revocar
-          </button>
+          {admin && (
+            <button className="btn small danger" type="button" onClick={() => void revoke(token.id)}>
+              Revocar
+            </button>
+          )}
         </div>
       ))}
-      <button className="btn block" type="button" onClick={() => void create()}>
-        Generar token nuevo
-      </button>
+      {admin ? (
+        <button className="btn block" type="button" onClick={() => void create()}>
+          Generar token nuevo
+        </button>
+      ) : (
+        <p className="muted small">Solo quien administra el hogar puede generar o revocar tokens.</p>
+      )}
       {message && <p className="error small">{message}</p>}
     </section>
   );

@@ -18,6 +18,14 @@ public sealed class AccessService(AppDbContext db)
             .Select(m => (Guid?)m.HouseholdId)
             .FirstOrDefaultAsync();
 
+    /// <summary>Si la persona administra su hogar. Los tokens y la gestión de miembros son solo para quien administra.</summary>
+    public async Task<bool> IsAdmin(string userId)
+    {
+        var householdId = await EnsureHousehold(userId);
+        return await db.HouseholdMembers.AnyAsync(m =>
+            m.HouseholdId == householdId && m.UserId == userId && m.Role == HouseholdMember.Admin && m.DeletedAtMs == null);
+    }
+
     /// <summary>Cada cuenta tiene un hogar; a las anteriores a este plan se les crea al iniciar sesión.</summary>
     public async Task<Guid> EnsureHousehold(string userId)
     {

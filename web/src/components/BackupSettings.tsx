@@ -22,7 +22,7 @@ function when(ms: number | null): string {
 }
 
 /** Sección «Copias de seguridad» de Ajustes: copias diarias del servidor y token para la copia en Google Drive. */
-export function BackupSettings() {
+export function BackupSettings({ admin = false }: { admin?: boolean }) {
   const [local, setLocal] = useState<LocalBackup[] | null>(null);
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -106,14 +106,20 @@ export function BackupSettings() {
           <span>
             {token.label} · creado {when(token.createdMs)} · última copia {when(token.lastUsedMs)}
           </span>
-          <button className="btn small danger" type="button" onClick={() => void revoke(token.id)}>
-            Revocar
-          </button>
+          {admin && (
+            <button className="btn small danger" type="button" onClick={() => void revoke(token.id)}>
+              Revocar
+            </button>
+          )}
         </div>
       ))}
-      <button className="btn block" type="button" onClick={() => void create()}>
-        Generar token de copia para Drive
-      </button>
+      {admin ? (
+        <button className="btn block" type="button" onClick={() => void create()}>
+          Generar token de copia para Drive
+        </button>
+      ) : (
+        <p className="muted small">Solo quien administra el hogar puede generar o revocar el token de copia.</p>
+      )}
       {message && <p className="error small">{message}</p>}
     </section>
   );

@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
+import { TypeChips } from '../components/TypeChips';
 import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
 import { listAttachments, listBookings, listInbox, listTrips } from '../data/repo';
 import { useSyncStatus } from '../data/syncClient';
-import type { Trip } from '../data/types';
+import type { BookingType, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { groupByDay, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
 
@@ -75,18 +76,21 @@ const PREVIEW = 3;
 function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) {
   const offline = useTripOffline(trip);
   const [expanded, setExpanded] = useState(false);
+  const [filter, setFilter] = useState<BookingType | null>(null);
   const data = useLiveQuery(async () => {
-    const bookings = await listBookings(trip.id);
+    const all = await listBookings(trip.id);
+    const bookings = filter ? all.filter((b) => b.type === filter) : all;
     const upcoming = upcomingBookings(bookings, Date.now(), PREVIEW);
     const next = upcoming[0];
     const qr = next ? (await listAttachments(next.id)).some((a) => a.qrText) : false;
-    return { bookings, upcoming, qr };
-  }, [trip.id]);
+    return { all, bookings, upcoming, qr };
+  }, [trip.id, filter]);
 
   if (!data) {
     return null;
   }
-  const { bookings, upcoming, qr } = data;
+  const { all, bookings, upcoming, qr } = data;
+  const typesPresent = new Set(all.map((b) => b.type));
   const [next, ...after] = upcoming;
   const info = next ? TYPE_INFO[next.type] : null;
   const hidden = bookings.length - upcoming.length;
@@ -106,6 +110,8 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
           <span className="muted">›</span>
         </div>
       </Link>
+
+      <TypeChips types={typesPresent} value={filter} onChange={setFilter} />
 
       {next && info && (
         <section className="card highlight">
@@ -131,12 +137,13 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
         </section>
       )}
 
-      {bookings.length === 0 && (
+      {all.length === 0 && (
         <p className="muted small">
           Este viaje no tiene reservas todavía.{' '}
           <Link to={`/trips/${trip.id}/bookings/new`}>Añadir la primera</Link>
         </p>
       )}
+      {all.length > 0 && bookings.length === 0 && <p className="muted small">No hay reservas de ese tipo en este viaje.</p>}
 
       {!expanded && after.length > 0 && (
         <>
@@ -159,7 +166,7 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
 
       {bookings.length > 0 && (hidden > 0 || expanded) && (
         <button className="btn block" type="button" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Mostrar menos' : `Ver las ${bookings.length} reservas del viaje por días`}
+          {expanded ? 'Mostrar menos' : `Ver las ${bookings.length} reservas${filter ? " de este tipo" : ""} por días`}
         </button>
       )}
     </section>

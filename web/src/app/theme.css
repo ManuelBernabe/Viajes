@@ -309,3 +309,47 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 }
 .btn.add svg { width: 20px; height: 20px; flex: none; }
 .topbar h1.two-words { font-size: 1.3rem; }
+
+/* Un color por tipo de reserva: en las píldoras del filtro y en el borde de cada tarjeta. */
+:root {
+  --type-flight: #2563eb;
+  --type-train: #7c3aed;
+  --type-hotel: #d97706;
+  --type-car: #059669;
+  --type-ticket: #db2777;
+  --type-other: #6b7280;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --type-flight: #60a5fa;
+    --type-train: #a78bfa;
+    --type-hotel: #fbbf24;
+    --type-car: #34d399;
+    --type-ticket: #f472b6;
+    --type-other: #9ca3af;
+  }
+}
+.chips button.type-flight { --type: var(--type-flight); }
+.chips button.type-train { --type: var(--type-train); }
+.chips button.type-hotel { --type: var(--type-hotel); }
+.chips button.type-car { --type: var(--type-car); }
+.chips button.type-ticket { --type: var(--type-ticket); }
+.chips button.type-other { --type: var(--type-other); }
+.chips button[class*="type-"] { border-color: var(--type); color: var(--type); background: color-mix(in srgb, var(--type) 10%, var(--surface)); }
+.chips button[class*="type-"].on { background: var(--type); color: #fff; border-color: var(--type); text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25); }
+.booking.type-flight { --type: var(--type-flight); }
+.booking.type-train { --type: var(--type-train); }
+.booking.type-hotel { --type: var(--type-hotel); }
+.booking.type-car { --type: var(--type-car); }
+.booking.type-ticket { --type: var(--type-ticket); }
+.booking.type-other { --type: var(--type-other); }
+.booking[class*="type-"] { border-left: 4px solid var(--type); }
+.booking[class*="type-"] .icon {
+  background: color-mix(in srgb, var(--type) 18%, var(--surface));
+  border-radius: 10px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+.booking[class*="type-"] .icon { align-self: flex-start; width: fit-content; }
+/* La tarjeta de reserva es un enlace: sin esto, «a.card» (bloque) gana a «.booking» (fila). */
+a.card.booking { display: flex; }

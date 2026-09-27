@@ -181,7 +181,8 @@ export function GuidePage() {
           <li>Cada persona tiene su cuenta y su contraseña. Todas las del hogar ven y editan los mismos viajes.</li>
           <li>
             En Ajustes → Hogar cualquiera puede <strong>Invitar a alguien</strong>: se genera un enlace de un solo uso que caduca a los
-            siete días. Quien administra el hogar puede quitar miembros.
+            siete días. Solo quien administra el hogar puede quitar miembros y generar o revocar los tokens de Gmail y de copias de
+            seguridad; los demás ven esos apartados sin botones.
           </li>
           <li>
             <strong>Cerrar sesión</strong> borra la copia de este móvil (viajes, billetes y cambios sin enviar). Normalmente no hace falta

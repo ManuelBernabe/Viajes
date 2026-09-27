@@ -11,6 +11,7 @@ import { PushSettings } from '../components/PushSettings';
 import { dropBlobs } from '../data/offline';
 import { listTrips } from '../data/repo';
 import { syncNow, useSyncStatus } from '../data/syncClient';
+import { loadHousehold } from '../household/household';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal } from '../domain/agenda';
 import { describeServer, formatBuild, type ServerVersion } from '../platform/version';
@@ -38,6 +39,11 @@ export function SettingsPage() {
   const [server, setServer] = useState('consultando…');
   const [message, setMessage] = useState('');
   const trips = useLiveQuery(listTrips, []);
+  // Los tokens y la gestión de miembros solo los toca quien administra el hogar; hasta saberlo, se esconden.
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    loadHousehold().then((home) => setAdmin(home.iAmAdmin), () => setAdmin(false));
+  }, []);
   const past = trips ? sortTrips(trips, todayLocal()).past : [];
 
   useEffect(() => {
@@ -99,11 +105,11 @@ export function SettingsPage() {
 
       <PushSettings />
 
-      <ImportTokens />
+      <ImportTokens admin={admin} />
 
       <AiSettings />
 
-      <BackupSettings />
+      <BackupSettings admin={admin} />
 
       <section className="card">
         <h3>Espacio en el móvil</h3>

@@ -7,7 +7,7 @@ export function BookingCard({ booking, showDay }: { booking: Booking; showDay?: 
   const info = TYPE_INFO[booking.type];
   const route = [booking.startPlace, booking.endPlace].filter(Boolean).join(' → ');
   return (
-    <Link className="card booking" to={`/bookings/${booking.id}`}>
+    <Link className={`card booking type-${booking.type}`} to={`/bookings/${booking.id}`}>
       <div className="time">
         {timeOf(booking.startLocal)}
         <span className="tz">{zoneLabel(booking.startTz)}</span>

@@ -126,3 +126,25 @@ public sealed class HouseholdTests(TestApp app) : IClassFixture<TestApp>
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
     }
 }
+
+public sealed class AdminOnlySettingsTests(TestApp app) : IClassFixture<TestApp>
+{
+    [Fact]
+    public async Task Only_the_admin_creates_and_revokes_tokens()
+    {
+        var admin = await TripsApi.SignUp(app, "solo-admin@example.com");
+        var invite = await admin.Client.PostAsJsonAsync("/api/household/invitations", new { });
+        var token = (await invite.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+        var member = app.CreateHttpsClient();
+        (await member.PostAsJsonAsync("/api/auth/register", new { email = "solo-miembro@example.com", password = Auth.Password, invitation = token })).EnsureSuccessStatusCode();
+
+        var created = await admin.Client.PostAsJsonAsync("/api/import-tokens/", new { label = "Gmail" });
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.PostAsJsonAsync("/api/import-tokens/", new { label = "Gmail" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.PostAsJsonAsync("/api/import-tokens/", new { label = "Copia", scope = "backup" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.DeleteAsync($"/api/import-tokens/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.Client.DeleteAsync($"/api/import-tokens/{id}")).StatusCode);
+    }
+}

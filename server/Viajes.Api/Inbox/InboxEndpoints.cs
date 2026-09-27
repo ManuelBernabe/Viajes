@@ -58,15 +58,10 @@ public static class InboxEndpoints
             return Results.Problem("Tipo de token desconocido.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (scope == ImportToken.BackupScope)
+        // Un token da acceso desde fuera (correo o copia completa): solo quien administra el hogar los crea.
+        if (!await access.IsAdmin(userId))
         {
-            // La copia lleva los datos de todo el hogar: solo quien lo administra puede crear el token.
-            var householdId = await access.EnsureHousehold(userId);
-            var admin = await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == householdId && m.UserId == userId && m.Role == HouseholdMember.Admin && m.DeletedAtMs == null);
-            if (!admin)
-            {
-                return Results.Problem("Solo quien administra el hogar puede crear tokens de copia de seguridad.", statusCode: StatusCodes.Status403Forbidden);
-            }
+            return Results.Problem("Solo quien administra el hogar puede crear tokens.", statusCode: StatusCodes.Status403Forbidden);
         }
 
         var secret = RandomNumberGenerator.GetBytes(32);
@@ -87,9 +82,14 @@ public static class InboxEndpoints
         return Results.Ok(new { id = entity.Id, label = entity.Label, scope = entity.Scope, token });
     }
 
-    private static async Task<IResult> RevokeToken(Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db)
+    private static async Task<IResult> RevokeToken(Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db, AccessService access)
     {
         var userId = users.GetUserId(principal)!;
+        if (!await access.IsAdmin(userId))
+        {
+            return Results.Problem("Solo quien administra el hogar puede revocar tokens.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
         if (token is null)
         {
