@@ -179,9 +179,13 @@ export function HomePage() {
   return (
     <main className="page">
       <div className="topbar">
-        <h1>Viajes</h1>
-        <Link className="btn small primary" to="/trips/new">
-          + Viaje
+        <h1 className="two-words">Viajes y reservas</h1>
+        <Link className="btn primary add" to="/trips/new" aria-label="Nuevo viaje">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 7v10M7 12h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          </svg>
+          Nuevo viaje
         </Link>
       </div>
       {sync.pending > 0 && (

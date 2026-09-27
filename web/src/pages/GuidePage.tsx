@@ -58,7 +58,7 @@ export function GuidePage() {
             todas sin salir de Inicio; <strong>Mostrar menos</strong> las vuelve a plegar.
           </li>
           <li>
-            <strong>Más adelante</strong>: los demás viajes por venir. Con <strong>+ Viaje</strong> creas uno (título, destino y fechas).
+            <strong>Más adelante</strong>: los demás viajes por venir. Con <strong>Nuevo viaje</strong> creas uno (título, destino y fechas).
           </li>
           <li>
             <strong>Histórico</strong>, al final: los viajes ya realizados, plegados y agrupados por año, marcados en naranja como

@@ -297,3 +297,15 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 .trip-group .card { margin: 8px 0; }
 .trip-group .day, .trip-group .after { margin: 10px 6px 2px; }
 .trip-group .btn.block { margin-top: 8px; }
+
+/* Botón de crear en la cabecera: píldora con icono, alineada con el título. */
+.btn.add {
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-height: 40px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.btn.add svg { width: 20px; height: 20px; flex: none; }
+.topbar h1.two-words { font-size: 1.3rem; }
