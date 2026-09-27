@@ -167,3 +167,38 @@ describe('bandeja de entrada', () => {
     expect(await (await openDb()).getAllKeys('inbox')).toEqual([]);
   });
 });
+
+describe('reservas cuya visibilidad se ha retirado', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('purga las reservas locales que ya no están en la lista de visibles, salvo las que esperan en la cola', async () => {
+    const database = await openDb();
+    await database.put('trips', trip('t1'));
+    await database.put('bookings', booking('b-vieja', 't1'));
+    await database.put('attachments', attachment('a1', 'b-vieja'));
+    await database.put('blobs', { id: 'a1', mime: 'application/pdf', size: 1, bytes: new Uint8Array([1]).buffer });
+    // Una reserva creada en el móvil y aún sin enviar: el servidor no la conoce, pero no debe borrarse.
+    const { id: _sinId, ...cuerpo } = booking('x', 't1');
+    void _sinId;
+    const local = await saveBooking(cuerpo, 'yo', 'b-nueva');
+
+    await pull({ fetchSync: async () => response({ tripIds: ['t1'], bookingIds: ['b-otra'] }) });
+
+    expect((await listBookings('t1')).map((b) => b.id)).toEqual([local.id]);
+    expect(await listAttachments('b-vieja')).toEqual([]);
+    expect(await getBlob('a1')).toBeUndefined();
+    expect((await pending()).some((op) => op.id === 'b-nueva')).toBe(true);
+  });
+
+  it('sin la lista (servidor antiguo) no purga nada', async () => {
+    const database = await openDb();
+    await database.put('trips', trip('t1'));
+    await database.put('bookings', booking('b1', 't1'));
+
+    await pull({ fetchSync: async () => response({ tripIds: ['t1'] }) });
+
+    expect((await listBookings('t1')).map((b) => b.id)).toEqual(['b1']);
+  });
+});

@@ -214,6 +214,9 @@ public sealed class SharedHouseholdDataTests(TestApp app) : IClassFixture<TestAp
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(adminBooking, tripId, new { title = "Vuelo común", visibility = "private" })).StatusCode);
         Assert.DoesNotContain((await ana.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == adminBooking);
         Assert.DoesNotContain((await luis.GetSync()).Bookings.Where(b => b.DeletedAtMs == null), b => b.Id == adminBooking);
+        // La lista completa de reservas visibles es lo que permite al móvil de Luis purgar la copia que ya tenía.
+        Assert.DoesNotContain(adminBooking, (await luis.GetSync()).BookingIds);
+        Assert.Contains(adminBooking, (await admin.GetSync()).BookingIds);
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(adminBooking, tripId, new { title = "Vuelo común", visibility = "some", sharedWith = new[] { luisId, "nadie" } })).StatusCode);
         var luisView = (await luis.GetSync()).Bookings.Single(b => b.Id == adminBooking);
         Assert.Equal("some", luisView.Visibility);

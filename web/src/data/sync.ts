@@ -76,6 +76,19 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     }
   }
 
+  // Igual con las reservas: si su visibilidad se ha retirado (ya no está en la lista), se quita del móvil con sus adjuntos.
+  // Las que aún esperan en la cola de salida no se tocan: el servidor todavía no las conoce.
+  if (response.bookingIds) {
+    const visible = new Set(response.bookingIds);
+    const waiting = new Set((await database.getAll('outbox')).map((op) => op.id));
+    for (const booking of await database.getAll('bookings')) {
+      if (!visible.has(booking.id) && !waiting.has(booking.id)) {
+        await removeBooking(booking.id);
+        applied++;
+      }
+    }
+  }
+
   await setMeta(VERSION_KEY, response.version);
   await setMeta(LAST_SYNC_KEY, Date.now());
   if (applied > 0) {

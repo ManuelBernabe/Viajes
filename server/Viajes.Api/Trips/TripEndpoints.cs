@@ -413,6 +413,7 @@ public static partial class TripEndpoints
         var tripIds = await visibleTrips.Where(t => t.DeletedAtMs == null).Select(t => t.Id).ToListAsync(ct);
         var trips = await visibleTrips.Where(t => t.Version > from).OrderBy(t => t.Version).ToListAsync(ct);
         var bookings = await access.VisibleBookings(userId).Where(b => b.Version > from).OrderBy(b => b.Version).ToListAsync(ct);
+        var visibleBookingIds = await access.VisibleBookings(userId).Where(b => b.DeletedAtMs == null).Select(b => b.Id).ToListAsync(ct);
         var attachments = await access.VisibleAttachments(userId).Where(a => a.Version > from).OrderBy(a => a.Version).ToListAsync(ct);
         var bookingIds = bookings.Select(b => b.Id).ToList();
         var shares = (await db.BookingShares.Where(s => bookingIds.Contains(s.BookingId)).ToListAsync(ct))
@@ -426,6 +427,7 @@ public static partial class TripEndpoints
         return Results.Ok(new SyncResponse(
             version,
             tripIds,
+            visibleBookingIds,
             trips.Select(TripDto.From).ToList(),
             bookings.Select(b => BookingDto.From(b, shares.GetValueOrDefault(b.Id))).ToList(),
             attachments.Select(AttachmentDto.From).ToList(),

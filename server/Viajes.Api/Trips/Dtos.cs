@@ -108,6 +108,8 @@ public sealed record InboxItemDto(
 public sealed record SyncResponse(
     long Version,
     IReadOnlyList<Guid> TripIds,
+    /// <summary>Todas las reservas que la persona puede ver ahora: el móvil purga las que tenga y ya no estén (visibilidad retirada).</summary>
+    IReadOnlyList<Guid> BookingIds,
     IReadOnlyList<TripDto> Trips,
     IReadOnlyList<BookingDto> Bookings,
     IReadOnlyList<AttachmentDto> Attachments,

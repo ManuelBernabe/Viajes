@@ -70,9 +70,9 @@ public sealed class TripsApi(HttpClient client)
     public async Task<SyncFull> GetSyncFull(long since = 0) =>
         (await Client.GetFromJsonAsync<SyncFull>($"/api/sync?since={since}"))!;
 
-    public sealed record Sync(long Version, List<Guid> TripIds, List<TripRow> Trips, List<BookingRow> Bookings, List<AttachmentRow> Attachments);
+    public sealed record Sync(long Version, List<Guid> TripIds, List<Guid> BookingIds, List<TripRow> Trips, List<BookingRow> Bookings, List<AttachmentRow> Attachments);
 
-    public sealed record SyncFull(long Version, List<Guid> TripIds, List<TripRow> Trips, List<BookingRow> Bookings, List<AttachmentRow> Attachments, List<InboxRow> Inbox);
+    public sealed record SyncFull(long Version, List<Guid> TripIds, List<Guid> BookingIds, List<TripRow> Trips, List<BookingRow> Bookings, List<AttachmentRow> Attachments, List<InboxRow> Inbox);
 
     public sealed record InboxRow(
         Guid Id, string FromAddress, string Subject, long ReceivedMs, string? SuggestedType, string? SuggestedTitle,

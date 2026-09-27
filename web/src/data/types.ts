@@ -104,6 +104,8 @@ export interface InboxItem {
 export interface SyncResponse {
   version: number;
   tripIds: string[];
+  /** Todas las reservas visibles ahora; las locales que no estén aquí se purgan (visibilidad retirada). */
+  bookingIds?: string[];
   trips: Trip[];
   bookings: Booking[];
   attachments: Attachment[];
