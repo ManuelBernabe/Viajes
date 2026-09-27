@@ -85,8 +85,8 @@ export function HouseholdSettings() {
     <section className="card">
       <h3>Hogar</h3>
       <p className="small muted">
-        Las personas del hogar ven los mismos viajes, reservas y adjuntos, cada una con su cuenta y sus avisos. Cualquier miembro puede
-        invitar; solo quien administra puede quitar.
+        Las personas del hogar comparten los viajes. Las reservas de quien administra las ven todos; las que añade un invitado solo
+        las ven ese invitado y quien administra. Cualquier miembro puede invitar; solo quien administra puede quitar.
       </p>
       {home ? (
         <>

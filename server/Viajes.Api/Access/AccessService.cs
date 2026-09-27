@@ -56,10 +56,37 @@ public sealed class AccessService(AppDbContext db)
     public Task<Trip?> VisibleTrip(string userId, Guid tripId) =>
         VisibleTrips(userId).FirstOrDefaultAsync(t => t.Id == tripId);
 
+    /// <summary>
+    /// Regla de las reservas (decidida por Manuel el 27/09/2026): quien administra el hogar ve todas; las que crea quien
+    /// administra las ve todo el hogar; las que crea un invitado solo las ven ese invitado y quien administra.
+    /// </summary>
     public IQueryable<Booking> VisibleBookings(string userId) =>
         from booking in db.Bookings
-        join trip in VisibleTrips(userId) on booking.TripId equals trip.Id
+        join trip in db.Trips on booking.TripId equals trip.Id
+        join member in db.HouseholdMembers on trip.HouseholdId equals member.HouseholdId
+        where member.UserId == userId && member.DeletedAtMs == null
+        where member.Role == HouseholdMember.Admin
+            || booking.CreatedBy == userId
+            || db.HouseholdMembers.Any(a => a.HouseholdId == trip.HouseholdId && a.UserId == booking.CreatedBy && a.Role == HouseholdMember.Admin && a.DeletedAtMs == null)
         select booking;
+
+    /// <summary>Quiénes pueden ver una reserva (para los avisos): el hogar entero si la creó quien administra; si no, su creador y quien administra.</summary>
+    public async Task<List<string>> BookingAudience(Booking booking)
+    {
+        var trip = await db.Trips.FirstOrDefaultAsync(t => t.Id == booking.TripId);
+        if (trip is null)
+        {
+            return [];
+        }
+
+        var members = await db.HouseholdMembers.Where(m => m.HouseholdId == trip.HouseholdId && m.DeletedAtMs == null).ToListAsync();
+        var creatorIsAdmin = members.Any(m => m.UserId == booking.CreatedBy && m.Role == HouseholdMember.Admin);
+        return members
+            .Where(m => creatorIsAdmin || m.Role == HouseholdMember.Admin || m.UserId == booking.CreatedBy)
+            .Select(m => m.UserId)
+            .Distinct()
+            .ToList();
+    }
 
     public Task<Booking?> VisibleBooking(string userId, Guid bookingId) =>
         VisibleBookings(userId).FirstOrDefaultAsync(b => b.Id == bookingId);

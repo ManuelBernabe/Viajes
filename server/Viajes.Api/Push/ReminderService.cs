@@ -45,6 +45,7 @@ public sealed class ReminderService(IServiceProvider services, IPushSender sende
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var push = scope.ServiceProvider.GetRequiredService<PushService>();
+        var access = scope.ServiceProvider.GetRequiredService<Access.AccessService>();
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         // Solo reservas de las próximas 48 horas: las demás no pueden tener avisos pendientes.
@@ -65,13 +66,14 @@ public sealed class ReminderService(IServiceProvider services, IPushSender sende
         var delivered = 0;
         foreach (var reminder in due)
         {
-            var trip = await db.Trips.FirstOrDefaultAsync(t => t.Id == reminder.Booking.TripId, ct);
-            if (trip is null)
+            // Solo a quienes pueden ver la reserva (el hogar, o su creador y quien administra).
+            var audience = await access.BookingAudience(reminder.Booking);
+            if (audience.Count == 0)
             {
                 continue;
             }
 
-            delivered += await push.SendToHouseholdAsync(trip.HouseholdId, reminder.Message, ct);
+            delivered += await push.SendToUsersAsync(audience, reminder.Message, ct);
             db.ReminderLogs.Add(new ReminderLog { BookingId = reminder.Booking.Id, Kind = reminder.Kind, StartUtcMs = reminder.Booking.StartUtcMs, SentMs = now });
             await db.SaveChangesAsync(ct);
         }

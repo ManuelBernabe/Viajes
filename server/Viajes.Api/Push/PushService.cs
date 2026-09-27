@@ -21,6 +21,17 @@ public sealed class PushService(AppDbContext db, IPushSender sender, ILogger<Pus
         return await SendAsync(subscriptions, message, ct);
     }
 
+    public async Task<int> SendToUsersAsync(IReadOnlyCollection<string> userIds, PushMessage message, CancellationToken ct)
+    {
+        if (!sender.IsConfigured || userIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var subscriptions = await db.PushSubscriptions.Where(s => userIds.Contains(s.UserId)).ToListAsync(ct);
+        return await SendAsync(subscriptions, message, ct);
+    }
+
     public async Task<int> SendToUserAsync(string userId, PushMessage message, CancellationToken ct)
     {
         if (!sender.IsConfigured)

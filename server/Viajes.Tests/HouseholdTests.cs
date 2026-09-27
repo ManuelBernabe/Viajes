@@ -161,33 +161,45 @@ public sealed class SharedHouseholdDataTests(TestApp app) : IClassFixture<TestAp
     }
 
     [Fact]
-    public async Task What_one_member_adds_is_seen_by_the_admin_and_by_every_other_member()
+    public async Task Admin_bookings_are_shared_and_a_members_bookings_are_seen_only_by_that_member_and_the_admin()
     {
         var admin = await TripsApi.SignUp(app, "compartido-admin@example.com");
         var tripId = Guid.NewGuid();
+        var adminBooking = Guid.NewGuid();
         await admin.PutTrip(tripId, "Viaje del administrador");
+        await admin.PutBooking(adminBooking, tripId, new { title = "Vuelo común" });
         var ana = await Join(app, admin, "compartido-ana@example.com");
         var luis = await Join(app, admin, "compartido-luis@example.com");
 
-        // Ana añade una reserva al viaje del administrador y crea un viaje nuevo con otra reserva.
-        var bookingInAdminTrip = Guid.NewGuid();
-        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(bookingInAdminTrip, tripId, new { title = "Hotel de Ana" })).StatusCode);
+        // Ana añade una reserva al viaje común y crea un viaje nuevo con otra reserva.
+        var anaInAdminTrip = Guid.NewGuid();
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaInAdminTrip, tripId, new { title = "Hotel de Ana" })).StatusCode);
         var anaTrip = Guid.NewGuid();
         var anaBooking = Guid.NewGuid();
         Assert.Equal(HttpStatusCode.NoContent, (await ana.PutTrip(anaTrip, "Viaje de Ana")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await ana.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana" })).StatusCode);
 
+        // Los viajes son del hogar: los ven los tres.
         foreach (var api in new[] { admin, ana, luis })
         {
-            var sync = await api.GetSync();
-            Assert.Equal([tripId, anaTrip], sync.TripIds.OrderBy(id => id == anaTrip));
-            Assert.Contains(sync.Bookings, b => b.Id == bookingInAdminTrip && b.Title == "Hotel de Ana");
-            Assert.Contains(sync.Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana");
+            Assert.Equal(2, (await api.GetSync()).TripIds.Count);
         }
 
-        // Luis puede editar la reserva de Ana (mismo hogar) y Ana la del administrador; el cambio lo ven todos.
-        Assert.Equal(HttpStatusCode.NoContent, (await luis.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana (editado por Luis)" })).StatusCode);
-        Assert.Contains((await admin.GetSync()).Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana (editado por Luis)");
+        // El administrador ve todo; Ana ve lo común y lo suyo; Luis ve lo común pero no lo de Ana.
+        var adminSees = (await admin.GetSync()).Bookings.Select(b => b.Id).ToHashSet();
+        Assert.True(adminSees.IsSupersetOf([adminBooking, anaInAdminTrip, anaBooking]));
+        var anaSees = (await ana.GetSync()).Bookings.Select(b => b.Id).ToHashSet();
+        Assert.True(anaSees.IsSupersetOf([adminBooking, anaInAdminTrip, anaBooking]));
+        var luisSees = (await luis.GetSync()).Bookings.Select(b => b.Id).ToHashSet();
+        Assert.Contains(adminBooking, luisSees);
+        Assert.DoesNotContain(anaInAdminTrip, luisSees);
+        Assert.DoesNotContain(anaBooking, luisSees);
+
+        // Luis no puede pisar ni borrar la reserva de Ana aunque conozca su id; el administrador sí puede editarla.
+        Assert.Equal(HttpStatusCode.NotFound, (await luis.PutBooking(anaBooking, anaTrip, new { title = "Intento de Luis" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await luis.DeleteBooking(anaBooking)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutBooking(anaBooking, anaTrip, new { title = "Vuelo de Ana (revisado)" })).StatusCode);
+        Assert.Contains((await ana.GetSync()).Bookings, b => b.Id == anaBooking && b.Title == "Vuelo de Ana (revisado)");
 
         // Alguien de otro hogar no ve nada de esto.
         var outsider = await TripsApi.SignUp(app, "compartido-ajeno@example.com");

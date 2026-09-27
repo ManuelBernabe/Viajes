@@ -169,7 +169,8 @@ public static partial class TripEndpoints
         }
         else
         {
-            if (booking.TripId != trip.Id)
+            // Una reserva de otro miembro que no se puede ver tampoco se puede pisar, aunque se conozca su id.
+            if (booking.TripId != trip.Id || !await access.VisibleBookings(userId).AnyAsync(b => b.Id == id, ct))
             {
                 return NotFound();
             }
@@ -197,12 +198,12 @@ public static partial class TripEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        // Un aviso de modificación nuevo se comunica al instante a todos los móviles del hogar.
+        // Un aviso de modificación nuevo se comunica al instante a los móviles de quienes ven la reserva.
         if (booking.ChangeNote is not null && booking.ChangeNote != previousNote)
         {
             try
             {
-                await push.SendToHouseholdAsync(trip.HouseholdId, Push.Reminders.ChangeMessage(booking), ct);
+                await push.SendToUsersAsync(await access.BookingAudience(booking), Push.Reminders.ChangeMessage(booking), ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
