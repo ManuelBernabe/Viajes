@@ -92,11 +92,11 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
   const hidden = bookings.length - upcoming.length;
 
   return (
-    <>
-      <h2>{inProgress ? 'Viaje en curso' : 'Próximo viaje'}</h2>
-      <Link className="card" to={`/trips/${trip.id}`}>
+    <section className="trip-group" aria-label={trip.title}>
+      <Link className="trip-head" to={`/trips/${trip.id}`}>
         <div className="row between">
           <div className="grow">
+            <div className="eyebrow">{inProgress ? 'Viaje en curso' : 'Próximo viaje'}</div>
             <h3>{trip.title}</h3>
             <div className="muted small">
               {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
@@ -140,7 +140,7 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
 
       {!expanded && after.length > 0 && (
         <>
-          <div className="muted small" style={{ margin: '4px 0' }}>Después</div>
+          <div className="muted small after">Después, en este viaje</div>
           {after.map((booking) => (
             <BookingCard key={booking.id} booking={booking} showDay={formatDay(booking.startLocal)} />
           ))}
@@ -162,7 +162,7 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
           {expanded ? 'Mostrar menos' : `Ver las ${bookings.length} reservas del viaje por días`}
         </button>
       )}
-    </>
+    </section>
   );
 }
 

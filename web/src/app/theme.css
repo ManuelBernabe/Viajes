@@ -269,3 +269,31 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 .card.done { border-left: 4px solid var(--warn); }
 .badge.done { color: var(--warn); border-color: var(--warn); margin-left: 6px; }
 .year { font-size: 0.8rem; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Bloque del viaje en curso en Inicio: la cabecera del viaje y sus reservas dentro del mismo marco. */
+.trip-group {
+  border: 2px solid var(--primary);
+  border-radius: 18px;
+  padding: 0 10px 10px;
+  margin: 8px 0 16px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--bg));
+}
+.trip-group .trip-head {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  padding: 12px 6px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  margin-bottom: 4px;
+}
+.trip-group .trip-head .eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  font-weight: 600;
+}
+.trip-group .trip-head h3 { margin: 2px 0; font-size: 1.15rem; }
+.trip-group .card { margin: 8px 0; }
+.trip-group .day, .trip-group .after { margin: 10px 6px 2px; }
+.trip-group .btn.block { margin-top: 8px; }
