@@ -66,7 +66,7 @@ function etiqueta(nombre) {
 /**
  * Copia de seguridad en Google Drive.
  *
- * Descarga de la app un zip con todo (base de datos, billetes y claves) y lo guarda en la carpeta
+ * Descarga de la app un zip con la base de datos y los billetes adjuntos (sin claves de sesión) y lo guarda en la carpeta
  * «Viajes - copias de seguridad» de tu Drive. Conserva las 14 copias más recientes.
  *
  * Configuración (Propiedades del script):
