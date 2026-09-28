@@ -97,7 +97,7 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
 
             var result = JsonSerializer.Deserialize<Extraction>(json, JsonOptions);
             log.LogInformation("Extracción con IA: tipo {Tipo}, localizador {Ref}, {Entrada} tokens de entrada, {Salida} de salida.",
-                result?.Type ?? "ninguno", result?.Reference ?? "-", response.Usage.InputTokens, response.Usage.OutputTokens);
+                result?.Type ?? "ninguno", result?.Reference is null ? "no" : "sí", response.Usage.InputTokens, response.Usage.OutputTokens);
             return result is { Type: null, Title: null, Reference: null, StartLocal: null } ? null : result;
         }
         catch (AnthropicRateLimitException e)

@@ -40,6 +40,13 @@ var app = builder.Build();
 
 app.MigrateDatabase();
 
+// Órdenes de mantenimiento desde la consola del servidor (por ejemplo, restablecer una contraseña): no arrancan la web.
+if (AdminCommands.IsCommand(args))
+{
+    Environment.ExitCode = await AdminCommands.RunAsync(app.Services, args);
+    return;
+}
+
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<OriginCheckMiddleware>();
 app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = spa });

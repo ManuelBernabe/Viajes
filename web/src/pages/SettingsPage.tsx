@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { formatSize } from '../attachments/files';
+import { AccountSecurity } from '../components/AccountSecurity';
 import { AiSettings } from '../components/AiSettings';
 import { BackupSettings } from '../components/BackupSettings';
 import { HouseholdSettings } from '../components/HouseholdSettings';
@@ -88,6 +89,7 @@ export function SettingsPage() {
         <button className="btn block" onClick={() => void signOut()}>
           Cerrar sesión
         </button>
+        <AccountSecurity onSignedOutEverywhere={() => session.signOut()} />
       </section>
 
       <section className="card">

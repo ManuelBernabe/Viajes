@@ -124,7 +124,7 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
 
             var result = JsonSerializer.Deserialize<Extraction>(StripFences(content), JsonOptions);
             log.LogInformation("Extracción con DeepSeek: tipo {Tipo}, localizador {Ref}, {Entrada} tokens de entrada, {Salida} de salida.",
-                result?.Type ?? "ninguno", result?.Reference ?? "-", completion?.Usage?.PromptTokens, completion?.Usage?.CompletionTokens);
+                result?.Type ?? "ninguno", result?.Reference is null ? "no" : "sí", completion?.Usage?.PromptTokens, completion?.Usage?.CompletionTokens);
             return result is null or { Type: null, Title: null, Reference: null, StartLocal: null } ? null : result;
         }
         catch (HttpRequestException e)

@@ -67,7 +67,7 @@ public sealed class PushService(AppDbContext db, IPushSender sender, ILogger<Pus
         }
 
         await db.SaveChangesAsync(ct);
-        log.LogInformation("Push «{Titulo}»: {Enviados} de {Total} dispositivos.", message.Title, sent, subscriptions.Count);
+        log.LogInformation("Push {Tipo}: {Enviados} de {Total} dispositivos.", message.Tag.Split('-')[0], sent, subscriptions.Count);
         return sent;
     }
 }

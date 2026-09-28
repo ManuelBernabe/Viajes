@@ -160,7 +160,7 @@ public static class InboxEndpoints
                 && string.Equals(owner.Email, email.From, StringComparison.OrdinalIgnoreCase);
             if (!ownForward)
             {
-                log.LogWarning("Importación rechazada: validación de Gmail {Resultado}, remitente {De}. Asunto «{Asunto}».", email.GmailAuth, email.From, email.Subject);
+                log.LogWarning("Importación rechazada: validación de Gmail {Resultado}, dominio remitente {Dominio}.", email.GmailAuth, Domain(email.From));
                 return Results.Problem("Gmail no validó el remitente (DKIM/SPF).", statusCode: StatusCodes.Status422UnprocessableEntity);
             }
         }
@@ -169,11 +169,11 @@ public static class InboxEndpoints
         var existing = await db.InboxItems.FirstOrDefaultAsync(i => i.HouseholdId == householdId && i.MessageId == email.MessageId, ct);
         if (existing is not null)
         {
-            log.LogInformation("Importación repetida de «{Asunto}»: ya existía.", email.Subject);
+            log.LogInformation("Importación repetida: el correo ya existía.");
             return Results.Ok(new { id = existing.Id, duplicate = true });
         }
 
-        log.LogInformation("Importando «{Asunto}» de {De} con {Adjuntos} adjuntos (tipo propuesto: {Tipo}).", email.Subject, email.From, email.Attachments.Count, email.Suggestion.Type ?? "ninguno");
+        log.LogInformation("Importando un correo de {Dominio} con {Adjuntos} adjuntos (tipo propuesto: {Tipo}).", Domain(email.From), email.Attachments.Count, email.Suggestion.Type ?? "ninguno");
 
         // La IA lee el texto y los adjuntos y va primero; lo que deje vacío lo completan los datos estructurados y el asunto.
         if (extractor.IsAvailable)
@@ -353,6 +353,10 @@ public static class InboxEndpoints
         var file = await store.OpenReadAsync(attachment.FileKey, ct);
         return file is null ? Results.NotFound() : FileResponses.Serve(http, file);
     }
+
+    /// <summary>Solo el dominio del remitente: en los registros no se guardan direcciones ni asuntos.</summary>
+    private static string Domain(string? address) =>
+        address is not null && address.LastIndexOf('@') is var at and >= 0 ? address[(at + 1)..].Trim('>', ' ') : "desconocido";
 
     public static string Hash(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();

@@ -190,6 +190,10 @@ export function GuidePage() {
             seguridad; los demás ven esos apartados sin botones.
           </li>
           <li>
+            En Ajustes → Cuenta puedes <strong>Cambiar contraseña</strong> y, si pierdes el móvil, pulsar{' '}
+            <strong>Cerrar sesión en todos los dispositivos</strong> desde otro: en un minuto el móvil perdido deja de tener acceso.
+          </li>
+          <li>
             <strong>Cerrar sesión</strong> borra la copia de este móvil (viajes, billetes y cambios sin enviar). Normalmente no hace falta
             cerrarla nunca.
           </li>

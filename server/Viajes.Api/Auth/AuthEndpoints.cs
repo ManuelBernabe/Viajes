@@ -14,6 +14,8 @@ public static class AuthEndpoints
 
     public sealed record LoginRequest(string Email, string Password);
 
+    public sealed record PasswordRequest(string Current, string New);
+
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth").RequireRateLimiting(AuthSetup.RateLimitPolicy);
@@ -85,6 +87,39 @@ public static class AuthEndpoints
             await access.EnsureHousehold(user!.Id);
             return Results.Ok(new { email = body.Email });
         });
+
+        // Cambiar la contraseña cierra las demás sesiones (cambia el sello) y mantiene abierta esta.
+        app.MapPost("/api/auth/password", async (PasswordRequest body, ClaimsPrincipal principal, UserManager<IdentityUser> users, SignInManager<IdentityUser> signIn) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await users.ChangePasswordAsync(user, body.Current ?? "", body.New ?? "");
+            if (!result.Succeeded)
+            {
+                return Results.Problem(IdentityMessages.Describe(result.Errors), statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            await signIn.RefreshSignInAsync(user);
+            return Results.NoContent();
+        }).RequireAuthorization().RequireRateLimiting(AuthSetup.RateLimitPolicy);
+
+        // Cierra todas las sesiones de la cuenta (móvil perdido): cambia el sello de seguridad y cierra también esta.
+        app.MapPost("/api/auth/logout-everywhere", async (ClaimsPrincipal principal, UserManager<IdentityUser> users, SignInManager<IdentityUser> signIn) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            await users.UpdateSecurityStampAsync(user);
+            await signIn.SignOutAsync();
+            return Results.NoContent();
+        }).RequireAuthorization();
 
         group.MapPost("/logout", async (SignInManager<IdentityUser> signIn) =>
         {

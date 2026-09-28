@@ -43,6 +43,11 @@ public static class AuthSetup
             };
         });
 
+        // Cada minuto se comprueba el sello de seguridad de la cuenta: al cerrar sesión en todos los dispositivos o cambiar
+        // la contraseña, las demás sesiones caducan en ese plazo aunque su cookie siga siendo válida.
+        services.Configure<SecurityStampValidatorOptions>(options =>
+            options.ValidationInterval = TimeSpan.FromSeconds(config.GetValue("SECURITY_STAMP_SECONDS", 60)));
+
         services.AddAuthorization();
 
         var permitLimit = config.GetValue("AUTH_RATE_LIMIT", 10);

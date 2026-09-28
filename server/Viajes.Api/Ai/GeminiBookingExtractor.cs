@@ -110,7 +110,7 @@ public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookin
                 }
 
                 var result = JsonSerializer.Deserialize<Extraction>(text, JsonOptions);
-                log.LogInformation("Extracción con Gemini ({Modelo}): tipo {Tipo}, localizador {Ref}.", model, result?.Type ?? "ninguno", result?.Reference ?? "-");
+                log.LogInformation("Extracción con Gemini ({Modelo}): tipo {Tipo}, localizador {Ref}.", model, result?.Type ?? "ninguno", result?.Reference is null ? "no" : "sí");
                 return result is null or { Type: null, Title: null, Reference: null, StartLocal: null } ? null : result;
             }
 

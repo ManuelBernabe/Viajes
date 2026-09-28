@@ -151,3 +151,71 @@ public sealed class InvitationOnlyRegistrationTests(InvitationOnlyApp app) : ICl
         Assert.Equal(System.Net.HttpStatusCode.Forbidden, guess.StatusCode);
     }
 }
+
+public sealed class InstantStampApp : TestApp
+{
+    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.UseSetting("SECURITY_STAMP_SECONDS", "0");
+    }
+}
+
+public sealed class SessionControlTests(InstantStampApp app) : IClassFixture<InstantStampApp>
+{
+    private async Task<HttpClient> SignIn(string email, string password = Auth.Password)
+    {
+        var client = app.CreateHttpsClient();
+        (await client.PostAsJsonAsync("/api/auth/login", new { email, password })).EnsureSuccessStatusCode();
+        return client;
+    }
+
+    [Fact]
+    public async Task Logging_out_everywhere_ends_every_session_of_the_account()
+    {
+        var phone = app.CreateHttpsClient();
+        await Auth.RegisterAsync(phone, "todas-sesiones@example.com");
+        var laptop = await SignIn("todas-sesiones@example.com");
+        Assert.Equal(HttpStatusCode.OK, (await laptop.GetAsync("/api/auth/me")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await laptop.PostAsync("/api/auth/logout-everywhere", null)).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await phone.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await laptop.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await (await SignIn("todas-sesiones@example.com")).GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Changing_the_password_keeps_this_session_and_ends_the_others()
+    {
+        var phone = app.CreateHttpsClient();
+        await Auth.RegisterAsync(phone, "cambio-clave@example.com");
+        var laptop = await SignIn("cambio-clave@example.com");
+
+        var wrong = await phone.PostAsJsonAsync("/api/auth/password", new { current = "no-es-esta-12", @new = "NuevaClave2026" });
+        Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+        var ok = await phone.PostAsJsonAsync("/api/auth/password", new { current = Auth.Password, @new = "NuevaClave2026" });
+        Assert.Equal(HttpStatusCode.NoContent, ok.StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await phone.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await laptop.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await (await SignIn("cambio-clave@example.com", "NuevaClave2026")).GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_console_command_sets_a_temporary_password_and_ends_sessions()
+    {
+        var phone = app.CreateHttpsClient();
+        await Auth.RegisterAsync(phone, "consola@example.com");
+
+        var output = new StringWriter();
+        var code = await Viajes.Api.Auth.AdminCommands.RunAsync(app.Services, ["reset-password", "consola@example.com"], output);
+
+        Assert.Equal(0, code);
+        var temporary = System.Text.RegularExpressions.Regex.Match(output.ToString(), @"consola@example\.com: (\S{16})").Groups[1].Value;
+        Assert.Equal(16, temporary.Length);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await phone.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await (await SignIn("consola@example.com", temporary)).GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(1, await Viajes.Api.Auth.AdminCommands.RunAsync(app.Services, ["reset-password", "nadie@example.com"], new StringWriter()));
+    }
+}
