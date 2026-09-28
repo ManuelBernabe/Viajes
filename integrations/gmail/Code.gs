@@ -23,11 +23,16 @@ function importarViajes() {
     throw new Error('Faltan VIAJES_URL o VIAJES_TOKEN en las propiedades del script.');
   }
 
+  // Una sola llamada a Gmail por minuto cuando no hay nada (lo normal): así no se agota la cuota diaria
+  // («Limit Exceeded: Gmail»). Las etiquetas solo se consultan si hay correos que mover.
+  const hilos = GmailApp.search('label:' + ETIQUETA.replace(/ /g, '-'), 0, 20);
+  if (hilos.length === 0) {
+    return;
+  }
   const pendiente = etiqueta(ETIQUETA);
   const importado = etiqueta(ETIQUETA_OK);
   const error = etiqueta(ETIQUETA_ERROR);
 
-  const hilos = pendiente.getThreads(0, 20);
   for (const hilo of hilos) {
     let todoBien = true;
     for (const mensaje of hilo.getMessages()) {
