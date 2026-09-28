@@ -35,6 +35,11 @@ public static class AuthEndpoints
                     return Results.Problem("La invitación no es válida, ha caducado o ya se ha usado.", statusCode: StatusCodes.Status410Gone);
                 }
             }
+            else if (string.IsNullOrEmpty(config["REGISTRATION_CODE"]))
+            {
+                // Sin código configurado, solo se entra con el enlace de invitación de alguien del hogar.
+                return Results.Problem("Para crear una cuenta hace falta un enlace de invitación.", statusCode: StatusCodes.Status403Forbidden);
+            }
             else if (!IsRegistrationCode(body.Code, config["REGISTRATION_CODE"]))
             {
                 return Results.Problem("El código de registro no es válido.", statusCode: StatusCodes.Status403Forbidden);

@@ -46,7 +46,8 @@ public sealed class BackupTests(TestApp app) : IClassFixture<TestApp>
         var names = zip.Entries.Select(e => e.FullName).ToList();
         Assert.Contains("viajes.db", names);
         Assert.Contains(names, n => n.StartsWith("files/") && n.Contains(attachmentId.ToString()));
-        Assert.Contains(names, n => n.StartsWith("keys/"));
+        // Las claves de sesión nunca salen del servidor: con ellas se podrían fabricar cookies válidas.
+        Assert.DoesNotContain(names, n => n.StartsWith("keys/"));
 
         // La base copiada se abre y contiene el viaje.
         var temp = Path.Combine(Path.GetTempPath(), $"copia-{Guid.NewGuid():N}.db");

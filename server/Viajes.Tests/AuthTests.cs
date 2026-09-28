@@ -129,3 +129,25 @@ public sealed class RateLimitTests(StrictRateLimitApp app) : IClassFixture<Stric
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
     }
 }
+
+public sealed class InvitationOnlyApp : TestApp
+{
+    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.UseSetting("REGISTRATION_CODE", "");
+    }
+}
+
+public sealed class InvitationOnlyRegistrationTests(InvitationOnlyApp app) : IClassFixture<InvitationOnlyApp>
+{
+    [Fact]
+    public async Task Without_a_registration_code_only_invited_people_can_sign_up()
+    {
+        var client = app.CreateHttpsClient();
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "sin-codigo@example.com", password = Auth.Password, code = "" });
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, response.StatusCode);
+        var guess = await client.PostAsJsonAsync("/api/auth/register", new { email = "sin-codigo2@example.com", password = Auth.Password, code = "cualquiera" });
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, guess.StatusCode);
+    }
+}

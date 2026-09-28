@@ -30,3 +30,21 @@ public sealed class HostingTests(TestApp app) : IClassFixture<TestApp>
         Assert.True(Directory.Exists(app.DataDir));
     }
 }
+
+public sealed class SecurityHeaderTests(TestApp app) : IClassFixture<TestApp>
+{
+    [Fact]
+    public async Task Every_response_carries_the_security_headers()
+    {
+        var client = app.CreateHttpsClient();
+        foreach (var path in new[] { "/", "/api/health", "/api/version" })
+        {
+            var response = await client.GetAsync(path);
+            Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+            Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
+            Assert.Contains("default-src 'self'", response.Headers.GetValues("Content-Security-Policy").Single());
+            Assert.Contains("frame-ancestors 'none'", response.Headers.GetValues("Content-Security-Policy").Single());
+            Assert.Contains("max-age=31536000", response.Headers.GetValues("Strict-Transport-Security").Single());
+        }
+    }
+}

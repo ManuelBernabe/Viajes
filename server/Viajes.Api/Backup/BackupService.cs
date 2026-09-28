@@ -41,7 +41,7 @@ public sealed class BackupService(BackupPaths paths, ILogger<BackupService> log)
     }
 
     /// <summary>
-    /// Zip con la base (instantánea), los ficheros subidos y las claves de sesión. Se monta en un fichero temporal
+    /// Zip con la base (instantánea) y los ficheros subidos (sin las claves de sesión). Se monta en un fichero temporal
     /// (ZipArchive escribe en síncrono, y la respuesta HTTP no lo admite) y se copia a la salida en asíncrono.
     /// </summary>
     public async Task WriteZipAsync(Stream output, CancellationToken ct)
@@ -56,7 +56,9 @@ public sealed class BackupService(BackupPaths paths, ILogger<BackupService> log)
             using (var zip = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: false))
             {
                 AddFile(zip, snapshot, "viajes.db");
-                foreach (var (root, prefix) in new[] { (paths.Files, "files"), (paths.Keys, "keys") })
+                // Las claves de sesión (keys/) no van en la copia: con ellas se podrían fabricar cookies válidas.
+                // Al restaurar sin ellas solo hay que volver a iniciar sesión.
+                foreach (var (root, prefix) in new[] { (paths.Files, "files") })
                 {
                     if (!Directory.Exists(root))
                     {

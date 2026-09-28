@@ -40,6 +40,7 @@ var app = builder.Build();
 
 app.MigrateDatabase();
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<OriginCheckMiddleware>();
 app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = spa });
 app.UseStaticFiles(SpaHosting.StaticOptions(spa));

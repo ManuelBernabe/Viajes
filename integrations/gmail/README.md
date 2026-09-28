@@ -89,5 +89,7 @@ noche un zip completo (base de datos, billetes adjuntos y claves de sesión) a t
 
 Se conservan las 14 copias más recientes; las demás van a la papelera de Drive.
 
-**Restaurar**: descomprime el zip y copia `viajes.db`, la carpeta `files` y la carpeta `keys` en el volumen de datos
-del servidor (`/data`), con la app parada. En el servidor las copias diarias están en `/data/backups/viajes-AAAA-MM-DD.db`.
+**Restaurar**: descomprime el zip y copia `viajes.db` y la carpeta `files` en el volumen de datos del servidor
+(`/data`), con la app parada. La copia no lleva las claves de sesión (con ellas se podrían fabricar sesiones), así que
+tras restaurar todo el mundo tiene que iniciar sesión de nuevo. En el servidor las copias diarias están en
+`/data/backups/viajes-AAAA-MM-DD.db`.
