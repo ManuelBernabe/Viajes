@@ -93,3 +93,14 @@ Se conservan las 14 copias más recientes; las demás van a la papelera de Drive
 (`/data`), con la app parada. La copia no lleva las claves de sesión (con ellas se podrían fabricar sesiones), así que
 tras restaurar todo el mundo tiene que iniciar sesión de nuevo. En el servidor las copias diarias están en
 `/data/backups/viajes-AAAA-MM-DD.db`.
+
+## Aviso si el servidor se cae
+
+La función `vigilarServidor` del mismo script comprueba cada 5 minutos que la app responde. Si falla dos veces
+seguidas te envía un correo («Viajes: el servidor no responde») y otro cuando vuelve. Solo avisa una vez por caída.
+
+1. Pega el `Code.gs` actualizado y guarda.
+2. **Activadores → Añadir activador**: función `vigilarServidor`, «Basado en tiempo», «Temporizador por minutos»,
+   «Cada 5 minutos».
+3. En el editor elige `vigilarServidor` y pulsa **Ejecutar** una vez: Google pedirá el permiso nuevo de «enviar
+   correo en tu nombre». Acéptalo.

@@ -111,6 +111,47 @@ function copiaDeSeguridad() {
   ficheros.slice(COPIAS_A_CONSERVAR).forEach((f) => f.setTrashed(true));
 }
 
+/**
+ * Vigilancia del servidor.
+ *
+ * Comprueba cada 5 minutos que la app responde. Si falla dos veces seguidas te envía un correo, y otro cuando
+ * vuelve. No repite el aviso mientras siga caída.
+ *
+ * Activador: función `vigilarServidor`, basado en tiempo, temporizador por minutos, cada 5 minutos.
+ */
+function vigilarServidor() {
+  const props = PropertiesService.getScriptProperties();
+  const url = props.getProperty('VIAJES_URL');
+  if (!url) {
+    throw new Error('Falta VIAJES_URL en las propiedades del script.');
+  }
+
+  let bien = false;
+  let detalle = '';
+  try {
+    const respuesta = UrlFetchApp.fetch(url.replace(/\/$/, '') + '/api/health', { muteHttpExceptions: true, followRedirects: false });
+    bien = respuesta.getResponseCode() === 200;
+    detalle = 'código ' + respuesta.getResponseCode();
+  } catch (e) {
+    detalle = String(e);
+  }
+
+  const fallos = bien ? 0 : Number(props.getProperty('VIGILANCIA_FALLOS') || '0') + 1;
+  const avisado = props.getProperty('VIGILANCIA_AVISADO') === 'si';
+  props.setProperty('VIGILANCIA_FALLOS', String(fallos));
+
+  if (!bien && fallos >= 2 && !avisado) {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'Viajes: el servidor no responde',
+      'La app no responde desde hace unos minutos (' + detalle + ').\n\n' +
+      'Lo que tengas guardado en el móvil sigue funcionando sin conexión. Revisa Railway: ' + url);
+    props.setProperty('VIGILANCIA_AVISADO', 'si');
+  }
+  if (bien && avisado) {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'Viajes: el servidor vuelve a responder', 'La app responde de nuevo: ' + url);
+    props.setProperty('VIGILANCIA_AVISADO', 'no');
+  }
+}
+
 function carpetaDeCopias() {
   const existentes = DriveApp.getFoldersByName(CARPETA_COPIAS);
   return existentes.hasNext() ? existentes.next() : DriveApp.createFolder(CARPETA_COPIAS);
