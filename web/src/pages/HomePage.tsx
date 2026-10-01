@@ -8,7 +8,7 @@ import { listAttachments, listBookings, listInbox, listTrips } from '../data/rep
 import { useSyncStatus } from '../data/syncClient';
 import type { BookingType, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
+import { groupByDay, isInProgress, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
 
 function TripCard({ trip, done = false }: { trip: Trip; done?: boolean }) {
   const offline = useTripOffline(trip);
@@ -115,7 +115,7 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
 
       {next && info && (
         <section className={`card highlight type-${next.type}`}>
-          <div className="small eyebrow-type">Lo siguiente · {info.label}</div>
+          <div className="small eyebrow-type">{isInProgress(next, Date.now()) ? 'En curso' : 'Lo siguiente'} · {info.label}</div>
           <h3>
             {info.icon} {next.title}
           </h3>

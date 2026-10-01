@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking, Trip } from '../data/types';
-import { groupByDay, nextBooking, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
+import { activeUntilMs, groupByDay, isInProgress, nextBooking, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
+import { toUtcMs } from '../data/localTime';
 
 const booking = (id: string, startLocal: string, startUtcMs: number): Booking => ({
   id, tripId: 't', type: 'flight', title: id, startLocal, startTz: 'Europe/Madrid', startPlace: null, endLocal: null,
@@ -14,7 +15,7 @@ describe('nextBooking', () => {
   const h = 3_600_000;
   const list = [booking('mañana', '2026-10-13T09:00', 100 * h), booking('ayer', '2026-10-11T09:00', 10 * h), booking('hace-2h', '2026-10-12T09:00', 48 * h)];
 
-  it('devuelve la primera que no ha pasado, con seis horas de margen', () => {
+  it('sin hora de llegada, una reserva sigue vigente tres horas después de salir', () => {
     expect(nextBooking(list, 50 * h)?.id).toBe('hace-2h');
     expect(nextBooking(list, 60 * h)?.id).toBe('mañana');
   });
@@ -65,5 +66,35 @@ describe('tripStatus y sortTrips', () => {
 
   it('todayLocal usa la fecha del móvil', () => {
     expect(todayLocal(new Date(2026, 8, 5, 23, 59))).toBe('2026-09-05');
+  });
+});
+
+describe('vigencia según la llegada', () => {
+  const at = (local: string, tz = 'Europe/Madrid') => toUtcMs(local, tz);
+  const train = {
+    ...({} as Booking), id: 'ave', tripId: 't', type: 'train' as const, title: 'AVE', startLocal: '2026-10-01T14:35', startTz: 'Europe/Madrid',
+    startUtcMs: at('2026-10-01T14:35'), endLocal: '2026-10-01T17:08', endTz: 'Europe/Madrid', startPlace: null, endPlace: null,
+    reference: null, address: null, notes: null, changeNote: null, visibility: 'household' as const, sharedWith: [], createdBy: 'yo', version: 1, deletedAtMs: null,
+  };
+  const hotel = { ...train, id: 'hotel', type: 'hotel' as const, startLocal: '2026-10-02T15:00', startTz: 'America/Argentina/Buenos_Aires',
+    startUtcMs: at('2026-10-02T15:00', 'America/Argentina/Buenos_Aires'), endLocal: '2026-10-06T11:00', endTz: 'America/Argentina/Buenos_Aires' };
+
+  it('el tren deja de estar vigente una hora después de llegar y está en curso durante el trayecto', () => {
+    expect(activeUntilMs(train)).toBe(at('2026-10-01T18:08'));
+    expect(isInProgress(train, at('2026-10-01T15:30'))).toBe(true);
+    expect(nextBooking([train], at('2026-10-01T18:00'))?.id).toBe('ave');
+    expect(nextBooking([train], at('2026-10-01T18:15'))).toBeUndefined();
+  });
+
+  it('el hotel sigue vigente toda la estancia, no solo seis horas tras el check-in', () => {
+    const tercerDia = at('2026-10-04T12:00', 'America/Argentina/Buenos_Aires');
+    expect(nextBooking([hotel], tercerDia)?.id).toBe('hotel');
+    expect(isInProgress(hotel, tercerDia)).toBe(true);
+    expect(nextBooking([hotel], at('2026-10-06T12:30', 'America/Argentina/Buenos_Aires'))).toBeUndefined();
+  });
+
+  it('una llegada anterior a la salida (dato erróneo) se ignora y vale el margen de tres horas', () => {
+    const bad = { ...train, endLocal: '2026-10-01T10:00' };
+    expect(activeUntilMs(bad)).toBe(at('2026-10-01T17:35'));
   });
 });

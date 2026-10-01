@@ -1,19 +1,45 @@
-import { dateOf } from '../data/localTime';
+import { dateOf, toUtcMs } from '../data/localTime';
 import type { Booking, BookingType, Trip } from '../data/types';
 
-/** Seis horas de margen: una reserva que empezó hace poco sigue siendo «lo siguiente» (el vuelo en el que estás). */
-export const GRACE_MS = 6 * 3_600_000;
+const HOUR = 3_600_000;
 
-/** La próxima reserva por instante real, entre todas las de todos los viajes. */
-export function nextBooking(bookings: readonly Booking[], nowMs: number, graceMs = GRACE_MS): Booking | undefined {
-  return upcomingBookings(bookings, nowMs, 1, graceMs)[0];
+/** Instante real de llegada (o salida del hotel), si la reserva la tiene y es posterior a la salida. */
+export function endUtcMs(booking: Booking): number | null {
+  if (!booking.endLocal || !booking.endTz) {
+    return null;
+  }
+  try {
+    const end = toUtcMs(booking.endLocal, booking.endTz);
+    return end >= booking.startUtcMs ? end : null;
+  } catch {
+    return null;
+  }
 }
 
-/** Las próximas `limit` reservas por instante real, la más cercana primero. */
-export function upcomingBookings(bookings: readonly Booking[], nowMs: number, limit: number, graceMs = GRACE_MS): Booking[] {
+/**
+ * Hasta cuándo una reserva cuenta como vigente: una hora después de la llegada o del check-out; sin llegada,
+ * tres horas después de la salida. Así el tren deja de estar «lo siguiente» al llegar y el hotel sigue arriba toda la estancia.
+ */
+export function activeUntilMs(booking: Booking): number {
+  const end = endUtcMs(booking);
+  return end !== null ? end + HOUR : booking.startUtcMs + 3 * HOUR;
+}
+
+/** Ya ha empezado y aún no ha terminado (el tren en el que vas, el hotel en el que estás). */
+export function isInProgress(booking: Booking, nowMs: number): boolean {
+  return booking.startUtcMs <= nowMs && nowMs <= activeUntilMs(booking);
+}
+
+/** La próxima reserva vigente por instante real, entre todas las de todos los viajes. */
+export function nextBooking(bookings: readonly Booking[], nowMs: number): Booking | undefined {
+  return upcomingBookings(bookings, nowMs, 1)[0];
+}
+
+/** Las próximas `limit` reservas vigentes por instante real, la más cercana primero. */
+export function upcomingBookings(bookings: readonly Booking[], nowMs: number, limit: number): Booking[] {
   return [...bookings]
     .sort((a, b) => a.startUtcMs - b.startUtcMs)
-    .filter((b) => b.startUtcMs >= nowMs - graceMs)
+    .filter((b) => activeUntilMs(b) >= nowMs)
     .slice(0, limit);
 }
 
