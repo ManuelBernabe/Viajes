@@ -53,6 +53,23 @@ public sealed class HouseholdTests(TestApp app) : IClassFixture<TestApp>
     }
 
     [Fact]
+    public async Task Accepting_right_after_signing_up_with_the_invitation_confirms_instead_of_failing()
+    {
+        // La página de invitación crea la cuenta con el token y justo después llama a /accept.
+        var ana = await TripsApi.SignUp(app, "hogar5-ana@example.com");
+        await ana.PutTrip(Guid.NewGuid(), "Chile");
+        var token = await Invite(ana);
+
+        var bea = await SignUpWithInvitation(app, "hogar5-bea@example.com", token);
+        var accept = await bea.Client.PostAsJsonAsync($"/api/invitations/{token}/accept", new { });
+
+        Assert.Equal(HttpStatusCode.OK, accept.StatusCode);
+        var body = await accept.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(body.GetProperty("alreadyMember").GetBoolean());
+        Assert.Single((await bea.GetSync()).TripIds);
+    }
+
+    [Fact]
     public async Task An_existing_account_joins_by_accepting_and_a_used_token_is_rejected()
     {
         var ana = await TripsApi.SignUp(app, "hogar2-ana@example.com");
