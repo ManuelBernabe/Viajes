@@ -86,16 +86,23 @@ public sealed class InvitationService(AppDbContext db, AccessService access)
     public async Task<(AcceptOutcome Outcome, Household? Household)> Accept(string token, string userId)
     {
         var lookup = await Lookup(token);
-        if (lookup.State != InvitationState.Valid || lookup.Invitation is null || lookup.Household is null || lookup.Household.DeletedAtMs is not null)
+        if (lookup.Invitation is null || lookup.Household is null || lookup.Household.DeletedAtMs is not null)
         {
             return (AcceptOutcome.Invalid, null);
         }
 
         var invitation = lookup.Invitation;
+        // Se comprueba antes que el estado: el alta con invitación ya gasta el token y mete la cuenta en el hogar,
+        // y el canje que la web hace justo después tiene que confirmarlo, no responder «ya se ha usado».
         var alreadyMember = await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == invitation.HouseholdId && m.UserId == userId && m.DeletedAtMs == null);
         if (alreadyMember)
         {
             return (AcceptOutcome.AlreadyMember, lookup.Household);
+        }
+
+        if (lookup.State != InvitationState.Valid)
+        {
+            return (AcceptOutcome.Invalid, null);
         }
 
         var current = await access.HouseholdOf(userId);
