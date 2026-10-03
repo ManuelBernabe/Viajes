@@ -111,6 +111,12 @@ export function InvitationPage() {
             <button className="btn block" type="button" style={{ marginTop: 8 }} onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>
               {mode === 'register' ? 'Ya tengo cuenta' : 'No tengo cuenta'}
             </button>
+            {mode === 'login' && (
+              <p className="small muted" style={{ marginTop: 10 }}>
+                ¿Has olvidado la contraseña? Pide a quien te ha invitado que te mande un enlace para cambiarla (Ajustes → Hogar →
+                «Contraseña» junto a tu email).
+              </p>
+            )}
           </form>
         )}
         {message && <p className="error">{message}</p>}
