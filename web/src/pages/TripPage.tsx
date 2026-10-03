@@ -10,7 +10,7 @@ import { deleteTrip, getTrip, listBookings } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay } from '../domain/agenda';
+import { groupByDay, isPast } from '../domain/agenda';
 
 export function TripPage() {
   const { tripId = '' } = useParams();
@@ -38,7 +38,10 @@ export function TripPage() {
 
   const typesPresent = new Set(bookings.map((b) => b.type));
   const visible = filter ? bookings.filter((b) => b.type === filter) : bookings;
-  const days = groupByDay(visible);
+  // Lo que queda, por días; debajo, el histórico con lo ya terminado, del día más reciente al más antiguo.
+  const now = Date.now();
+  const days = groupByDay(visible.filter((b) => !isPast(b, now)));
+  const pastDays = groupByDay(visible.filter((b) => isPast(b, now))).reverse();
 
   async function toggleOffline() {
     if (!offline) {
@@ -108,7 +111,8 @@ export function TripPage() {
         <TypeChips types={typesPresent} value={filter} onChange={setFilter} />
       </div>
 
-      {days.length === 0 && <p className="empty">Sin reservas todavía.</p>}
+      {visible.length === 0 && <p className="empty">Sin reservas todavía.</p>}
+      {visible.length > 0 && days.length === 0 && <p className="muted small">No queda ninguna reserva por delante en este viaje.</p>}
       {days.map((day) => (
         <section key={day.date}>
           <div className="day">{formatLongDay(day.date)}</div>
@@ -117,6 +121,20 @@ export function TripPage() {
           ))}
         </section>
       ))}
+
+      {pastDays.length > 0 && (
+        <>
+          <h2>Histórico</h2>
+          {pastDays.map((day) => (
+            <section key={day.date}>
+              <div className="day">{formatLongDay(day.date)}</div>
+              {[...day.bookings].reverse().map((booking) => (
+                <BookingCard key={booking.id} booking={booking} past />
+              ))}
+            </section>
+          ))}
+        </>
+      )}
 
       <div className="spacer" />
       <button className="btn danger block" onClick={() => void remove()}>

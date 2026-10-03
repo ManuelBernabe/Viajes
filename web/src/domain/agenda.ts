@@ -43,6 +43,16 @@ export function upcomingBookings(bookings: readonly Booking[], nowMs: number, li
     .slice(0, limit);
 }
 
+/** Ya terminada: pasó la hora hasta la que cuenta como vigente (ver `activeUntilMs`). */
+export function isPast(booking: Booking, nowMs: number): boolean {
+  return activeUntilMs(booking) < nowMs;
+}
+
+/** Las reservas ya terminadas, la más reciente primero: el histórico que va debajo de lo que queda. */
+export function pastBookings(bookings: readonly Booking[], nowMs: number): Booking[] {
+  return bookings.filter((b) => isPast(b, nowMs)).sort((a, b) => b.startUtcMs - a.startUtcMs);
+}
+
 export interface Day {
   date: string;
   bookings: Booking[];

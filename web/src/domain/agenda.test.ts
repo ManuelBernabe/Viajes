@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking, Trip } from '../data/types';
-import { activeUntilMs, groupByDay, isInProgress, nextBooking, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
+import { activeUntilMs, groupByDay, isInProgress, nextBooking, pastBookings, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
 import { toUtcMs } from '../data/localTime';
 
 const booking = (id: string, startLocal: string, startUtcMs: number): Booking => ({
@@ -28,6 +28,25 @@ describe('nextBooking', () => {
   it('las próximas van en orden y con límite', () => {
     expect(upcomingBookings(list, 0, 3).map((b) => b.id)).toEqual(['ayer', 'hace-2h', 'mañana']);
     expect(upcomingBookings(list, 50 * h, 1).map((b) => b.id)).toEqual(['hace-2h']);
+  });
+});
+
+describe('pastBookings', () => {
+  const h = 3_600_000;
+  const list = [booking('mañana', '2026-10-13T09:00', 100 * h), booking('ayer', '2026-10-11T09:00', 10 * h), booking('hace-2h', '2026-10-12T09:00', 48 * h)];
+
+  it('el histórico tiene solo las terminadas, la más reciente primero', () => {
+    expect(pastBookings(list, 50 * h).map((b) => b.id)).toEqual(['ayer']);
+    expect(pastBookings(list, 60 * h).map((b) => b.id)).toEqual(['hace-2h', 'ayer']);
+    expect(pastBookings(list, 0)).toEqual([]);
+  });
+
+  it('ninguna está a la vez en lo que queda y en el histórico', () => {
+    for (const now of [0, 50 * h, 60 * h, 200 * h]) {
+      const upcoming = upcomingBookings(list, now, 99).map((b) => b.id);
+      const past = pastBookings(list, now).map((b) => b.id);
+      expect([...upcoming, ...past].sort()).toEqual(list.map((b) => b.id).sort());
+    }
   });
 });
 

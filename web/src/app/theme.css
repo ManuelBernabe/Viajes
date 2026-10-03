@@ -268,6 +268,7 @@ button.secondary { background: transparent; border: 1px solid var(--border); }
 /* Histórico: viajes realizados, en naranja y plegados al final de Inicio. */
 .card.done { border-left: 4px solid var(--warn); }
 .badge.done { color: var(--warn); border-color: var(--warn); margin-left: 6px; }
+.card.booking.past { opacity: 0.65; }
 .year { font-size: 0.8rem; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; }
 
 /* Bloque del viaje en curso en Inicio: la cabecera del viaje y sus reservas dentro del mismo marco. */

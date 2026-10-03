@@ -8,7 +8,7 @@ import { listAttachments, listBookings, listInbox, listTrips } from '../data/rep
 import { useSyncStatus } from '../data/syncClient';
 import type { BookingType, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, isInProgress, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
+import { groupByDay, isInProgress, isPast, pastBookings, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
 
 function TripCard({ trip, done = false }: { trip: Trip; done?: boolean }) {
   const offline = useTripOffline(trip);
@@ -80,20 +80,23 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
   const data = useLiveQuery(async () => {
     const all = await listBookings(trip.id);
     const bookings = filter ? all.filter((b) => b.type === filter) : all;
-    const upcoming = upcomingBookings(bookings, Date.now(), PREVIEW);
+    const now = Date.now();
+    const upcoming = upcomingBookings(bookings, now, PREVIEW);
+    const past = pastBookings(bookings, now);
     const next = upcoming[0];
     const qr = next ? (await listAttachments(next.id)).some((a) => a.qrText) : false;
-    return { all, bookings, upcoming, qr };
+    return { all, bookings, upcoming, past, now, qr };
   }, [trip.id, filter]);
 
   if (!data) {
     return null;
   }
-  const { all, bookings, upcoming, qr } = data;
+  const { all, bookings, upcoming, past, now, qr } = data;
   const typesPresent = new Set(all.map((b) => b.type));
   const [next, ...after] = upcoming;
   const info = next ? TYPE_INFO[next.type] : null;
-  const hidden = bookings.length - upcoming.length;
+  // Lo que no se ve ni arriba ni en el histórico: las reservas más lejanas del viaje.
+  const hidden = bookings.length - upcoming.length - past.length;
 
   return (
     <section className="trip-group" aria-label={trip.title}>
@@ -159,10 +162,19 @@ function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) 
           <section key={day.date}>
             <div className="day">{formatLongDay(day.date)}</div>
             {day.bookings.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} />
+              <BookingCard key={booking.id} booking={booking} past={isPast(booking, now)} />
             ))}
           </section>
         ))}
+
+      {!expanded && past.length > 0 && (
+        <>
+          <div className="muted small after">Histórico de este viaje</div>
+          {past.map((booking) => (
+            <BookingCard key={booking.id} booking={booking} showDay={formatDay(booking.startLocal)} past />
+          ))}
+        </>
+      )}
 
       {bookings.length > 0 && (hidden > 0 || expanded) && (
         <button className="btn block" type="button" onClick={() => setExpanded(!expanded)}>

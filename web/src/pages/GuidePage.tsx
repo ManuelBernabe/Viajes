@@ -58,6 +58,11 @@ export function GuidePage() {
             todas sin salir de Inicio; <strong>Mostrar menos</strong> las vuelve a plegar.
           </li>
           <li>
+            <strong>Histórico de este viaje</strong>, justo debajo: las reservas que ya han pasado (el tren en el que llegaste, el hotel
+            que dejaste), atenuadas y marcadas como «Realizada», de la más reciente a la más antigua. En la página del viaje salen igual,
+            en su apartado <strong>Histórico</strong> al final.
+          </li>
+          <li>
             <strong>Más adelante</strong>: los demás viajes por venir. Con <strong>Nuevo viaje</strong> creas uno (título, destino y fechas).
           </li>
           <li>
