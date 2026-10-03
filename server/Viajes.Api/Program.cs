@@ -25,6 +25,7 @@ var spa = SpaHosting.CreateProvider(builder.Configuration, builder.Environment);
 
 builder.Services.AddViajesData(dataDir);
 builder.Services.AddViajesAuth(builder.Configuration);
+builder.Services.AddForgotPassword();
 builder.Services.AddFileStore(builder.Configuration, dataDir);
 builder.Services.AddSingleton<VersionInfo>();
 builder.Services.AddBookingExtractor(builder.Configuration);
@@ -64,6 +65,7 @@ app.MapGet("/api/version", (VersionInfo version) => Results.Ok(new
 }));
 app.MapAuthEndpoints();
 app.MapPasswordResetEndpoints();
+app.MapForgotPasswordEndpoints();
 app.MapDiagEndpoints();
 app.MapTripEndpoints();
 app.MapInboxEndpoints();

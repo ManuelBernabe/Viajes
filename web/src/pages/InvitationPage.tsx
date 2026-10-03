@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { describeError } from '../api';
 import { useSession } from '../app/SessionContext';
+import { ForgotPassword } from '../auth/ForgotPassword';
 import { acceptInvitation, describeInvitationState, lookupInvitation, type InvitationInfo } from '../household/household';
 
 /**
@@ -111,12 +112,7 @@ export function InvitationPage() {
             <button className="btn block" type="button" style={{ marginTop: 8 }} onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>
               {mode === 'register' ? 'Ya tengo cuenta' : 'No tengo cuenta'}
             </button>
-            {mode === 'login' && (
-              <p className="small muted" style={{ marginTop: 10 }}>
-                ¿Has olvidado la contraseña? Pide a quien te ha invitado que te mande un enlace para cambiarla (Ajustes → Hogar →
-                «Contraseña» junto a tu email).
-              </p>
-            )}
+            {mode === 'login' && <ForgotPassword email={email} />}
           </form>
         )}
         {message && <p className="error">{message}</p>}

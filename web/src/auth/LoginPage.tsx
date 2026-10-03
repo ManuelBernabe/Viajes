@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { ForgotPassword } from './ForgotPassword';
 import { describeError } from '../api';
 import { useSession } from '../app/SessionContext';
 
@@ -64,13 +65,9 @@ export function LoginPage() {
         <button className="btn block" type="button" style={{ marginTop: 8 }} onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? 'No tengo cuenta' : 'Ya tengo cuenta'}
         </button>
+        {mode === 'login' && <ForgotPassword email={email} />}
       </form>
-      {mode === 'login' && (
-        <p className="small muted center">
-          ¿Has olvidado la contraseña? Pide a quien administra tu hogar que te mande un enlace para cambiarla (Ajustes → Hogar →
-          «Contraseña» junto a tu nombre).
-        </p>
-      )}
+
     </main>
   );
 }

@@ -74,7 +74,7 @@ public static class AuthEndpoints
             var result = await signIn.PasswordSignInAsync(body.Email, body.Password, isPersistent: true, lockoutOnFailure: true);
             if (result.IsLockedOut)
             {
-                return Results.Problem("Demasiados intentos: la cuenta queda bloqueada 15 minutos. Si no recuerdas la contraseña, pide a quien administra tu hogar un enlace para cambiarla (Ajustes → Hogar → «Contraseña»); con él entras sin esperar.", statusCode: StatusCodes.Status429TooManyRequests);
+                return Results.Problem("Demasiados intentos: la cuenta queda bloqueada 15 minutos. Si no recuerdas la contraseña, pulsa «¿Has olvidado la contraseña?» y te llegará un enlace por correo; con él entras sin esperar.", statusCode: StatusCodes.Status429TooManyRequests);
             }
 
             if (!result.Succeeded)

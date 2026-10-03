@@ -3,6 +3,7 @@
  *
  * Cada minuto busca los correos con la etiqueta «Viajes», envía cada uno completo (formato RFC 822) a la app
  * y le cambia la etiqueta a «Viajes/Importado». Si la app falla, le pone «Viajes/Error» y no lo reintenta.
+ * También envía, desde esta cuenta, los correos de «¿Has olvidado la contraseña?» de la gente del hogar.
  *
  * Configuración (Configuración del proyecto → Propiedades del script):
  *   VIAJES_URL    = https://viajes-production-82cb.up.railway.app
@@ -21,6 +22,13 @@ function importarViajes() {
   const token = props.getProperty('VIAJES_TOKEN');
   if (!url || !token) {
     throw new Error('Faltan VIAJES_URL o VIAJES_TOKEN en las propiedades del script.');
+  }
+
+  // Antes que nada, los correos de «¿Has olvidado la contraseña?» que haya pedido alguien del hogar.
+  try {
+    enviarCorreosPendientes(url, token);
+  } catch (e) {
+    console.error('No se pudieron enviar los correos de contraseña: ' + e);
   }
 
   // Una sola llamada a Gmail por minuto cuando no hay nada (lo normal): así no se agota la cuota diaria
@@ -56,6 +64,35 @@ function importarViajes() {
     }
     hilo.removeLabel(pendiente);
     hilo.addLabel(todoBien ? importado : error);
+  }
+}
+
+/**
+ * «¿Has olvidado la contraseña?»: la app no puede enviar correo, así que deja aquí los enlaces pedidos por gente de
+ * este hogar y el script los manda desde tu cuenta de Gmail. La app solo da la ruta; la dirección se pone con VIAJES_URL.
+ */
+function enviarCorreosPendientes(url, token) {
+  const base = url.replace(/\/$/, '');
+  const respuesta = UrlFetchApp.fetch(base + '/api/mail/pending', {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + token },
+    muteHttpExceptions: true,
+  });
+  if (respuesta.getResponseCode() !== 200) {
+    console.error('La app no dio los correos pendientes: ' + respuesta.getResponseCode() + ' ' + respuesta.getContentText());
+    return;
+  }
+  const correos = JSON.parse(respuesta.getContentText());
+  for (const correo of correos) {
+    const enlace = base + correo.path;
+    MailApp.sendEmail(correo.to, correo.subject,
+      'Hola:\n\n' +
+      'Alguien (seguramente tú) ha pedido poner una contraseña nueva para tu cuenta de Viajes (' + correo.to + ').\n\n' +
+      'Abre este enlace en el móvil y escribe la contraseña nueva. Sirve una sola vez y caduca en 24 horas:\n\n' +
+      enlace + '\n\n' +
+      'Si no lo has pedido tú, ignora este correo: tu contraseña no cambia.',
+      { name: 'Viajes' });
+    console.log('Enviado el enlace de contraseña a ' + correo.to);
   }
 }
 
