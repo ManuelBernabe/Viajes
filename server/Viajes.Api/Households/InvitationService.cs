@@ -29,7 +29,7 @@ public enum AcceptOutcome
 /// <summary>Crea, consulta y canjea invitaciones al hogar. Cualquier miembro puede invitar.</summary>
 public sealed class InvitationService(AppDbContext db, AccessService access)
 {
-    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(7);
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
 
     /// <summary>Crea una invitación y devuelve el token en claro, que solo se muestra una vez.</summary>
     public async Task<(Invitation Invitation, string Token)> Create(Guid householdId, string userId)

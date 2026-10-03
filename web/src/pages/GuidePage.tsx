@@ -186,7 +186,7 @@ export function GuidePage() {
           </li>
           <li>
             En Ajustes → Hogar cualquiera puede <strong>Invitar a alguien</strong>: se genera un enlace de un solo uso que caduca a los
-            siete días. Solo quien administra el hogar puede quitar miembros y generar o revocar los tokens de Gmail y de copias de
+            treinta días. Solo quien administra el hogar puede quitar miembros y generar o revocar los tokens de Gmail y de copias de
             seguridad; los demás ven esos apartados sin botones.
           </li>
           <li>
