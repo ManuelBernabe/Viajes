@@ -13,7 +13,13 @@ public static class HouseholdEndpoints
 
     public sealed record InvitationDto(Guid Id, string? CreatedByEmail, long CreatedMs, long ExpiresMs);
 
-    public sealed record HouseholdDto(Guid Id, string Name, bool IAmAdmin, List<MemberDto> Members, List<InvitationDto> Invitations);
+    /// <summary>Quien estuvo en el hogar y ya no está: quien administra puede borrar su cuenta para liberar el email.</summary>
+    public sealed record FormerMemberDto(string UserId, string? Email);
+
+    public sealed record HouseholdDto(Guid Id, string Name, bool IAmAdmin, List<MemberDto> Members, List<InvitationDto> Invitations, List<FormerMemberDto> FormerMembers);
+
+    /// <summary>Dominio de las cuentas borradas: su email deja de existir y queda libre para una cuenta nueva.</summary>
+    public const string DeletedDomain = "@cuenta-borrada.invalid";
 
     public static IServiceCollection AddHouseholds(this IServiceCollection services)
     {
@@ -28,6 +34,7 @@ public static class HouseholdEndpoints
         household.MapPost("/invitations", CreateInvitation);
         household.MapDelete("/invitations/{id:guid}", RevokeInvitation);
         household.MapDelete("/members/{userId}", RemoveMember);
+        household.MapDelete("/former-members/{userId}", DeleteFormerAccount);
 
         // Quien recibe el enlace aún no tiene sesión: la consulta es anónima pero con límite de intentos.
         app.MapGet("/api/invitations/{token}", LookupInvitation).RequireRateLimiting(AuthSetup.RateLimitPolicy);
@@ -50,6 +57,22 @@ public static class HouseholdEndpoints
         var inviterIds = invitations.Select(i => i.CreatedBy).Distinct().ToList();
         var inviters = await db.Users.Where(u => inviterIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Email);
 
+        var iAmAdmin = memberships.Any(m => m.UserId == userId && m.Role == HouseholdMember.Admin);
+        var formerMembers = new List<FormerMemberDto>();
+        if (iAmAdmin)
+        {
+            var formerIds = await db.HouseholdMembers
+                .Where(m => m.HouseholdId == householdId && m.DeletedAtMs != null && !ids.Contains(m.UserId))
+                .Select(m => m.UserId)
+                .Distinct()
+                .ToListAsync();
+            formerMembers = await db.Users
+                .Where(u => formerIds.Contains(u.Id) && u.Email != null && !u.Email.EndsWith(DeletedDomain))
+                .OrderBy(u => u.Email)
+                .Select(u => new FormerMemberDto(u.Id, u.Email))
+                .ToListAsync();
+        }
+
         return Results.Ok(new HouseholdDto(
             home.Id,
             home.Name,
@@ -59,7 +82,63 @@ public static class HouseholdEndpoints
                 .ThenBy(m => emails.GetValueOrDefault(m.UserId))
                 .Select(m => new MemberDto(m.UserId, emails.GetValueOrDefault(m.UserId), m.Role, m.UserId == userId))
                 .ToList(),
-            invitations.Select(i => new InvitationDto(i.Id, inviters.GetValueOrDefault(i.CreatedBy), i.CreatedMs, i.ExpiresMs)).ToList()));
+            invitations.Select(i => new InvitationDto(i.Id, inviters.GetValueOrDefault(i.CreatedBy), i.CreatedMs, i.ExpiresMs)).ToList(),
+            formerMembers));
+    }
+
+    /// <summary>
+    /// Borra la cuenta de alguien que estuvo en el hogar (por ejemplo, olvidó la contraseña y prefiere empezar de cero):
+    /// su email queda libre para crear una cuenta nueva con una invitación. No se borran filas —las reservas guardan quién
+    /// las creó—: la cuenta pasa a un email inexistente, queda bloqueada y se cierran sus sesiones.
+    /// Solo quien administra, y solo si la persona ya no está en este hogar ni en otro con más gente.
+    /// </summary>
+    private static async Task<IResult> DeleteFormerAccount(string userId, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db)
+    {
+        var me = users.GetUserId(principal)!;
+        var householdId = await access.EnsureHousehold(me);
+        var mine = await db.HouseholdMembers.FirstAsync(m => m.HouseholdId == householdId && m.UserId == me && m.DeletedAtMs == null);
+        if (mine.Role != HouseholdMember.Admin)
+        {
+            return Results.Problem("Solo quien administra el hogar puede borrar cuentas.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var wasHere = await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == householdId && m.UserId == userId && m.DeletedAtMs != null);
+        var isHere = await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == householdId && m.UserId == userId && m.DeletedAtMs == null);
+        var user = wasHere && !isHere ? await users.FindByIdAsync(userId) : null;
+        if (user is null || user.Email?.EndsWith(DeletedDomain) == true)
+        {
+            return Results.NotFound();
+        }
+
+        var current = await access.HouseholdOf(userId);
+        if (current is not null && await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == current && m.UserId != userId && m.DeletedAtMs == null))
+        {
+            return Results.Problem("Esta persona ya está en otro hogar con más gente: no se puede borrar su cuenta desde aquí.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        var gone = $"{user.Id}{DeletedDomain}";
+        user.Email = gone;
+        user.UserName = gone;
+        user.NormalizedEmail = gone.ToUpperInvariant();
+        user.NormalizedUserName = gone.ToUpperInvariant();
+        user.PasswordHash = null;
+        user.LockoutEnabled = true;
+        user.LockoutEnd = DateTimeOffset.MaxValue;
+        var result = await users.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return Results.Problem("No se ha podido borrar la cuenta.", statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        await users.UpdateSecurityStampAsync(user);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        foreach (var membership in await db.HouseholdMembers.Where(m => m.UserId == userId && m.DeletedAtMs == null).ToListAsync())
+        {
+            membership.DeletedAtMs = now;
+        }
+
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 
     private static async Task<IResult> CreateInvitation(ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, InvitationService invitations)
