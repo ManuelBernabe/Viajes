@@ -63,6 +63,7 @@ app.MapGet("/api/version", (VersionInfo version) => Results.Ok(new
     startedAt = version.StartedAt,
 }));
 app.MapAuthEndpoints();
+app.MapPasswordResetEndpoints();
 app.MapDiagEndpoints();
 app.MapTripEndpoints();
 app.MapInboxEndpoints();

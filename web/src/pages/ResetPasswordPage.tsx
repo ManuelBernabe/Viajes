@@ -1,0 +1,97 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { describeError } from '../api';
+import { useSession } from '../app/SessionContext';
+import { checkPasswordReset, resetPassword } from '../household/household';
+
+/** Página del enlace para cambiar una contraseña olvidada. Lo genera quien administra el hogar; sirve una vez y 24 horas. */
+export function ResetPasswordPage() {
+  const { userId = '', token = '' } = useParams();
+  const session = useSession();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState<string | null>(null);
+  const [state, setState] = useState<'checking' | 'valid' | 'invalid'>('checking');
+  const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    checkPasswordReset(userId, token).then(
+      (found) => {
+        setEmail(found);
+        setState('valid');
+      },
+      (error: unknown) => {
+        setMessage(describeError(error));
+        setState('invalid');
+      },
+    );
+  }, [userId, token]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (password !== repeat) {
+      setMessage('Las dos contraseñas no coinciden.');
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    try {
+      const account = (await resetPassword(userId, token, password)) ?? email;
+      if (account) {
+        if (session.status === 'in') {
+          await session.signOut();
+        }
+        await session.signIn(account, password);
+      }
+      navigate('/', { replace: true });
+    } catch (error) {
+      setMessage(describeError(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="page no-tabs">
+      <div className="topbar">
+        <h1>Nueva contraseña</h1>
+      </div>
+      <section className="card">
+        {state === 'checking' && <p className="muted">Comprobando el enlace…</p>}
+        {state === 'invalid' && (
+          <>
+            <p className="error">{message}</p>
+            <Link className="btn block" to="/">
+              Ir a la entrada
+            </Link>
+          </>
+        )}
+        {state === 'valid' && (
+          <form onSubmit={submit}>
+            <p>
+              Pon una contraseña nueva para <strong>{email ?? 'tu cuenta'}</strong>. Al guardarla entrarás directamente, y se cerrará la
+              sesión en los demás dispositivos donde la tuvieras abierta.
+            </p>
+            {/* El email oculto ayuda al llavero de iOS a guardar la contraseña nueva con la cuenta correcta. */}
+            <input type="email" autoComplete="username" value={email ?? ''} readOnly hidden />
+            <div className="field">
+              <label htmlFor="new-password">Contraseña nueva</label>
+              <input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label htmlFor="repeat-password">Repítela</label>
+              <input id="repeat-password" type="password" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} required />
+            </div>
+            <p className="small muted">Al menos 10 caracteres, con mayúsculas, minúsculas y números.</p>
+            {message && <p className="error">{message}</p>}
+            <button className="btn primary block" type="submit" disabled={busy}>
+              Guardar y entrar
+            </button>
+          </form>
+        )}
+      </section>
+    </main>
+  );
+}

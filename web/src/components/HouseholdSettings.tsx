@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { describeError } from '../api';
-import { createInvitation, loadHousehold, removeMember, revokeInvitation, type Household } from '../household/household';
+import { createInvitation, createPasswordResetLink, loadHousehold, removeMember, revokeInvitation, type Household } from '../household/household';
 
 function when(ms: number): string {
   return new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
@@ -9,7 +9,8 @@ function when(ms: number): string {
 /** Sección «Hogar» de Ajustes: quién ve los viajes, invitar a alguien y quitar miembros. */
 export function HouseholdSettings() {
   const [home, setHome] = useState<Household | null>(null);
-  const [link, setLink] = useState<{ url: string; expiresMs: number } | null>(null);
+  // El último enlace generado: una invitación o el de cambiar la contraseña de alguien.
+  const [link, setLink] = useState<{ url: string; expiresMs: number; resetFor?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,14 +58,27 @@ export function HouseholdSettings() {
     }
   }
 
+  async function resetLink(userId: string, email: string | null) {
+    if (!confirm(`¿Generar un enlace para que ${email ?? 'esta persona'} ponga una contraseña nueva? Sirve una vez y caduca en 24 horas.`)) {
+      return;
+    }
+    await run(async () => {
+      const created = await createPasswordResetLink(userId);
+      setLink({ url: created.url, expiresMs: created.expiresMs, resetFor: created.email ?? email ?? 'esta persona' });
+      setCopied(false);
+    });
+  }
+
   async function share() {
     if (!link) {
       return;
     }
-    const text = `Únete a mis viajes en la app Viajes: ${link.url}`;
+    const text = link.resetFor
+      ? `Para poner una contraseña nueva en la app Viajes abre este enlace (sirve una vez): ${link.url}`
+      : `Únete a mis viajes en la app Viajes: ${link.url}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Invitación a Viajes', text, url: link.url });
+        await navigator.share({ title: link.resetFor ? 'Nueva contraseña en Viajes' : 'Invitación a Viajes', text, url: link.url });
         return;
       } catch {
         // Cancelado: queda el botón de copiar.
@@ -121,9 +135,14 @@ export function HouseholdSettings() {
                 {member.role === 'admin' ? ' · administra' : ''}
               </span>
               {home.iAmAdmin && !member.me && (
-                <button className="btn small danger" type="button" disabled={busy} onClick={() => void remove(member.userId, member.email)}>
-                  Quitar
-                </button>
+                <span className="row" style={{ gap: 6 }}>
+                  <button className="btn small" type="button" disabled={busy} onClick={() => void resetLink(member.userId, member.email)}>
+                    Contraseña
+                  </button>
+                  <button className="btn small danger" type="button" disabled={busy} onClick={() => void remove(member.userId, member.email)}>
+                    Quitar
+                  </button>
+                </span>
               )}
             </div>
           ))}
@@ -168,7 +187,11 @@ export function HouseholdSettings() {
       )}
       {link && (
         <div className="notice">
-          <div className="small">Enlace de invitación (un solo uso, caduca {when(link.expiresMs)}). Mándaselo a quien quieras:</div>
+          <div className="small">
+            {link.resetFor
+              ? `Enlace para que ${link.resetFor} ponga una contraseña nueva (un solo uso, caduca ${when(link.expiresMs)}). Mándaselo solo a esa persona:`
+              : `Enlace de invitación (un solo uso, caduca ${when(link.expiresMs)}). Mándaselo a quien quieras:`}
+          </div>
           <code style={{ wordBreak: 'break-all', display: 'block', margin: '6px 0' }}>{link.url}</code>
           <button className="btn small" type="button" onClick={() => void share()}>
             {copied ? 'Copiado ✓' : 'share' in navigator ? 'Compartir' : 'Copiar'}

@@ -65,6 +65,12 @@ export function LoginPage() {
           {mode === 'login' ? 'No tengo cuenta' : 'Ya tengo cuenta'}
         </button>
       </form>
+      {mode === 'login' && (
+        <p className="small muted center">
+          ¿Has olvidado la contraseña? Pide a quien administra tu hogar que te mande un enlace para cambiarla (Ajustes → Hogar →
+          «Contraseña» junto a tu nombre).
+        </p>
+      )}
     </main>
   );
 }

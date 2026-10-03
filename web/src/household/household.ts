@@ -82,3 +82,24 @@ export function describeInvitationState(state: InvitationState): string {
       return 'Esta invitación no existe. Comprueba el enlace.';
   }
 }
+
+/** Enlace de un solo uso (24 h) para que un miembro ponga una contraseña nueva. Solo quien administra. */
+export async function createPasswordResetLink(userId: string): Promise<{ url: string; email: string | null; expiresMs: number }> {
+  const created = await api<{ userId: string; email: string | null; token: string; expiresMs: number }>(
+    `/api/household/members/${encodeURIComponent(userId)}/password-reset`,
+    { method: 'POST', body: '{}' },
+  );
+  return { url: `${location.origin}/restablecer/${encodeURIComponent(created.userId)}/${created.token}`, email: created.email, expiresMs: created.expiresMs };
+}
+
+/** Comprueba el enlace y devuelve el email de la cuenta. */
+export async function checkPasswordReset(userId: string, token: string): Promise<string | null> {
+  const result = await api<{ email: string | null }>('/api/auth/password-reset/check', { method: 'POST', body: JSON.stringify({ userId, token }) });
+  return result.email;
+}
+
+/** Pone la contraseña nueva con el enlace. Devuelve el email para entrar con ella. */
+export async function resetPassword(userId: string, token: string, password: string): Promise<string | null> {
+  const result = await api<{ email: string | null }>('/api/auth/password-reset', { method: 'POST', body: JSON.stringify({ userId, token, password }) });
+  return result.email;
+}
