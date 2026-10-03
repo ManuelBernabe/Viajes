@@ -112,11 +112,13 @@ export function GuidePage() {
         <ul className="small">
           <li>
             En cada reserva se pueden añadir más adjuntos con <strong>+ Adjuntar</strong> (cámara, Fotos o Archivos). Si uno lleva un QR o
-            código de barras, la app lo lee al guardarlo y lo marca con «QR».
+            código de barras, la app lo lee al guardarlo y lo marca con «QR». Si el billete trae varios pasajeros (en la misma página o
+            en páginas distintas), los lee todos y lo marca con «2 QR», «3 QR»…
           </li>
           <li>
             <strong>Ver QR</strong> lo enseña a pantalla completa y con fondo blanco, listo para el control de embarque. La pantalla no se
-            apaga mientras está abierto. <strong>Ver original</strong> abre el billete entero.
+            apaga mientras está abierto. Con varios pasajeros sale el nombre de cada uno y se pasa de uno a otro con los botones de
+            abajo. <strong>Ver original</strong> abre el billete entero.
           </li>
           <li>Tocando un adjunto se abre el original (el PDF entero, por ejemplo).</li>
         </ul>

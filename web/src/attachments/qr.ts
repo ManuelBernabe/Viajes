@@ -1,18 +1,17 @@
-import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import { isImage, isPdf } from './files';
 import { renderPdf } from './pdf';
+import { findQrCodes, joinQrCodes } from './qrCodes';
 
 const MAX_SIDE = 1600;
 
-function decodeCanvas(canvas: HTMLCanvasElement): string | null {
+/** Todos los QR del lienzo (uno por pasajero, si hay varios). */
+function decodeCanvas(canvas: HTMLCanvasElement): string[] {
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) {
-    return null;
+    return [];
   }
-  const image = context.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(image.data, image.width, image.height, { inversionAttempts: 'attemptBoth' });
-  return code?.data || null;
+  return findQrCodes(context.getImageData(0, 0, canvas.width, canvas.height));
 }
 
 async function loadBitmap(blob: Blob): Promise<ImageBitmap | HTMLImageElement> {
@@ -34,7 +33,7 @@ async function loadBitmap(blob: Blob): Promise<ImageBitmap | HTMLImageElement> {
   }
 }
 
-/** Busca un QR en la imagen, a tamaño reducido y a tamaño completo. */
+/** Busca los QR de la imagen, a tamaño reducido y a tamaño completo. Varios códigos van juntos (ver `qrCodes.ts`). */
 export async function readQrFromImage(bytes: ArrayBuffer, mime: string): Promise<string | null> {
   const bitmap = await loadBitmap(new Blob([bytes], { type: mime }));
   const width = 'naturalWidth' in bitmap ? bitmap.naturalWidth : bitmap.width;
@@ -45,24 +44,21 @@ export async function readQrFromImage(bytes: ArrayBuffer, mime: string): Promise
     canvas.width = Math.max(1, Math.round(width * scale));
     canvas.height = Math.max(1, Math.round(height * scale));
     canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const text = decodeCanvas(canvas);
-    if (text) {
-      return text;
+    const codes = decodeCanvas(canvas);
+    if (codes.length > 0) {
+      return joinQrCodes(codes);
     }
   }
   return null;
 }
 
-/** Busca un QR en las primeras páginas del PDF (las tarjetas de embarque suelen llegar así). */
+/**
+ * Busca los QR de las primeras páginas del PDF (las tarjetas de embarque suelen llegar así). Todas las páginas, no solo
+ * la primera: con dos pasajeros cada uno suele tener la suya, y a veces van los dos en la misma.
+ */
 export async function readQrFromPdf(bytes: ArrayBuffer): Promise<string | null> {
-  const canvases = await renderPdf(bytes, { width: MAX_SIDE, maxPages: 3 });
-  for (const canvas of canvases) {
-    const text = decodeCanvas(canvas);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
+  const canvases = await renderPdf(bytes, { width: MAX_SIDE, maxPages: 8 });
+  return joinQrCodes(canvases.flatMap(decodeCanvas));
 }
 
 export async function readQr(bytes: ArrayBuffer, mime: string): Promise<string | null> {

@@ -1,10 +1,66 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { drawQr } from '../attachments/qr';
+import { parseBoardingPass } from '../attachments/bcbp';
+import { isImage, isPdf } from '../attachments/files';
+import { drawQr, readQr } from '../attachments/qr';
+import { splitQrCodes } from '../attachments/qrCodes';
 import { useWakeLock } from '../attachments/useWakeLock';
 import { timeOf, zoneLabel } from '../data/localTime';
-import { getBooking, listAttachments } from '../data/repo';
+import { getBlob, getBooking, listAttachments, updateAttachment } from '../data/repo';
+import type { Attachment } from '../data/types';
+import { downloadAttachment } from '../data/syncClient';
 import { useLiveQuery } from '../data/useLive';
+
+/** Un QR para enseñar: un adjunto puede traer varios (uno por pasajero). */
+interface QrEntry {
+  key: string;
+  attachment: Attachment;
+  code: string;
+  label: string;
+}
+
+function entriesOf(attachments: readonly Attachment[]): QrEntry[] {
+  const entries: QrEntry[] = [];
+  for (const attachment of attachments) {
+    const codes = splitQrCodes(attachment.qrText);
+    codes.forEach((code, index) => {
+      // En las tarjetas de embarque el propio código lleva el nombre del pasajero.
+      const passenger = parseBoardingPass(code)?.passenger;
+      entries.push({ key: `${attachment.id}:${index}`, attachment, code, label: passenger || `Pasajero ${index + 1}` });
+    });
+  }
+  // Con un solo código por adjunto, la etiqueta útil es el nombre del fichero.
+  if (entries.every((e, _index, all) => all.filter((o) => o.attachment.id === e.attachment.id).length === 1)) {
+    return entries.map((e) => ({ ...e, label: parseBoardingPass(e.code)?.passenger || e.attachment.name }));
+  }
+  return entries;
+}
+
+/** Adjuntos ya releídos en esta sesión: la relectura de lo guardado con la versión anterior se hace una sola vez. */
+const rescanned = new Set<string>();
+
+/**
+ * Los adjuntos guardados antes de leer varios QR por fichero solo tienen el primero. El fichero se
+ * vuelve a leer (del móvil o del servidor) y, si salen más códigos, se guardan.
+ */
+async function rescan(attachments: readonly Attachment[]): Promise<void> {
+  for (const attachment of attachments) {
+    if (rescanned.has(attachment.id) || !(isPdf(attachment.mime) || isImage(attachment.mime))) {
+      continue;
+    }
+    rescanned.add(attachment.id);
+    // Del móvil si está guardado; si no, se baja (sin red simplemente no se relee).
+    const stored = await getBlob(attachment.id);
+    const bytes = stored?.bytes ?? (attachment.uploaded ? await downloadAttachment(attachment).catch(() => null) : null);
+    if (!bytes) {
+      continue;
+    }
+    const text = await readQr(bytes, stored?.mime || attachment.mime);
+    if (text && splitQrCodes(text).length > splitQrCodes(attachment.qrText).length) {
+      await updateAttachment(attachment.id, { qrText: text });
+    }
+  }
+}
 
 export function QrPage() {
   const { bookingId = '' } = useParams();
@@ -16,27 +72,36 @@ export function QrPage() {
 
   const data = useLiveQuery(async () => {
     const booking = await getBooking(bookingId);
-    const withQr = (await listAttachments(bookingId)).filter((a) => a.qrText);
-    return { booking, withQr };
+    const attachments = await listAttachments(bookingId);
+    return { booking, attachments, entries: entriesOf(attachments.filter((a) => a.qrText)) };
   }, [bookingId]);
 
-  const selectedId = params.get('a');
-  const current = data?.withQr.find((a) => a.id === selectedId) ?? data?.withQr[0];
+  useEffect(() => {
+    if (data) {
+      void rescan(data.attachments).catch(() => undefined);
+    }
+  }, [data]);
+
+  const selected = params.get('q') ?? (params.get('a') ? `${params.get('a')}:0` : null);
+  const current = data?.entries.find((e) => e.key === selected) ?? data?.entries[0];
 
   useEffect(() => {
-    if (!current?.qrText || !canvas.current) {
+    if (!current || !canvas.current) {
       return;
     }
     const size = Math.round(Math.min(window.innerWidth * 0.92, window.innerHeight * 0.7) * (window.devicePixelRatio || 1));
-    drawQr(canvas.current, current.qrText, size).then(
+    drawQr(canvas.current, current.code, size).then(
       () => setDrawError(''),
       () => setDrawError('No se ha podido dibujar el QR. Abre el original.'),
     );
-  }, [current?.id, current?.qrText]);
+  }, [current?.key, current?.code]);
 
   if (!data) {
     return <div className="qr-page">Cargando…</div>;
   }
+
+  const total = data.entries.length;
+  const position = current ? data.entries.indexOf(current) : -1;
 
   return (
     <div className="qr-page">
@@ -59,20 +124,25 @@ export function QrPage() {
 
       {current ? (
         <>
+          {total > 1 && (
+            <div className="center" style={{ fontWeight: 600 }}>
+              {current.label} · {position + 1} de {total}
+            </div>
+          )}
           <canvas ref={canvas} className="qr-canvas" />
           {drawError && <p className="error">{drawError}</p>}
-          <div className="small muted center">{current.name}</div>
-          {data.withQr.length > 1 && (
+          {total === 1 && <div className="small muted center">{current.label}</div>}
+          {total > 1 && (
             <div className="chips" style={{ marginTop: 8 }}>
-              {data.withQr.map((a, index) => (
-                <button key={a.id} className={a.id === current.id ? 'on' : ''} onClick={() => setParams({ a: a.id })}>
-                  {index + 1} · {a.name}
+              {data.entries.map((entry, index) => (
+                <button key={entry.key} className={entry.key === current.key ? 'on' : ''} onClick={() => setParams({ q: entry.key }, { replace: true })}>
+                  {index + 1} · {entry.label}
                 </button>
               ))}
             </div>
           )}
           <div className="actions">
-            <Link className="btn" to={`/attachments/${current.id}`}>
+            <Link className="btn" to={`/attachments/${current.attachment.id}`}>
               Ver original
             </Link>
           </div>

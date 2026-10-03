@@ -4,6 +4,7 @@ import { describeError } from '../api';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
 import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp';
+import { splitQrCodes } from '../attachments/qrCodes';
 import { extractWithAi, toSuggestion } from '../attachments/aiExtract';
 import { suggestFromText, type TextSuggestion } from '../attachments/extract';
 import { isPdf } from '../attachments/files';
@@ -134,7 +135,7 @@ export function BookingFormPage() {
     const read = await readFiles(files, setReadMessage);
     setPendingFiles(read);
     const errors = read.filter((r) => r.error).map((r) => r.error);
-    const pass = read.map((r) => (r.qrText ? parseBoardingPass(r.qrText) : null)).find((p) => p !== null);
+    const pass = read.flatMap((r) => splitQrCodes(r.qrText)).map((code) => parseBoardingPass(code)).find((p) => p !== null);
     if (pass) {
       const fill = prefillFromBoardingPass(pass);
       setType('flight');
@@ -146,7 +147,7 @@ export function BookingFormPage() {
       if (!notes.trim()) setNotes(fill.notes);
       setReadMessage(`Tarjeta de embarque leída (${pass.passenger}): comprueba la fecha y pon la hora de salida.`);
     } else {
-      const withQr = read.filter((r) => r.qrText).length;
+      const withQr = read.reduce((sum, r) => sum + splitQrCodes(r.qrText).length, 0);
       setReadMessage(withQr ? `${withQr} QR ${withQr === 1 ? 'leído' : 'leídos'}.` : read.some((r) => !r.error) ? 'Ficheros listos para adjuntar.' : '');
       await suggestFromPdfs(read);
     }

@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { isImage, isPdf } from '../attachments/files';
 import { getBlob } from '../data/repo';
 import type { Attachment } from '../data/types';
+import { splitQrCodes } from '../attachments/qrCodes';
+
+const qrCount = (text: string) => splitQrCodes(text).length;
 
 function Thumb({ attachment }: { attachment: Attachment }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -27,7 +30,7 @@ function Thumb({ attachment }: { attachment: Attachment }) {
   return (
     <Link className="thumb" to={`/attachments/${attachment.id}`} title={attachment.name}>
       {url ? <img src={url} alt={attachment.name} /> : <span className="big">{isPdf(attachment.mime) ? '📄' : isImage(attachment.mime) ? '🖼️' : '📎'}</span>}
-      {attachment.qrText && <span className="qr">QR</span>}
+      {attachment.qrText && <span className="qr">{qrCount(attachment.qrText) > 1 ? `${qrCount(attachment.qrText)} QR` : 'QR'}</span>}
       <span className="name">{attachment.name}</span>
     </Link>
   );
