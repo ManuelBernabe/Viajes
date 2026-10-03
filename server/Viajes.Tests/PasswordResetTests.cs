@@ -59,6 +59,25 @@ public sealed class PasswordResetTests(TestApp app) : IClassFixture<TestApp>
     }
 
     [Fact]
+    public async Task A_locked_out_member_gets_in_with_the_link_without_waiting()
+    {
+        var (admin, _, memberId) = await Household("reset4");
+        for (var i = 0; i < 5; i++)
+        {
+            await Login("reset4-bea@example.com", "Equivocada2026");
+        }
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await Login("reset4-bea@example.com", Auth.Password)).StatusCode);
+
+        var token = await Link(admin, memberId);
+        var client = app.CreateHttpsClient();
+        var reset = await client.PostAsJsonAsync("/api/auth/password-reset", new { userId = memberId, token, password = NewPassword });
+
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Login("reset4-bea@example.com", NewPassword)).StatusCode);
+    }
+
+    [Fact]
     public async Task Only_the_admin_creates_links_and_only_for_members_of_the_household()
     {
         var (admin, member, memberId) = await Household("reset2");

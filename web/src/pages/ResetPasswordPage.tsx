@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { describeError } from '../api';
 import { useSession } from '../app/SessionContext';
 import { checkPasswordReset, resetPassword } from '../household/household';
@@ -8,7 +8,6 @@ import { checkPasswordReset, resetPassword } from '../household/household';
 export function ResetPasswordPage() {
   const { userId = '', token = '' } = useParams();
   const session = useSession();
-  const navigate = useNavigate();
   const [email, setEmail] = useState<string | null>(null);
   const [state, setState] = useState<'checking' | 'valid' | 'invalid'>('checking');
   const [password, setPassword] = useState('');
@@ -38,14 +37,15 @@ export function ResetPasswordPage() {
     setBusy(true);
     setMessage('');
     try {
-      const account = (await resetPassword(userId, token, password)) ?? email;
-      if (account) {
-        if (session.status === 'in') {
-          await session.signOut();
-        }
-        await session.signIn(account, password);
+      // Si en este navegador había otra cuenta abierta, se cierra antes: la nueva sesión es la de este enlace.
+      if (session.status === 'in') {
+        await session.signOut();
       }
-      navigate('/', { replace: true });
+      // El servidor ya deja la sesión iniciada al guardar la contraseña: no se vuelve a pasar por el inicio de sesión
+      // (que con la cuenta bloqueada por intentos o con el llavero rellenando la antigua podía fallar). Se recarga la app.
+      await resetPassword(userId, token, password);
+      window.location.replace('/');
+      return;
     } catch (error) {
       setMessage(describeError(error));
     } finally {
