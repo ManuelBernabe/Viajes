@@ -23,6 +23,8 @@ export interface Household {
   iAmAdmin: boolean;
   members: Member[];
   invitations: PendingInvitation[];
+  /** Quien estuvo y ya no está (solo lo ve quien administra). */
+  formerMembers?: { userId: string; email: string | null }[];
 }
 
 export type InvitationState = 'valid' | 'unknown' | 'expired' | 'used' | 'revoked';
@@ -102,4 +104,9 @@ export async function checkPasswordReset(userId: string, token: string): Promise
 export async function resetPassword(userId: string, token: string, password: string): Promise<string | null> {
   const result = await api<{ email: string | null }>('/api/auth/password-reset', { method: 'POST', body: JSON.stringify({ userId, token, password }) });
   return result.email;
+}
+
+/** Borra la cuenta de alguien que ya no está en el hogar: su email queda libre para crear una cuenta nueva. */
+export function deleteFormerAccount(userId: string): Promise<void> {
+  return api(`/api/household/former-members/${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }

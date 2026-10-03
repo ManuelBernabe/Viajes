@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { describeError } from '../api';
-import { createInvitation, createPasswordResetLink, loadHousehold, removeMember, revokeInvitation, type Household } from '../household/household';
+import { createInvitation, createPasswordResetLink, deleteFormerAccount, loadHousehold, removeMember, revokeInvitation, type Household } from '../household/household';
 
 function when(ms: number): string {
   return new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
@@ -99,6 +99,17 @@ export function HouseholdSettings() {
     await run(() => removeMember(userId));
   }
 
+  async function deleteAccount(userId: string, email: string | null) {
+    if (
+      !confirm(
+        `¿Borrar la cuenta de ${email ?? 'esta persona'}? Su email quedará libre: con un enlace de invitación podrá crear una cuenta nueva con ese mismo email y la contraseña que quiera. Las reservas privadas que tuviera se pierden.`,
+      )
+    ) {
+      return;
+    }
+    await run(() => deleteFormerAccount(userId));
+  }
+
   async function revokeAll(ids: string[]) {
     if (!confirm(`¿Anular las ${ids.length} invitaciones pendientes? Esos enlaces dejarán de funcionar.`)) {
       return;
@@ -146,6 +157,22 @@ export function HouseholdSettings() {
               )}
             </div>
           ))}
+          {home.iAmAdmin && (home.formerMembers ?? []).length > 0 && (
+            <>
+              <div className="small muted" style={{ margin: '12px 0 4px' }}>
+                Estuvieron en el hogar. Si alguien no recuerda su contraseña, borra su cuenta y mándale una invitación: podrá crearla de
+                nuevo con el mismo email.
+              </div>
+              {(home.formerMembers ?? []).map((former) => (
+                <div key={former.userId} className="row between small muted" style={{ margin: '6px 0' }}>
+                  <span>{former.email ?? former.userId}</span>
+                  <button className="btn small danger" type="button" disabled={busy} onClick={() => void deleteAccount(former.userId, former.email)}>
+                    Borrar cuenta
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
           {home.invitations.length > 0 && (
             <div className="row between small muted" style={{ margin: '10px 0 6px' }}>
               <span>
