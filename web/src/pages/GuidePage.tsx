@@ -197,9 +197,10 @@ export function GuidePage() {
             seguridad; los demás ven esos apartados sin botones.
           </li>
           <li>
-            <strong>Contraseña olvidada</strong>: quien administra el hogar pulsa <strong>Contraseña</strong> junto a esa persona en Ajustes
-            → Hogar y le manda el enlace que sale. Sirve una vez y dura 24 horas: al abrirlo pone una contraseña nueva y entra
-            directamente, y se cierra la sesión en sus demás dispositivos.
+            <strong>Contraseña olvidada</strong>: en la pantalla de entrada, <strong>¿Has olvidado la contraseña?</strong> → escribe tu
+            email → en uno o dos minutos llega un correo con un enlace (lo envía el script de Gmail del hogar). También puede generarlo
+            quien administra con <strong>Contraseña</strong> junto a esa persona en Ajustes → Hogar. El enlace sirve una vez y dura 24
+            horas: al abrirlo pones una contraseña nueva y entras directamente, y se cierra la sesión en tus demás dispositivos.
           </li>
           <li>
             En Ajustes → Cuenta puedes <strong>Cambiar contraseña</strong> y, si pierdes el móvil, pulsar{' '}

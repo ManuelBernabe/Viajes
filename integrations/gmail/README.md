@@ -53,6 +53,13 @@ detecta como modificación de la reserva. Si un proveedor manda publicidad desde
 borrador «por revisar» y basta con descartarlo; para afinar, añade en **Asunto** palabras como
 `reserva OR confirmación OR booking OR billete OR itinerario`.
 
+## Correos de «¿Has olvidado la contraseña?»
+
+La app no puede enviar correo (Railway bloquea el SMTP), así que lo envía este mismo script: cada minuto, antes de
+mirar las etiquetas, recoge los enlaces que haya pedido alguien del hogar y se los manda **desde tu cuenta de Gmail**.
+No hay que configurar nada más que tener el script al día (copia otra vez `Code.gs` cuando cambie). Si Google pide
+autorizar «enviar correo en tu nombre», acéptalo.
+
 ## Qué extrae la app
 
 | Del correo | Qué da |
