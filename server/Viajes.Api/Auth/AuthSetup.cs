@@ -19,7 +19,11 @@ public static class AuthSetup
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddEntityFrameworkStores<AppDbContext>()
-            .AddSignInManager();
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
+
+        // Enlaces para cambiar la contraseña olvidada (ver PasswordResetEndpoints).
+        services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = PasswordResetEndpoints.Lifetime);
 
         services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 

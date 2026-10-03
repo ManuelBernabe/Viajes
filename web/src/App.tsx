@@ -13,6 +13,7 @@ import { HomePage } from './pages/HomePage';
 import { InboxItemPage } from './pages/InboxItemPage';
 import { InboxPage } from './pages/InboxPage';
 import { InvitationPage } from './pages/InvitationPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { QrPage } from './pages/QrPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TripFormPage } from './pages/TripFormPage';
@@ -35,11 +36,12 @@ function Gate() {
   if (session.status === 'loading') {
     return <main className="page no-tabs center muted">Abriendo…</main>;
   }
-  // El enlace de invitación y la guía se abren con o sin sesión: la propia página decide qué pedir.
-  if (location.pathname.startsWith('/invitacion/') || (location.pathname === '/guia' && session.status !== 'in')) {
+  // El enlace de invitación, el de cambiar la contraseña y la guía se abren con o sin sesión: la propia página decide qué pedir.
+  if (location.pathname.startsWith('/invitacion/') || location.pathname.startsWith('/restablecer/') || (location.pathname === '/guia' && session.status !== 'in')) {
     return (
       <Routes>
         <Route path="/invitacion/:token" element={<InvitationPage />} />
+        <Route path="/restablecer/:userId/:token" element={<ResetPasswordPage />} />
         <Route path="/guia" element={<GuidePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -197,6 +197,11 @@ export function GuidePage() {
             seguridad; los demás ven esos apartados sin botones.
           </li>
           <li>
+            <strong>Contraseña olvidada</strong>: quien administra el hogar pulsa <strong>Contraseña</strong> junto a esa persona en Ajustes
+            → Hogar y le manda el enlace que sale. Sirve una vez y dura 24 horas: al abrirlo pone una contraseña nueva y entra
+            directamente, y se cierra la sesión en sus demás dispositivos.
+          </li>
+          <li>
             En Ajustes → Cuenta puedes <strong>Cambiar contraseña</strong> y, si pierdes el móvil, pulsar{' '}
             <strong>Cerrar sesión en todos los dispositivos</strong> desde otro: en un minuto el móvil perdido deja de tener acceso.
           </li>
