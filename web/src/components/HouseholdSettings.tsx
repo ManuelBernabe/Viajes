@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { describeError } from '../api';
 import { createInvitation, loadHousehold, removeMember, revokeInvitation, type Household } from '../household/household';
 
@@ -13,6 +13,9 @@ export function HouseholdSettings() {
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showInvitations, setShowInvitations] = useState(false);
+  // Evita que un doble toque en «Invitar a alguien» cree dos enlaces antes de que el botón se desactive.
+  const inviting = useRef(false);
 
   async function load() {
     try {
@@ -40,10 +43,18 @@ export function HouseholdSettings() {
   }
 
   async function invite() {
-    await run(async () => {
-      setLink(await createInvitation());
-      setCopied(false);
-    });
+    if (inviting.current) {
+      return;
+    }
+    inviting.current = true;
+    try {
+      await run(async () => {
+        setLink(await createInvitation());
+        setCopied(false);
+      });
+    } finally {
+      inviting.current = false;
+    }
   }
 
   async function share() {
@@ -72,6 +83,18 @@ export function HouseholdSettings() {
       return;
     }
     await run(() => removeMember(userId));
+  }
+
+  async function revokeAll(ids: string[]) {
+    if (!confirm(`¿Anular las ${ids.length} invitaciones pendientes? Esos enlaces dejarán de funcionar.`)) {
+      return;
+    }
+    await run(async () => {
+      for (const id of ids) {
+        await revokeInvitation(id);
+      }
+    });
+    setShowInvitations(false);
   }
 
   async function revoke(id: string) {
@@ -104,16 +127,41 @@ export function HouseholdSettings() {
               )}
             </div>
           ))}
-          {home.invitations.map((invitation) => (
-            <div key={invitation.id} className="row between small muted" style={{ margin: '6px 0' }}>
+          {home.invitations.length > 0 && (
+            <div className="row between small muted" style={{ margin: '10px 0 6px' }}>
               <span>
-                Invitación pendiente{invitation.createdByEmail ? ` de ${invitation.createdByEmail}` : ''} · caduca {when(invitation.expiresMs)}
+                {home.invitations.length === 1 ? '1 invitación pendiente' : `${home.invitations.length} invitaciones pendientes`} (enlaces
+                enviados que nadie ha usado aún)
               </span>
-              <button className="btn small danger" type="button" disabled={busy} onClick={() => void revoke(invitation.id)}>
-                Anular
+              <button className="btn small" type="button" onClick={() => setShowInvitations(!showInvitations)}>
+                {showInvitations ? 'Ocultar' : 'Ver'}
               </button>
             </div>
-          ))}
+          )}
+          {showInvitations &&
+            [...home.invitations]
+              .sort((a, b) => b.createdMs - a.createdMs)
+              .map((invitation) => (
+                <div key={invitation.id} className="row between small muted" style={{ margin: '6px 0' }}>
+                  <span>
+                    Creada {when(invitation.createdMs)}
+                    {invitation.createdByEmail ? ` por ${invitation.createdByEmail}` : ''} · caduca {when(invitation.expiresMs)}
+                  </span>
+                  <button className="btn small danger" type="button" disabled={busy} onClick={() => void revoke(invitation.id)}>
+                    Anular
+                  </button>
+                </div>
+              ))}
+          {showInvitations && home.invitations.length > 1 && (
+            <button
+              className="btn small danger block"
+              type="button"
+              disabled={busy}
+              onClick={() => void revokeAll(home.invitations.map((i) => i.id))}
+            >
+              Anular todas
+            </button>
+          )}
         </>
       ) : (
         <p className="muted small">Consultando…</p>

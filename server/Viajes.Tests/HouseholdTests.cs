@@ -70,6 +70,22 @@ public sealed class HouseholdTests(TestApp app) : IClassFixture<TestApp>
     }
 
     [Fact]
+    public async Task A_second_link_opened_by_someone_already_in_the_household_stops_being_pending()
+    {
+        var ana = await TripsApi.SignUp(app, "hogar6-ana@example.com");
+        var bea = await SignUpWithInvitation(app, "hogar6-bea@example.com", await Invite(ana));
+        var second = await Invite(ana);
+        Assert.Single((await Household(ana)).GetProperty("invitations").EnumerateArray());
+
+        var accept = await bea.Client.PostAsJsonAsync($"/api/invitations/{second}/accept", new { });
+
+        Assert.Equal(HttpStatusCode.OK, accept.StatusCode);
+        Assert.Empty((await Household(ana)).GetProperty("invitations").EnumerateArray());
+        var lookup = await app.CreateHttpsClient().GetFromJsonAsync<JsonElement>($"/api/invitations/{second}");
+        Assert.Equal("used", lookup.GetProperty("state").GetString());
+    }
+
+    [Fact]
     public async Task An_existing_account_joins_by_accepting_and_a_used_token_is_rejected()
     {
         var ana = await TripsApi.SignUp(app, "hogar2-ana@example.com");

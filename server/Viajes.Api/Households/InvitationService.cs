@@ -97,6 +97,16 @@ public sealed class InvitationService(AppDbContext db, AccessService access)
         var alreadyMember = await db.HouseholdMembers.AnyAsync(m => m.HouseholdId == invitation.HouseholdId && m.UserId == userId && m.DeletedAtMs == null);
         if (alreadyMember)
         {
+            // Un enlace aún sin usar que abre alguien que ya está en el hogar se da por gastado: si no, se quedaba
+            // «pendiente» en Ajustes hasta caducar y se iban acumulando.
+            if (lookup.State == InvitationState.Valid)
+            {
+                var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                await db.Invitations
+                    .Where(i => i.Id == invitation.Id && i.UsedMs == null && i.RevokedMs == null)
+                    .ExecuteUpdateAsync(set => set.SetProperty(i => i.UsedMs, nowMs).SetProperty(i => i.UsedBy, userId));
+            }
+
             return (AcceptOutcome.AlreadyMember, lookup.Household);
         }
 
