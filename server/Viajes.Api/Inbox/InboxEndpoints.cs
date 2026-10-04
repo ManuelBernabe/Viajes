@@ -188,8 +188,8 @@ public static class InboxEndpoints
         HttpContext http, AppDbContext db, AccessService access, IFileStore store, IBookingExtractor extractor, ILoggerFactory loggers, CancellationToken ct)
     {
         var log = loggers.CreateLogger("Viajes.Inbox");
-        var header = http.Request.Headers.Authorization.ToString();
-        var hash = header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? Hash(header[7..].Trim()) : null;
+        var key = ShortcutKey(http.Request.Headers.Authorization.ToString(), http.Request.Query["key"].ToString());
+        var hash = key is null ? null : Hash(key);
         var token = hash is null ? null : await db.ImportTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
         if (token is null || token.RevokedMs is not null || token.Scope != ImportToken.ShareScope)
         {
@@ -231,6 +231,27 @@ public static class InboxEndpoints
         await Store(email, raw, token, db, access, store, extractor, log, ct);
         // Texto llano: el atajo lo enseña tal cual en la notificación.
         return Results.Text("✓ Enviado a Viajes: lo tienes en «por revisar».", "text/plain; charset=utf-8");
+    }
+
+    /// <summary>
+    /// La clave del atajo, tolerante con cómo la pega cada iPhone: con o sin «Bearer», en la cabecera o en ?key=, y sin los
+    /// guiones de corte de línea, espacios o caracteres invisibles que se cuelan al copiar. Las claves son 64 hexadecimales.
+    /// </summary>
+    public static string? ShortcutKey(string? authorization, string? query)
+    {
+        var raw = !string.IsNullOrWhiteSpace(authorization) ? authorization.Trim() : query?.Trim();
+        if (string.IsNullOrEmpty(raw))
+        {
+            return null;
+        }
+
+        if (raw.StartsWith("Bearer", StringComparison.OrdinalIgnoreCase))
+        {
+            raw = raw[6..];
+        }
+
+        var hex = new string(raw.Where(Uri.IsHexDigit).Select(char.ToLowerInvariant).ToArray());
+        return hex.Length == 64 ? hex : null;
     }
 
     /// <summary>El nombre que manda el atajo, sin rutas ni caracteres raros; si no llega, uno genérico.</summary>
