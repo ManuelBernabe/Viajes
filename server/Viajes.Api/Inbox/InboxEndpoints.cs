@@ -95,15 +95,16 @@ public static class InboxEndpoints
     {
         var userId = users.GetUserId(principal)!;
         var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+        // La clave del atajo es de cada persona: la revoca quien la creó. Las demás, solo quien administra.
+        if (token?.Scope != ImportToken.ShareScope && !await access.IsAdmin(userId))
+        {
+            return Results.Problem("Solo quien administra el hogar puede revocar tokens.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
         if (token is null)
         {
             return Results.Problem("No existe.", statusCode: StatusCodes.Status404NotFound);
-        }
-
-        // La clave del atajo es de cada persona: la revoca quien la creó. Las demás, solo quien administra.
-        if (token.Scope != ImportToken.ShareScope && !await access.IsAdmin(userId))
-        {
-            return Results.Problem("Solo quien administra el hogar puede revocar tokens.", statusCode: StatusCodes.Status403Forbidden);
         }
 
         token.RevokedMs ??= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
