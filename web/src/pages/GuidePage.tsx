@@ -111,6 +111,11 @@ export function GuidePage() {
         <h3>4. Billetes y códigos QR</h3>
         <ul className="small">
           <li>
+            <strong>Atajo «Enviar a Viajes»</strong> (iPhone): desde un PDF, una captura o un texto, <strong>Compartir → Enviar a
+            Viajes</strong> y aparece en «por revisar» con los datos leídos. Se configura en Ajustes → Atajo de iPhone: genera tu clave y
+            la primera vez que lo uses el atajo te la pide.
+          </li>
+          <li>
             En cada reserva se pueden añadir más adjuntos con <strong>+ Adjuntar</strong> (cámara, Fotos o Archivos). Si uno lleva un QR o
             código de barras, la app lo lee al guardarlo y lo marca con «QR». Si el billete trae varios pasajeros (en la misma página o
             en páginas distintas), los lee todos y lo marca con «2 QR», «3 QR»…

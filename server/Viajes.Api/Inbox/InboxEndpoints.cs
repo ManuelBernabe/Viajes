@@ -30,6 +30,9 @@ public static class InboxEndpoints
         // Lo llama el script de Gmail con el token; sin sesión.
         app.MapPost("/api/inbox/import", Import).DisableAntiforgery();
 
+        // Lo llama el atajo de iPhone («Enviar a Viajes») con la clave personal de quien lo usa; sin sesión.
+        app.MapPost("/api/inbox/share", Share).DisableAntiforgery();
+
         var inbox = app.MapGroup("/api/inbox").RequireAuthorization();
         inbox.MapPost("/{id:guid}/status", SetStatus);
         inbox.MapPost("/{id:guid}/extract", ReExtract);
@@ -53,20 +56,26 @@ public static class InboxEndpoints
     {
         var userId = users.GetUserId(principal)!;
         var scope = body.Scope ?? ImportToken.ImportScope;
-        if (scope != ImportToken.ImportScope && scope != ImportToken.BackupScope)
+        if (scope != ImportToken.ImportScope && scope != ImportToken.BackupScope && scope != ImportToken.ShareScope)
         {
             return Results.Problem("Tipo de token desconocido.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        // Un token da acceso desde fuera (correo o copia completa): solo quien administra el hogar los crea.
-        if (!await access.IsAdmin(userId))
+        // Un token da acceso desde fuera (correo o copia completa): solo quien administra el hogar los crea. La clave del atajo
+        // de iPhone es personal y solo deja borradores para revisar, como reenviar un correo: la crea cualquiera para sí.
+        if (scope != ImportToken.ShareScope && !await access.IsAdmin(userId))
         {
             return Results.Problem("Solo quien administra el hogar puede crear tokens.", statusCode: StatusCodes.Status403Forbidden);
         }
 
         var secret = RandomNumberGenerator.GetBytes(32);
         var token = Convert.ToHexString(secret).ToLowerInvariant();
-        var defaultLabel = scope == ImportToken.BackupScope ? "Copia en Drive" : "Gmail";
+        var defaultLabel = scope switch
+        {
+            ImportToken.BackupScope => "Copia en Drive",
+            ImportToken.ShareScope => "Atajo de iPhone",
+            _ => "Gmail",
+        };
         var entity = new ImportToken
         {
             Id = Guid.NewGuid(),
@@ -85,12 +94,14 @@ public static class InboxEndpoints
     private static async Task<IResult> RevokeToken(Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db, AccessService access)
     {
         var userId = users.GetUserId(principal)!;
-        if (!await access.IsAdmin(userId))
+        var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+        // La clave del atajo es de cada persona: la revoca quien la creó. Las demás, solo quien administra.
+        if (token?.Scope != ImportToken.ShareScope && !await access.IsAdmin(userId))
         {
             return Results.Problem("Solo quien administra el hogar puede revocar tokens.", statusCode: StatusCodes.Status403Forbidden);
         }
 
-        var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
         if (token is null)
         {
             return Results.Problem("No existe.", statusCode: StatusCodes.Status404NotFound);
@@ -165,6 +176,169 @@ public static class InboxEndpoints
             }
         }
 
+        return await Store(email, raw, token, db, access, store, extractor, log, ct);
+    }
+
+    /// <summary>
+    /// «Enviar a Viajes» desde el menú Compartir del iPhone: el atajo manda el archivo tal cual (PDF, imagen o texto) con la
+    /// clave personal. Se envuelve en un correo de la propia persona y sigue el mismo camino que los correos importados:
+    /// la IA lo lee y queda «por revisar».
+    /// </summary>
+    private static async Task<IResult> Share(
+        HttpContext http, AppDbContext db, AccessService access, IFileStore store, IBookingExtractor extractor, ILoggerFactory loggers, CancellationToken ct)
+    {
+        var log = loggers.CreateLogger("Viajes.Inbox");
+        var header = http.Request.Headers.Authorization.ToString();
+        var hash = header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? Hash(header[7..].Trim()) : null;
+        var token = hash is null ? null : await db.ImportTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+        if (token is null || token.RevokedMs is not null || token.Scope != ImportToken.ShareScope)
+        {
+            log.LogWarning("Envío desde el atajo rechazado: clave {Estado}.", token is null ? "desconocida" : token.RevokedMs is not null ? "revocada" : "de otro tipo");
+            return Results.Text("La clave del atajo no es válida. Genera una nueva en Ajustes → Atajo de iPhone.", "text/plain; charset=utf-8", statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        using var body = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await http.Request.Body.ReadAsync(buffer, ct)) > 0)
+        {
+            if (body.Length + read > MaxMessageBytes)
+            {
+                return Results.Text("El archivo supera los 25 MB.", "text/plain; charset=utf-8", statusCode: StatusCodes.Status413PayloadTooLarge);
+            }
+
+            body.Write(buffer, 0, read);
+        }
+
+        if (body.Length == 0)
+        {
+            return Results.Text("No ha llegado ningún archivo. Usa «Enviar a Viajes» desde el menú Compartir de un PDF, una imagen o un texto.", "text/plain; charset=utf-8", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (SniffMime(body.ToArray(), http.Request.ContentType) == "application/octet-stream")
+        {
+            return Results.Text("Ese tipo de archivo no se puede leer: comparte un PDF, una imagen o un texto.", "text/plain; charset=utf-8", statusCode: StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        var owner = await db.Users.FindAsync([token.UserId], ct);
+        var name = SharedName(http.Request.Headers["X-File-Name"].ToString(), http.Request.Query["name"].ToString());
+        var message = SharedMessage(body.ToArray(), http.Request.ContentType, name, owner?.Email);
+        var raw = new MemoryStream();
+        await message.WriteToAsync(raw, ct);
+        raw.Position = 0;
+        var email = EmailParser.Parse(raw);
+        log.LogInformation("Recibido desde el atajo de iPhone: {Bytes} bytes, {Adjuntos} adjuntos.", body.Length, email.Attachments.Count);
+        await Store(email, raw, token, db, access, store, extractor, log, ct);
+        // Texto llano: el atajo lo enseña tal cual en la notificación.
+        return Results.Text("✓ Enviado a Viajes: lo tienes en «por revisar».", "text/plain; charset=utf-8");
+    }
+
+    /// <summary>El nombre que manda el atajo, sin rutas ni caracteres raros; si no llega, uno genérico.</summary>
+    private static string SharedName(string header, string query)
+    {
+        var raw = !string.IsNullOrWhiteSpace(header) ? header : query;
+        try
+        {
+            raw = Uri.UnescapeDataString(raw ?? "");
+        }
+        catch (UriFormatException)
+        {
+        }
+
+        var name = Path.GetFileName(raw.Trim());
+        return string.IsNullOrWhiteSpace(name) ? "compartido" : name[..Math.Min(name.Length, 120)];
+    }
+
+    /// <summary>Tipo del archivo por sus primeros bytes: el atajo no siempre manda un Content-Type fiable.</summary>
+    public static string SniffMime(byte[] bytes, string? declared)
+    {
+        static bool Starts(byte[] b, params byte[] prefix) => b.Length >= prefix.Length && prefix.Select((x, i) => b[i] == x).All(x => x);
+        if (Starts(bytes, 0x25, 0x50, 0x44, 0x46))
+        {
+            return "application/pdf";
+        }
+
+        if (Starts(bytes, 0xFF, 0xD8, 0xFF))
+        {
+            return "image/jpeg";
+        }
+
+        if (Starts(bytes, 0x89, 0x50, 0x4E, 0x47))
+        {
+            return "image/png";
+        }
+
+        if (bytes.Length > 12 && Encoding.ASCII.GetString(bytes, 4, 8) is "ftypheic" or "ftypheix" or "ftypmif1" or "ftyphevc")
+        {
+            return "image/heic";
+        }
+
+        var type = declared?.Split(';')[0].Trim().ToLowerInvariant();
+        if (type is "text/plain" or "text/html")
+        {
+            return type;
+        }
+
+        // Sin firma conocida: si es texto legible, se trata como texto (un trozo de correo compartido).
+        try
+        {
+            var text = new UTF8Encoding(false, true).GetString(bytes);
+            return text.Any(c => char.IsControl(c) && c is not '\n' and not '\r' and not '\t') ? "application/octet-stream" : "text/plain";
+        }
+        catch (DecoderFallbackException)
+        {
+            return "application/octet-stream";
+        }
+    }
+
+    private static MimeKit.MimeMessage SharedMessage(byte[] bytes, string? contentType, string name, string? ownerEmail)
+    {
+        var mime = SniffMime(bytes, contentType);
+        var message = new MimeKit.MimeMessage();
+        var from = new MimeKit.MailboxAddress("Atajo de iPhone", ownerEmail ?? "atajo@viajes.invalid");
+        message.From.Add(from);
+        message.To.Add(from);
+        message.MessageId = $"atajo-{Guid.NewGuid():N}@viajes.invalid";
+        message.Date = DateTimeOffset.UtcNow;
+        var builder = new MimeKit.BodyBuilder();
+        if (mime is "text/plain" or "text/html")
+        {
+            var text = Encoding.UTF8.GetString(bytes);
+            // El asunto (y el título que se propone si la IA no da otro) es la primera línea del texto.
+            var firstLine = text.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "Texto compartido";
+            message.Subject = firstLine[..Math.Min(firstLine.Length, 80)];
+            if (mime == "text/html")
+            {
+                builder.HtmlBody = text;
+            }
+            else
+            {
+                builder.TextBody = text;
+            }
+        }
+        else
+        {
+            var fileName = Path.HasExtension(name) ? name : name + mime switch
+            {
+                "application/pdf" => ".pdf",
+                "image/jpeg" => ".jpg",
+                "image/png" => ".png",
+                "image/heic" => ".heic",
+                _ => "",
+            };
+            message.Subject = Path.GetFileNameWithoutExtension(fileName) is { Length: > 0 } stem && stem != "compartido" ? stem : "Compartido desde el iPhone";
+            builder.TextBody = "";
+            builder.Attachments.Add(fileName, bytes, MimeKit.ContentType.Parse(mime));
+        }
+
+        message.Body = builder.ToMessageBody();
+        return message;
+    }
+
+    /// <summary>Crea el borrador «por revisar» a partir de un correo ya leído (del script de Gmail o del atajo de iPhone).</summary>
+    private static async Task<IResult> Store(
+        ParsedEmail email, MemoryStream raw, ImportToken token, AppDbContext db, AccessService access, IFileStore store, IBookingExtractor extractor, ILogger log, CancellationToken ct)
+    {
         var householdId = await access.EnsureHousehold(token.UserId);
         var existing = await db.InboxItems.FirstOrDefaultAsync(i => i.HouseholdId == householdId && i.MessageId == email.MessageId, ct);
         if (existing is not null)
