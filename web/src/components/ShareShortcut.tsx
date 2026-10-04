@@ -14,7 +14,7 @@ interface TokenRow {
  * Enlace de iCloud del atajo «Enviar a Viajes» ya hecho. Mientras esté vacío, Ajustes enseña cómo crearlo a mano;
  * cuando alguien lo cree y lo comparta, basta con poner aquí su enlace para que los demás lo instalen con un toque.
  */
-export const SHORTCUT_ICLOUD_URL = '';
+export const SHORTCUT_ICLOUD_URL = 'https://www.icloud.com/shortcuts/92078364cf7240f6b0103cfff51fb95e';
 
 function when(ms: number | null): string {
   return ms ? new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
@@ -25,9 +25,7 @@ export function ShareShortcut() {
   const [keys, setKeys] = useState<TokenRow[] | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
   const [copied, setCopied] = useState('');
-  const [showSteps, setShowSteps] = useState(false);
   const [message, setMessage] = useState('');
-  const endpoint = `${location.origin}/api/inbox/share`;
 
   async function load() {
     try {
@@ -82,7 +80,7 @@ export function ShareShortcut() {
       {fresh ? (
         <div className="notice">
           <div className="small">
-            Tu clave personal. Cópiala ahora: no se volverá a mostrar. La primera vez que uses el atajo te la pedirá.
+            Tu clave personal. Cópiala ahora: no se volverá a mostrar. Pégala en el bloque Texto del atajo (paso 3).
           </div>
           <code style={{ wordBreak: 'break-all', display: 'block', margin: '6px 0' }}>{fresh}</code>
           <button className="btn small" type="button" onClick={() => void copy(fresh, 'clave')}>
@@ -101,60 +99,25 @@ export function ShareShortcut() {
       </button>
 
       {SHORTCUT_ICLOUD_URL ? (
-        <a className="btn primary block" style={{ marginTop: 8 }} href={SHORTCUT_ICLOUD_URL}>
-          2. Instalar el atajo
-        </a>
+        <>
+          <a className="btn primary block" style={{ marginTop: 8 }} href={SHORTCUT_ICLOUD_URL}>
+            2. Instalar el atajo
+          </a>
+          <ol className="small" style={{ paddingLeft: 18, marginTop: 10 }} start={3}>
+            <li>
+              En la app <strong>Atajos</strong>, toca los <strong>···</strong> de «Enviar a Viajes». En el bloque <strong>Texto</strong> borra{' '}
+              <em>Pega aquí tu clave</em> y pega la tuya. Debe quedar <code>Bearer</code>, un espacio y la clave, sin nada más.
+            </li>
+            <li>
+              Úsalo desde un PDF, una captura o un texto: <strong>Compartir → Enviar a Viajes</strong>. La primera vez, si pregunta,{' '}
+              <strong>Permitir siempre</strong>.
+            </li>
+          </ol>
+          <p className="small muted">Si generas una clave nueva, cámbiala también en el bloque Texto del atajo.</p>
+        </>
       ) : (
-        <button className="btn block" type="button" style={{ marginTop: 8 }} onClick={() => setShowSteps(!showSteps)}>
-          {showSteps ? 'Ocultar cómo crear el atajo' : '2. Cómo crear el atajo (una vez)'}
-        </button>
+        <p className="small muted" style={{ marginTop: 8 }}>El atajo aún no está publicado.</p>
       )}
-
-      {!SHORTCUT_ICLOUD_URL && showSteps && (
-        <ol className="small" style={{ paddingLeft: 18 }}>
-          <li>
-            Abre la app <strong>Atajos</strong> → <strong>+</strong>. Llámalo <strong>Enviar a Viajes</strong>.
-          </li>
-          <li>
-            Toca la <strong>ⓘ</strong> (abajo) y activa <strong>Mostrar en la hoja para compartir</strong>. En «Recibir», deja solo{' '}
-            <strong>Imágenes, PDF, Archivos y Texto</strong>. Si no recibe nada: <strong>Continuar</strong>.
-          </li>
-          <li>
-            Añade <strong>Obtener archivo de carpeta</strong>: carpeta <strong>Atajos</strong>, ruta <code>viajes-clave.txt</code>, y
-            desactiva <strong>Error si no se encuentra</strong>.
-          </li>
-          <li>
-            Añade <strong>Si</strong>: «Archivo» <strong>no tiene ningún valor</strong>. Dentro: <strong>Solicitar entrada</strong>{' '}
-            (texto, «Pega tu clave de Viajes») y <strong>Guardar archivo</strong>: «Entrada proporcionada», sin preguntar dónde, en
-            carpeta <strong>Atajos</strong> con subruta <code>viajes-clave.txt</code> y <strong>Sobrescribir</strong> activado. En{' '}
-            <strong>De lo contrario</strong>: <strong>Texto</strong> con la variable «Archivo».
-          </li>
-          <li>
-            Añade <strong>Texto</strong> con: <code>Bearer </code> seguido de la variable <strong>Resultado de Si</strong>.
-          </li>
-          <li>
-            Añade <strong>Obtener contenido de URL</strong>{' '}
-            <button className="btn small" type="button" onClick={() => void copy(endpoint, 'url')}>
-              {copied === 'url' ? 'URL copiada ✓' : 'Copiar URL'}
-            </button>
-            : método <strong>POST</strong>; encabezados <code>Authorization</code> = el Texto del paso anterior y{' '}
-            <code>X-File-Name</code> = «Entrada del atajo» → <strong>Nombre</strong>; cuerpo <strong>Archivo</strong> = «Entrada del
-            atajo».
-          </li>
-          <li>
-            Añade <strong>Mostrar notificación</strong> con «Contenido de la URL». Listo: verás «✓ Enviado a Viajes» o el motivo si algo
-            falla.
-          </li>
-          <li>
-            Para pasárselo a otros: mantén pulsado el atajo → <strong>Compartir</strong> → <strong>Copiar enlace de iCloud</strong>, y
-            mándame ese enlace para poner aquí el botón «Instalar el atajo».
-          </li>
-        </ol>
-      )}
-      <p className="small muted" style={{ marginTop: 8 }}>
-        Si generas una clave nueva, borra <code>viajes-clave.txt</code> en Archivos → iCloud Drive → Atajos para que el atajo te pida
-        la nueva.
-      </p>
       {message && <p className="error small">{message}</p>}
     </section>
   );

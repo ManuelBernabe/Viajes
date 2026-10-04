@@ -112,8 +112,8 @@ export function GuidePage() {
         <ul className="small">
           <li>
             <strong>Atajo «Enviar a Viajes»</strong> (iPhone): desde un PDF, una captura o un texto, <strong>Compartir → Enviar a
-            Viajes</strong> y aparece en «por revisar» con los datos leídos. Se configura en Ajustes → Atajo de iPhone: genera tu clave y
-            la primera vez que lo uses el atajo te la pide.
+            Viajes</strong> y aparece en «por revisar» con los datos leídos. Se instala desde Ajustes → Atajo de iPhone: genera tu clave,
+            instala el atajo y pega la clave en su bloque Texto.
           </li>
           <li>
             En cada reserva se pueden añadir más adjuntos con <strong>+ Adjuntar</strong> (cámara, Fotos o Archivos). Si uno lleva un QR o
