@@ -7,6 +7,7 @@ import { AccountSecurity } from '../components/AccountSecurity';
 import { AiSettings } from '../components/AiSettings';
 import { BackupSettings } from '../components/BackupSettings';
 import { HouseholdSettings } from '../components/HouseholdSettings';
+import { ShareShortcut } from '../components/ShareShortcut';
 import { ImportTokens } from '../components/ImportTokens';
 import { PushSettings } from '../components/PushSettings';
 import { dropBlobs } from '../data/offline';
@@ -106,6 +107,8 @@ export function SettingsPage() {
       <HouseholdSettings />
 
       <PushSettings />
+
+      <ShareShortcut />
 
       <ImportTokens admin={admin} />
 

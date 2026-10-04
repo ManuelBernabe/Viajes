@@ -156,6 +156,9 @@ public sealed class ImportToken
     /// <summary>Permite descargar la copia de seguridad completa (script que la guarda en Drive).</summary>
     public const string BackupScope = "backup";
 
+    /// <summary>Clave personal del atajo de iPhone «Enviar a Viajes»: solo crea borradores, como reenviar un correo.</summary>
+    public const string ShareScope = "share";
+
     public Guid Id { get; set; }
 
     public string Scope { get; set; } = ImportScope;
