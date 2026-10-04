@@ -104,4 +104,16 @@ public sealed class ShareShortcutTests(TestApp app) : IClassFixture<TestApp>
     [InlineData(new byte[] { 0x00, 0x01, 0x02, 0xFE }, null, "application/octet-stream")]
     public void The_type_comes_from_the_first_bytes(byte[] bytes, string? declared, string expected) =>
         Assert.Equal(expected, InboxEndpoints.SniffMime(bytes, declared));
+
+    [Fact]
+    public void The_key_survives_how_the_iphone_pastes_it()
+    {
+        var key = new string('a', 30) + "0123456789" + new string('f', 24);
+        Assert.Equal(key, InboxEndpoints.ShortcutKey($"Bearer {key}", null));
+        Assert.Equal(key, InboxEndpoints.ShortcutKey($"bearer  {key[..22]}-\n{key[22..41]}\u00AD-{key[41..]} ", null));
+        Assert.Equal(key, InboxEndpoints.ShortcutKey(key.ToUpperInvariant(), null));
+        Assert.Equal(key, InboxEndpoints.ShortcutKey(null, key));
+        Assert.Null(InboxEndpoints.ShortcutKey("https://viajes-production-82cb.up.railway.app/api/inbox/share", null));
+        Assert.Null(InboxEndpoints.ShortcutKey(null, null));
+    }
 }
