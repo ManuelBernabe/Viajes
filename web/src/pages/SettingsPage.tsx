@@ -17,6 +17,7 @@ import { syncNow, useSyncStatus } from '../data/syncClient';
 import { loadHousehold } from '../household/household';
 import { t } from '../i18n';
 import { useLiveQuery } from '../data/useLive';
+import { checkForUpdate } from '../UpdatePrompt';
 import { sortTrips, todayLocal } from '../domain/agenda';
 import { describeServer, formatBuild, type ServerVersion } from '../platform/version';
 
@@ -41,6 +42,21 @@ export function SettingsPage() {
   const sync = useSyncStatus();
   const [storage, setStorage] = useState('');
   const [server, setServer] = useState(t('consultando…'));
+  const [updateCheck, setUpdateCheck] = useState<'checking' | string>('');
+
+  async function searchUpdate() {
+    setUpdateCheck('checking');
+    const result = await checkForUpdate();
+    setUpdateCheck(
+      result === 'new'
+        ? t('Hay una versión nueva: pulsa «Actualizar ahora».')
+        : result === 'latest'
+          ? t('Ya tienes la última versión.')
+          : result === 'offline'
+            ? t('Sin conexión: no se ha podido comprobar.')
+            : t('Este navegador no instala actualizaciones: recarga la página.'),
+    );
+  }
   const [message, setMessage] = useState('');
   const trips = useLiveQuery(listTrips, []);
   // Los tokens y la gestión de miembros solo los toca quien administra el hogar; hasta saberlo, se esconden.
@@ -145,6 +161,10 @@ export function SettingsPage() {
         <h3>{t('Versión')}</h3>
         <p className="small">{t('App: {version}', { version: APP_VERSION })}</p>
         <p className="small">{t('Servidor: {server}', { server })}</p>
+        <button className="btn block" type="button" disabled={updateCheck === 'checking'} onClick={() => void searchUpdate()}>
+          {updateCheck === 'checking' ? t('Buscando…') : t('Buscar actualizaciones')}
+        </button>
+        {updateCheck && updateCheck !== 'checking' && <p className="small muted">{updateCheck}</p>}
         <Link to="/diag" className="small">
           {t('Página de diagnóstico')}
         </Link>
