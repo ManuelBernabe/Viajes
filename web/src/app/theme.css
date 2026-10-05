@@ -393,3 +393,7 @@ body { overflow: hidden; touch-action: manipulation; }
 /* En el iPhone un campo de fecha tiene un ancho mínimo propio y, en dos columnas, se sale por la derecha. */
 input[type='date'] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; display: block; }
 input[type='date']::-webkit-date-and-time-value { text-align: left; }
+/* Bloqueo con Face ID: tapa toda la app (también la barra de pestañas y los visores). */
+.app-lock { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.app-lock-card { width: 100%; max-width: 360px; text-align: center; }
+.app-lock-card h2 { margin: 8px 0 20px; }
