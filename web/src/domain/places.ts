@@ -46,8 +46,9 @@ export function parsePasted(text: string): { name: string; url: string | null } 
 /** Los que quedan por visitar primero; dentro, por categoría y nombre. */
 export function sortPlaces(places: readonly Place[]): { pending: Place[]; visited: Place[] } {
   const order = Object.keys(PLACE_INFO);
+  // Lo último que se añade sale primero; los sitios de antes de guardar la fecha, después, por categoría y nombre.
   const byCategoryThenName = (a: Place, b: Place) =>
-    order.indexOf(a.category) - order.indexOf(b.category) || a.name.localeCompare(b.name);
+    (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0) || order.indexOf(a.category) - order.indexOf(b.category) || a.name.localeCompare(b.name);
   return {
     pending: places.filter((p) => !p.visited).sort(byCategoryThenName),
     visited: places.filter((p) => p.visited).sort(byCategoryThenName),

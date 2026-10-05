@@ -49,10 +49,13 @@ public sealed class PlaceTests(TestApp app) : IClassFixture<TestApp>
         Assert.Equal("eat", place.GetProperty("category").GetString());
         Assert.False(place.GetProperty("visited").GetBoolean());
         var version = place.GetProperty("version").GetInt64();
+        var createdAt = place.GetProperty("createdAtMs").GetInt64();
+        Assert.InRange(createdAt, DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeMilliseconds(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         (await PutPlace(ana, placeId, tripId, new { visited = true })).EnsureSuccessStatusCode();
         var updated = Assert.Single(await Places(ana, version));
         Assert.True(updated.GetProperty("visited").GetBoolean());
+        Assert.Equal(createdAt, updated.GetProperty("createdAtMs").GetInt64());
 
         Assert.Equal(HttpStatusCode.NoContent, (await ana.Client.DeleteAsync($"/api/places/{placeId}")).StatusCode);
         var deleted = Assert.Single(await Places(ana, updated.GetProperty("version").GetInt64()));

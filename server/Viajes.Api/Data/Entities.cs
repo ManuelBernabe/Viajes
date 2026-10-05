@@ -88,6 +88,9 @@ public sealed class Place : IVersioned
 
     public required string CreatedBy { get; set; }
 
+    /// <summary>Cuándo se apuntó (hora del servidor), para enseñar primero lo último añadido. 0 en los anteriores a este campo.</summary>
+    public long CreatedAtMs { get; set; }
+
     public long Version { get; set; }
 
     public long? DeletedAtMs { get; set; }

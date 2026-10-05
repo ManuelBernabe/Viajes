@@ -68,6 +68,7 @@ export async function savePlace(body: PlaceBody, createdBy: string, id = newId()
     id,
     ...body,
     createdBy: existing?.createdBy ?? createdBy,
+    createdAtMs: existing ? existing.createdAtMs : Date.now(),
     version: existing?.version ?? 0,
     deletedAtMs: null,
   };

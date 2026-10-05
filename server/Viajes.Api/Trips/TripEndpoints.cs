@@ -167,6 +167,7 @@ public static partial class TripEndpoints
                 Address = Clean(body.Address, 300),
                 Visited = body.Visited,
                 CreatedBy = userId,
+                CreatedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             });
         }
         else
