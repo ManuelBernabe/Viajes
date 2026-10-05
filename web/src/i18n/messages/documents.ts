@@ -51,6 +51,42 @@ export const documents: Messages = {
     fr: 'Garde ici les passeports, cartes d’identité, visas, assurances et vaccins de la famille, avec une photo ou le PDF. Ils sont visibles hors ligne et l’app prévient si quelque chose expire avant un voyage.',
     it: 'Conserva qui passaporti, carte d’identità, visti, assicurazioni e vaccini della famiglia, con una foto o il PDF. Si vedono offline e l’app avvisa se qualcosa scade prima di un viaggio.',
   },
+  'Titular: {name}': { en: 'Holder: {name}', fr: 'Titulaire : {name}', it: 'Titolare: {name}' },
+  'Leyendo el documento…': { en: 'Reading the document…', fr: 'Lecture du document…', it: 'Lettura del documento…' },
+  'La lectura automática no está activada en el servidor: rellena los datos a mano.': {
+    en: 'Automatic reading isn’t enabled on the server: fill in the details by hand.',
+    fr: 'La lecture automatique n’est pas activée sur le serveur : remplis les données à la main.',
+    it: 'La lettura automatica non è attiva sul server: compila i dati a mano.',
+  },
+  'No se ha podido leer el documento. Prueba con otra foto, de frente y con buena luz.': {
+    en: 'The document couldn’t be read. Try another photo, straight on and in good light.',
+    fr: 'Impossible de lire le document. Essaie une autre photo, de face et avec une bonne lumière.',
+    it: 'Impossibile leggere il documento. Prova un’altra foto, di fronte e con buona luce.',
+  },
+  'Datos leídos de la foto: revísalos antes de guardar.': {
+    en: 'Details read from the photo: check them before saving.',
+    fr: 'Données lues sur la photo : vérifie-les avant d’enregistrer.',
+    it: 'Dati letti dalla foto: controllali prima di salvare.',
+  },
+  'El número y la caducidad están comprobados con la banda de lectura del documento.': {
+    en: 'The number and expiry date are verified against the document’s machine-readable zone.',
+    fr: 'Le numéro et la date d’expiration sont vérifiés avec la bande de lecture du document.',
+    it: 'Il numero e la scadenza sono verificati con la banda di lettura del documento.',
+  },
+  'No se ha leído nada nuevo de la foto.': { en: 'Nothing new was read from the photo.', fr: 'Rien de nouveau n’a été lu sur la photo.', it: 'Non è stato letto nulla di nuovo dalla foto.' },
+  'Sin conexión: no se ha podido leer la foto. Rellena los datos a mano.': {
+    en: 'Offline: the photo couldn’t be read. Fill in the details by hand.',
+    fr: 'Hors ligne : impossible de lire la photo. Remplis les données à la main.',
+    it: 'Offline: impossibile leggere la foto. Compila i dati a mano.',
+  },
+  'Haz una foto de la página de los datos: la app rellena el resto.': {
+    en: 'Take a photo of the details page: the app fills in the rest.',
+    fr: 'Prends en photo la page des données : l’app remplit le reste.',
+    it: 'Fai una foto della pagina dei dati: l’app compila il resto.',
+  },
+  'Leer los datos de la foto': { en: 'Read the details from the photo', fr: 'Lire les données de la photo', it: 'Leggi i dati dalla foto' },
+  'Envía una foto o un PDF.': { en: 'Send a photo or a PDF.', fr: 'Envoie une photo ou un PDF.', it: 'Invia una foto o un PDF.' },
+  'El fichero supera los 15 MB.': { en: 'The file is over 15 MB.', fr: 'Le fichier dépasse 15 Mo.', it: 'Il file supera i 15 MB.' },
   // Mensajes del servidor de esta función.
   'Tipo de documento desconocido.': { en: 'Unknown document type.', fr: 'Type de document inconnu.', it: 'Tipo di documento sconosciuto.' },
   'Visibilidad no válida.': { en: 'Invalid visibility.', fr: 'Visibilité non valide.', it: 'Visibilità non valida.' },

@@ -40,6 +40,13 @@ public interface IJsonAsker
 
     /// <summary>El JSON de la respuesta, o null si no hay respuesta útil (el motivo queda en el log).</summary>
     Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct);
+
+    /// <summary>
+    /// Igual, pero el modelo ve además fotos o PDF (un pasaporte, por ejemplo). Quien no sepa leer ficheros responde solo
+    /// con el texto.
+    /// </summary>
+    Task<string?> AskJsonWithFilesAsync(string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct) =>
+        AskJsonAsync(system, user, schema, maxTokens, ct);
 }
 
 /// <summary>Sin clave de API: no extrae nada.</summary>

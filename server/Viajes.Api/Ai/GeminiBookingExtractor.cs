@@ -134,8 +134,26 @@ public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookin
         }
     }
 
-    public async Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct)
+    public Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct) =>
+        AskJsonWithFilesAsync(system, user, [], schema, maxTokens, ct);
+
+    public async Task<string?> AskJsonWithFilesAsync(
+        string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct)
     {
+        var input = new List<object>();
+        foreach (var file in files.Take(MaxFiles))
+        {
+            if (file.Mime == "application/pdf")
+            {
+                input.Add(new { type = "document", data = Convert.ToBase64String(file.Bytes), mime_type = "application/pdf" });
+            }
+            else if (file.Mime is "image/jpeg" or "image/png" or "image/webp" or "image/heic" or "image/heif")
+            {
+                input.Add(new { type = "image", data = Convert.ToBase64String(file.Bytes), mime_type = file.Mime });
+            }
+        }
+
+        input.Add(new { type = "text", text = user });
         var models = FallbackModels.Prepend(preferredModel ?? ModelId).Distinct().ToList();
         try
         {
@@ -145,8 +163,8 @@ public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookin
                 {
                     model,
                     system_instruction = system,
-                    input = new object[] { new { type = "text", text = user } },
-                    generation_config = new { temperature = 0.4, max_output_tokens = maxTokens },
+                    input,
+                    generation_config = new { temperature = files.Count > 0 ? 0.0 : 0.4, max_output_tokens = maxTokens },
                     response_format = new { type = "text", mime_type = "application/json", schema },
                     store = false,
                 };
