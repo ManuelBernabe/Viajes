@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { runCryptoCheck, type CryptoCheckResult } from './cryptoBenchmark';
+import { t } from '../i18n';
 
 export function CryptoCheck() {
   const [result, setResult] = useState<CryptoCheckResult | null>(null);
@@ -13,14 +14,14 @@ export function CryptoCheck() {
 
   return (
     <section>
-      <h2>6 · Cifrado</h2>
+      <h2>{t('6 · Cifrado')}</h2>
       <button disabled={running} onClick={() => void run()}>
-        {running ? 'Calculando…' : 'Probar 600.000 iteraciones'}
+        {running ? t('Calculando…') : t('Probar 600.000 iteraciones')}
       </button>
       {result && (
         <p>
           {result.ok ? '✅' : '🔴'} {Math.round(result.pbkdf2Ms)} ms{' '}
-          {result.pbkdf2Ms < 2000 ? '(dentro del límite de 2 s)' : '(⚠️ supera 2 s)'}
+          {result.pbkdf2Ms < 2000 ? t('(dentro del límite de 2 s)') : `(⚠️ ${t('supera 2 s')})`}
           {result.error && ` · ${result.error}`}
         </p>
       )}

@@ -19,6 +19,7 @@ import { applyChanges, diffBooking, findExistingBooking, type Change, type Propo
 import { BOOKING_TYPES, type BookingType } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
 import type { InboxPrefill } from './InboxItemPage';
+import { t } from '../i18n';
 
 function isType(value: string | null): value is BookingType {
   return value !== null && (BOOKING_TYPES as readonly string[]).includes(value);
@@ -131,7 +132,7 @@ export function BookingFormPage() {
 
   /** Al elegir ficheros se leen ya: si alguno es una tarjeta de embarque, rellena lo que esté vacío. */
   async function onFilesChosen(files: FileList) {
-    setReadMessage('Leyendo…');
+    setReadMessage(t('Leyendo…'));
     const read = await readFiles(files, setReadMessage);
     setPendingFiles(read);
     const errors = read.filter((r) => r.error).map((r) => r.error);
@@ -145,10 +146,10 @@ export function BookingFormPage() {
       if (!startPlace.trim()) setStartPlace(fill.startPlace);
       if (!endPlace.trim()) setEndPlace(fill.endPlace);
       if (!notes.trim()) setNotes(fill.notes);
-      setReadMessage(`Tarjeta de embarque leída (${pass.passenger}): comprueba la fecha y pon la hora de salida.`);
+      setReadMessage(t('Tarjeta de embarque leída ({passenger}): comprueba la fecha y pon la hora de salida.', { passenger: pass.passenger }));
     } else {
       const withQr = read.reduce((sum, r) => sum + splitQrCodes(r.qrText).length, 0);
-      setReadMessage(withQr ? `${withQr} QR ${withQr === 1 ? 'leído' : 'leídos'}.` : read.some((r) => !r.error) ? 'Ficheros listos para adjuntar.' : '');
+      setReadMessage(withQr ? (withQr === 1 ? t('1 QR leído.') : t('{n} QR leídos.', { n: withQr })) : read.some((r) => !r.error) ? t('Ficheros listos para adjuntar.') : '');
       await suggestFromPdfs(read);
     }
     if (errors.length) {
@@ -165,16 +166,16 @@ export function BookingFormPage() {
       if (item.error || !(isPdf(item.mime) || item.mime.startsWith('image/'))) {
         continue;
       }
-      setReadMessage(`Leyendo ${item.file.name} con IA…`);
+      setReadMessage(t('Leyendo {name} con IA…', { name: item.file.name }));
       const ai = await extractWithAi(item.bytes, item.mime, item.file.name);
       let s: TextSuggestion;
       let source: string;
       if (ai.status === 'ok') {
         s = toSuggestion(ai.extraction);
-        source = `${item.file.name} (leído con IA)`;
+        source = t('{name} (leído con IA)', { name: item.file.name });
       } else {
         if (!isPdf(item.mime)) {
-          setReadMessage(ai.status === 'nothing' ? `No se ha encontrado ninguna reserva en ${item.file.name}.` : '');
+          setReadMessage(ai.status === 'nothing' ? t('No se ha encontrado ninguna reserva en {name}.', { name: item.file.name }) : '');
           continue;
         }
         let text = '';
@@ -185,10 +186,10 @@ export function BookingFormPage() {
         }
         setRawText(text);
         s = suggestFromText(text, item.file.name);
-        source = `${item.file.name}${ai.status === 'unavailable' ? '' : ' (sin IA: sin conexión con el servidor)'}`;
+        source = ai.status === 'unavailable' ? item.file.name : t('{name} (sin IA: sin conexión con el servidor)', { name: item.file.name });
       }
       if (!s.type && !s.reference && !s.startDate) {
-        setReadMessage(`No se ha encontrado nada nuevo en ${item.file.name}.`);
+        setReadMessage(t('No se ha encontrado nada nuevo en {name}.', { name: item.file.name }));
         continue;
       }
       let filled = 0;
@@ -214,7 +215,11 @@ export function BookingFormPage() {
         fill(endTime, s.endTime, setEndTime);
         fill(endPlace, s.endPlace, setEndPlace);
       }
-      setReadMessage(filled > 0 ? `Datos propuestos a partir de ${source}: revísalos antes de guardar.` : `No se ha encontrado nada nuevo en ${item.file.name}.`);
+      setReadMessage(
+        filled > 0
+          ? t('Datos propuestos a partir de {source}: revísalos antes de guardar.', { source })
+          : t('No se ha encontrado nada nuevo en {name}.', { name: item.file.name }),
+      );
       return;
     }
   }
@@ -223,17 +228,17 @@ export function BookingFormPage() {
     event.preventDefault();
     setError('');
     if (!title.trim()) {
-      setError('Ponle un título a la reserva.');
+      setError(t('Ponle un título a la reserva.'));
       return;
     }
     const startLocal = `${startDate}T${startTime || '00:00'}`;
     if (!startDate || !isValidLocal(startLocal)) {
-      setError(`Falta la fecha de ${info.startLabel.toLowerCase()}.`);
+      setError(t('Falta la fecha de {label}.', { label: info.startLabel.toLowerCase() }));
       return;
     }
     const endLocal = withEnd && endDate ? `${endDate}T${endTime || '00:00'}` : null;
     if (endLocal && !isValidLocal(endLocal)) {
-      setError(`La ${info.endLabel.toLowerCase()} no es válida.`);
+      setError(t('La {label} no es válida.', { label: info.endLabel.toLowerCase() }));
       return;
     }
     // Una reserva nueva que coincide con una ya cargada (cambio de horario recibido por PDF, por ejemplo) no se duplica.
@@ -317,18 +322,18 @@ export function BookingFormPage() {
   }
 
   if (!loaded) {
-    return <main className="page muted">Cargando…</main>;
+    return <main className="page muted">{t('Cargando…')}</main>;
   }
 
   return (
     <main className="page">
       <div className="topbar">
         <BackLink to={bookingId ? `/bookings/${bookingId}` : `/trips/${tripId}`} />
-        <h1>{bookingId ? 'Editar reserva' : 'Nueva reserva'}</h1>
+        <h1>{bookingId ? t('Editar reserva') : t('Nueva reserva')}</h1>
       </div>
       {match && (
         <section className="card highlight">
-          <h3>Esta reserva ya está en la app</h3>
+          <h3>{t('Esta reserva ya está en la app')}</h3>
           <p>
             {TYPE_INFO[match.existing.type].icon} {match.existing.title}
             {match.existing.reference && ` · ${match.existing.reference}`}
@@ -336,7 +341,7 @@ export function BookingFormPage() {
           {match.changes.length > 0 ? (
             <>
               <p className="error">
-                <strong>Lo que has metido trae cambios:</strong>
+                <strong>{t('Lo que has metido trae cambios:')}</strong>
               </p>
               <ul>
                 {match.changes.map((change) => (
@@ -347,108 +352,109 @@ export function BookingFormPage() {
               </ul>
             </>
           ) : (
-            <p className="muted small">Los datos coinciden con los de la reserva guardada.</p>
+            <p className="muted small">{t('Los datos coinciden con los de la reserva guardada.')}</p>
           )}
           <div className="actions">
             <button className="btn primary" type="button" disabled={saving} onClick={() => void updateExisting()}>
-              {match.changes.length > 0 ? 'Actualizar esa reserva' : 'Añadir los adjuntos a esa reserva'}
+              {match.changes.length > 0 ? t('Actualizar esa reserva') : t('Añadir los adjuntos a esa reserva')}
             </button>
             <button className="btn" type="button" disabled={saving} onClick={() => { setIgnoreMatch(true); setMatch(null); }}>
-              Crear otra de todos modos
+              {t('Crear otra de todos modos')}
             </button>
           </div>
         </section>
       )}
       {prefill && (
         <p className="notice">
-          Datos propuestos a partir de {prefill.sources?.length ? prefill.sources.join(' y ') : 'el asunto del correo'}. Revisa la fecha, la hora y la zona
-          horaria; los adjuntos del correo se añadirán al guardar.
+          {t('Datos propuestos a partir de {source}. Revisa la fecha, la hora y la zona horaria; los adjuntos del correo se añadirán al guardar.', {
+            source: prefill.sources?.length ? prefill.sources.join(` ${t('y')} `) : t('el asunto del correo'),
+          })}
           {prefill.warnings?.length ? <span className="error"> {prefill.warnings.join(' ')}</span> : null}
         </p>
       )}
       <form onSubmit={submit}>
         <div className="field">
-          <label>Tipo</label>
+          <label>{t('Tipo')}</label>
           <div className="segmented">
-            {BOOKING_TYPES.map((t) => (
-              <button key={t} type="button" className={type === t ? 'on' : ''} onClick={() => setType(t)}>
-                {TYPE_INFO[t].icon} {TYPE_INFO[t].label}
+            {BOOKING_TYPES.map((bt) => (
+              <button key={bt} type="button" className={type === bt ? 'on' : ''} onClick={() => setType(bt)}>
+                {TYPE_INFO[bt].icon} {TYPE_INFO[bt].label}
               </button>
             ))}
           </div>
         </div>
         <div className="field">
-          <label htmlFor="title">Título</label>
-          <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={type === 'flight' ? 'IB 6800 Madrid – Tokio' : 'Nombre'} />
+          <label htmlFor="title">{t('Título')}</label>
+          <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={type === 'flight' ? t('IB 6800 Madrid – Tokio') : t('Nombre')} />
         </div>
 
         <h2>{info.startLabel}</h2>
         <div className="field">
           <div className="inline">
-            <input type="date" aria-label="Fecha" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <input type="time" aria-label="Hora" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            <input type="date" aria-label={t('Fecha')} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <input type="time" aria-label={t('Hora')} value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </div>
         </div>
         <div className="field">
-          <label htmlFor="startTz">Zona horaria del lugar</label>
+          <label htmlFor="startTz">{t('Zona horaria del lugar')}</label>
           <ZoneSelect id="startTz" value={startTz} onChange={(tz) => { setStartTz(tz); if (!withEnd) setEndTz(tz); }} />
         </div>
         <div className="field">
-          <label htmlFor="startPlace">Lugar</label>
-          <input id="startPlace" value={startPlace} onChange={(e) => setStartPlace(e.target.value)} placeholder={type === 'flight' ? 'MAD T4' : 'Dirección o nombre'} />
+          <label htmlFor="startPlace">{t('Lugar')}</label>
+          <input id="startPlace" value={startPlace} onChange={(e) => setStartPlace(e.target.value)} placeholder={type === 'flight' ? 'MAD T4' : t('Dirección o nombre')} />
         </div>
 
         {!withEnd ? (
           <button type="button" className="btn block" onClick={() => { setWithEnd(true); setEndDate(startDate); setEndTz(startTz); }}>
-            + Añadir {info.endLabel.toLowerCase()}
+            {t('+ Añadir {label}', { label: info.endLabel.toLowerCase() })}
           </button>
         ) : (
           <>
             <div className="row between">
               <h2>{info.endLabel}</h2>
               <button type="button" className="btn small" onClick={() => setWithEnd(false)}>
-                Quitar
+                {t('Quitar')}
               </button>
             </div>
             <div className="field">
               <div className="inline">
-                <input type="date" aria-label="Fecha" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                <input type="time" aria-label="Hora" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                <input type="date" aria-label={t('Fecha')} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <input type="time" aria-label={t('Hora')} value={endTime} onChange={(e) => setEndTime(e.target.value)} />
               </div>
             </div>
             <div className="field">
-              <label htmlFor="endTz">Zona horaria del lugar</label>
+              <label htmlFor="endTz">{t('Zona horaria del lugar')}</label>
               <ZoneSelect id="endTz" value={endTz} onChange={setEndTz} />
             </div>
             <div className="field">
-              <label htmlFor="endPlace">Lugar</label>
+              <label htmlFor="endPlace">{t('Lugar')}</label>
               <input id="endPlace" value={endPlace} onChange={(e) => setEndPlace(e.target.value)} />
             </div>
           </>
         )}
 
-        <h2>Detalles</h2>
+        <h2>{t('Detalles')}</h2>
         <div className="field">
-          <label htmlFor="reference">Localizador</label>
+          <label htmlFor="reference">{t('Localizador')}</label>
           <input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} autoCapitalize="characters" />
         </div>
         <div className="field">
-          <label htmlFor="address">Dirección</label>
+          <label htmlFor="address">{t('Dirección')}</label>
           <input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="notes">Notas</label>
+          <label htmlFor="notes">{t('Notas')}</label>
           <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
         {home && (
           <div className="field">
-            <label>Quién la ve</label>
+            <label>{t('Quién la ve')}</label>
             <div className="segmented">
               {(
                 [
-                  ['household', 'Todo el hogar'],
-                  ['private', home.iAmAdmin ? 'Solo yo' : 'Solo yo y quien administra'],
-                  ['some', 'Personas concretas'],
+                  ['household', t('Todo el hogar')],
+                  ['private', home.iAmAdmin ? t('Solo yo') : t('Solo yo y quien administra')],
+                  ['some', t('Personas concretas')],
                 ] as [BookingVisibility, string][]
               ).map(([value, label]) => (
                 <button key={value} type="button" className={visibility === value ? 'on' : ''} onClick={() => setVisibility(value)}>
@@ -459,7 +465,7 @@ export function BookingFormPage() {
             {visibility === 'some' && (
               <div style={{ marginTop: 8 }}>
                 {home.members.filter((m) => !m.me && m.role !== 'admin').length === 0 && (
-                  <p className="muted small">Todavía no hay más personas en el hogar con quien compartirla.</p>
+                  <p className="muted small">{t('Todavía no hay más personas en el hogar con quien compartirla.')}</p>
                 )}
                 {home.members
                   .filter((m) => !m.me && m.role !== 'admin')
@@ -473,14 +479,14 @@ export function BookingFormPage() {
                       {m.email ?? m.userId}
                     </label>
                   ))}
-                <p className="muted small">Quien administra el hogar la ve siempre.</p>
+                <p className="muted small">{t('Quien administra el hogar la ve siempre.')}</p>
               </div>
             )}
           </div>
         )}
         {!bookingId && (
           <div className="field">
-            <label htmlFor="files">Adjuntos (tarjetas de embarque, PDF, fotos)</label>
+            <label htmlFor="files">{t('Adjuntos (tarjetas de embarque, PDF, fotos)')}</label>
             <input
               id="files"
               ref={fileInput}
@@ -500,9 +506,9 @@ export function BookingFormPage() {
         {prefill && readMessage && <p className="muted small">{readMessage}</p>}
         {rawText && (
           <details className="small muted" style={{ margin: '8px 0' }}>
-            <summary>Texto leído del PDF (para afinar las reglas)</summary>
+            <summary>{t('Texto leído del PDF (para afinar las reglas)')}</summary>
             <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>{rawText.slice(0, 4000)}</pre>
-            <p>En bruto, con los caracteres invisibles como códigos:</p>
+            <p>{t('En bruto, con los caracteres invisibles como códigos:')}</p>
             <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.7rem', wordBreak: 'break-all' }}>
               {JSON.stringify(rawText.slice(Math.max(0, rawText.search(/asiento/i) - 200), rawText.search(/asiento/i) + 700))}
             </pre>
@@ -510,7 +516,7 @@ export function BookingFormPage() {
         )}
         {error && <p className="error">{error}</p>}
         <button className="btn primary block" type="submit" disabled={saving || progress.busy}>
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('Guardando…') : t('Guardar')}
         </button>
       </form>
     </main>

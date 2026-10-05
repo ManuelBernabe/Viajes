@@ -2,6 +2,7 @@ import QRCode from 'qrcode';
 import { isImage, isPdf } from './files';
 import { renderPdf } from './pdf';
 import { findQrCodes, joinQrCodes } from './qrCodes';
+import { t } from '../i18n';
 
 const MAX_SIDE = 1600;
 
@@ -24,7 +25,7 @@ async function loadBitmap(blob: Blob): Promise<ImageBitmap | HTMLImageElement> {
       return await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('No se puede leer la imagen.'));
+        img.onerror = () => reject(new Error(t('No se puede leer la imagen.')));
         img.src = url;
       });
     } finally {

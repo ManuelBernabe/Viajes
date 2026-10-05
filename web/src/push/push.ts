@@ -1,4 +1,5 @@
 import { api } from '../api';
+import { t } from '../i18n';
 
 export type PushState =
   | { kind: 'unsupported'; reason: string }
@@ -15,9 +16,9 @@ function isStandalone(): boolean {
 export function pushSupport(): { ok: true } | { ok: false; reason: string } {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     if (/iPhone|iPad/.test(navigator.userAgent) && !isStandalone()) {
-      return { ok: false, reason: 'En iPhone los avisos solo funcionan desde la app añadida a la pantalla de inicio.' };
+      return { ok: false, reason: t('En iPhone los avisos solo funcionan desde la app añadida a la pantalla de inicio.') };
     }
-    return { ok: false, reason: 'Este navegador no admite avisos.' };
+    return { ok: false, reason: t('Este navegador no admite avisos.') };
   }
   return { ok: true };
 }
@@ -44,7 +45,7 @@ function toUint8(base64Url: string): Uint8Array {
 function toJson(subscription: PushSubscription): { endpoint: string; keys: { p256dh: string; auth: string } } {
   const json = subscription.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
-    throw new Error('Suscripción incompleta.');
+    throw new Error(t('Suscripción incompleta.'));
   }
   return { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } };
 }
@@ -56,37 +57,37 @@ export async function enablePush(onStep?: (step: string) => void): Promise<PushS
     return { kind: 'unsupported', reason: support.reason };
   }
   const step = onStep ?? (() => undefined);
-  step('pidiendo permiso');
+  step(t('pidiendo permiso'));
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     return { kind: 'denied' };
   }
-  step('pidiendo la clave al servidor');
-  const { publicKey } = await withTimeout(api<{ publicKey: string }>('/api/push/public-key'), 15_000, 'el servidor no responde');
-  step('esperando al service worker');
-  const registration = await withTimeout(navigator.serviceWorker.ready, 15_000, 'el service worker no llega a activarse');
-  step('consultando la suscripción actual');
-  let subscription = await withTimeout(registration.pushManager.getSubscription(), 15_000, 'getSubscription no responde');
+  step(t('pidiendo la clave al servidor'));
+  const { publicKey } = await withTimeout(api<{ publicKey: string }>('/api/push/public-key'), 15_000, t('el servidor no responde'));
+  step(t('esperando al service worker'));
+  const registration = await withTimeout(navigator.serviceWorker.ready, 15_000, t('el service worker no llega a activarse'));
+  step(t('consultando la suscripción actual'));
+  let subscription = await withTimeout(registration.pushManager.getSubscription(), 15_000, t('getSubscription no responde'));
   if (!subscription) {
-    step('suscribiendo el móvil al servicio push de Apple');
+    step(t('suscribiendo el móvil al servicio push de Apple'));
     subscription = await withTimeout(
       registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: toUint8(publicKey) as BufferSource,
       }),
       30_000,
-      'la suscripción push no responde',
+      t('la suscripción push no responde'),
     );
   }
-  step('registrando el móvil en el servidor');
-  await withTimeout(api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(toJson(subscription)) }), 15_000, 'el servidor no responde');
+  step(t('registrando el móvil en el servidor'));
+  await withTimeout(api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(toJson(subscription)) }), 15_000, t('el servidor no responde'));
   return { kind: 'on' };
 }
 
 /** Falla con un mensaje claro si un paso se queda colgado (pasa en iOS con el service worker o con subscribe). */
 function withTimeout<T>(promise: Promise<T>, ms: number, what: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Paso agotado: ${what}.`)), ms);
+    const timer = setTimeout(() => reject(new Error(t('Paso agotado: {what}.', { what }))), ms);
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -120,7 +121,7 @@ export async function sendTestPush(delaySeconds = 0): Promise<number> {
 export async function showLocalTest(): Promise<void> {
   const registration = await navigator.serviceWorker.ready;
   await registration.showNotification('Viajes', {
-    body: 'Aviso local de prueba: el permiso y el service worker funcionan.',
+    body: t('Aviso local de prueba: el permiso y el service worker funcionan.'),
     tag: 'local-test',
     icon: '/pwa-192x192.png',
   });
@@ -149,10 +150,10 @@ export async function pushDiagnostics(): Promise<PushDiagnostics> {
   }
 
   const parts = [
-    `controla: ${navigator.serviceWorker.controller ? 'sí' : 'no'}`,
-    registration?.installing ? 'instalando otro' : '',
-    registration?.waiting ? 'otro esperando' : '',
-    registration?.active ? `activo (${registration.active.state})` : 'sin worker activo',
+    t('controla: {yes}', { yes: navigator.serviceWorker.controller ? t('sí') : t('no') }),
+    registration?.installing ? t('instalando otro') : '',
+    registration?.waiting ? t('otro esperando') : '',
+    registration?.active ? t('activo ({state})', { state: registration.active.state }) : t('sin worker activo'),
   ];
   const workerState = parts.filter(Boolean).join(' · ');
 

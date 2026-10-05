@@ -8,6 +8,7 @@ import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
 import { deleteBooking, getBooking, listAttachments, saveBooking } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
+import { t } from '../i18n';
 
 export function BookingPage() {
   const { bookingId = '' } = useParams();
@@ -19,16 +20,16 @@ export function BookingPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   if (booking === undefined || attachments === undefined) {
-    return <main className="page muted">Cargando…</main>;
+    return <main className="page muted">{t('Cargando…')}</main>;
   }
   if (!booking) {
     return (
       <main className="page">
         <div className="topbar">
           <BackLink to="/" />
-          <h1>Reserva</h1>
+          <h1>{t('Reserva')}</h1>
         </div>
-        <p className="empty">Esta reserva ya no existe.</p>
+        <p className="empty">{t('Esta reserva ya no existe.')}</p>
       </main>
     );
   }
@@ -51,7 +52,7 @@ export function BookingPage() {
   }
 
   async function remove() {
-    if (!confirm(`¿Borrar «${booking!.title}»?`)) {
+    if (!confirm(t('¿Borrar «{name}»?', { name: booking!.title }))) {
       return;
     }
     const tripId = booking!.tripId;
@@ -67,7 +68,7 @@ export function BookingPage() {
           {info.icon} {booking.title}
         </h1>
         <Link className="btn small" to={`/bookings/${bookingId}/edit`}>
-          Editar
+          {t('Editar')}
         </Link>
       </div>
 
@@ -75,47 +76,47 @@ export function BookingPage() {
         <div className="notice danger" style={{ whiteSpace: 'pre-line' }}>
           <strong>⚠️ {booking.changeNote}</strong>
           <button className="btn small" style={{ marginTop: 8 }} type="button" onClick={() => void acknowledge()}>
-            Entendido, quitar el aviso
+            {t('Entendido, quitar el aviso')}
           </button>
         </div>
       )}
 
       {hasQr && (
         <Link className="btn primary block" to={`/bookings/${bookingId}/qr`}>
-          Ver QR
+          {t('Ver QR')}
         </Link>
       )}
 
       <dl className="detail card">
         <dt>{info.startLabel}</dt>
         <dd>
-          {formatLongDay(booking.startLocal)} · {timeOf(booking.startLocal)} hora de {zoneLabel(booking.startTz)}
+          {formatLongDay(booking.startLocal)} · {t('{time} hora de {zone}', { time: timeOf(booking.startLocal), zone: zoneLabel(booking.startTz) })}
           {booking.startPlace && <div>{booking.startPlace}</div>}
         </dd>
         {booking.endLocal && (
           <>
             <dt>{info.endLabel}</dt>
             <dd>
-              {formatLongDay(booking.endLocal)} · {timeOf(booking.endLocal)} hora de {zoneLabel(booking.endTz ?? booking.startTz)}
+              {formatLongDay(booking.endLocal)} · {t('{time} hora de {zone}', { time: timeOf(booking.endLocal), zone: zoneLabel(booking.endTz ?? booking.startTz) })}
               {booking.endPlace && <div>{booking.endPlace}</div>}
             </dd>
           </>
         )}
         {(booking.visibility ?? 'household') !== 'household' && (
           <>
-            <dt>Quién la ve</dt>
-            <dd>{booking.visibility === 'private' ? 'Solo quien la creó y quien administra' : `Personas concretas (${(booking.sharedWith ?? []).length}) además de quien la creó y quien administra`}</dd>
+            <dt>{t('Quién la ve')}</dt>
+            <dd>{booking.visibility === 'private' ? t('Solo quien la creó y quien administra') : t('Personas concretas ({n}) además de quien la creó y quien administra', { n: (booking.sharedWith ?? []).length })}</dd>
           </>
         )}
         {booking.reference && (
           <>
-            <dt>Localizador</dt>
+            <dt>{t('Localizador')}</dt>
             <dd>{booking.reference}</dd>
           </>
         )}
         {booking.address && (
           <>
-            <dt>Dirección</dt>
+            <dt>{t('Dirección')}</dt>
             <dd>
               <a href={`https://maps.apple.com/?q=${encodeURIComponent(booking.address)}`}>{booking.address}</a>
             </dd>
@@ -123,13 +124,13 @@ export function BookingPage() {
         )}
         {booking.notes && (
           <>
-            <dt>Notas</dt>
+            <dt>{t('Notas')}</dt>
             <dd>{booking.notes}</dd>
           </>
         )}
       </dl>
 
-      <h2>Adjuntos</h2>
+      <h2>{t('Adjuntos')}</h2>
       <AttachmentThumbs attachments={attachments} />
       <input
         ref={fileInput}
@@ -148,13 +149,13 @@ export function BookingPage() {
         }}
       />
       <button className="btn block" type="button" disabled={progress.busy} onClick={() => fileInput.current?.click()}>
-        {progress.busy ? progress.message : '+ Adjuntar (cámara, Fotos o Archivos)'}
+        {progress.busy ? progress.message : t('+ Adjuntar (cámara, Fotos o Archivos)')}
       </button>
       {!progress.busy && progress.message && <p className="error small">{progress.message}</p>}
 
       <div className="spacer" />
       <button className="btn danger block" onClick={() => void remove()}>
-        Borrar reserva
+        {t('Borrar reserva')}
       </button>
     </main>
   );

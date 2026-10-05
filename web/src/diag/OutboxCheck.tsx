@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, describeError } from '../api';
 import { enqueue, flush, pending, toSendResult, type Mark, type SendResult } from './outbox';
+import { t } from '../i18n';
 
 async function sendMark(mark: Mark): Promise<SendResult> {
   try {
@@ -23,7 +24,7 @@ export function OutboxCheck({ signedIn }: { signedIn: boolean }) {
     }
     try {
       const marks = await api<Mark[]>('/api/diag/marks');
-      setServer(`${marks.length} marcas${marks.length ? ` · última: ${marks[marks.length - 1].local}` : ''}`);
+      setServer(`${t('{n} marcas', { n: marks.length })}${marks.length ? ` · ${t('última: {mark}', { mark: marks[marks.length - 1].local })}` : ''}`);
     } catch (error) {
       setServer(describeError(error));
     }
@@ -31,7 +32,7 @@ export function OutboxCheck({ signedIn }: { signedIn: boolean }) {
 
   const send = useCallback(async () => {
     const result = await flush(sendMark);
-    setLast(`Enviadas ${result.sent} · descartadas ${result.dropped} · quedan ${result.left}`);
+    setLast(t('Enviadas {sent} · descartadas {dropped} · quedan {left}', { sent: result.sent, dropped: result.dropped, left: result.left }));
     await refresh();
   }, [refresh]);
 
@@ -54,11 +55,11 @@ export function OutboxCheck({ signedIn }: { signedIn: boolean }) {
 
   return (
     <section>
-      <h2>2 · Cambios sin conexión</h2>
-      <p>En cola en el móvil: {queued}</p>
-      <p>En el servidor: {server}</p>
+      <h2>{t('2 · Cambios sin conexión')}</h2>
+      <p>{t('En cola en el móvil: {n}', { n: queued })}</p>
+      <p>{t('En el servidor: {state}', { state: server })}</p>
       {last && <p>{last}</p>}
-      <button onClick={() => void add()}>Añadir marca</button>
+      <button onClick={() => void add()}>{t('Añadir marca')}</button>
     </section>
   );
 }

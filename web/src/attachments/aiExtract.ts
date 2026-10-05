@@ -1,6 +1,7 @@
 import { ApiError } from '../api';
 import { getMeta, setMeta } from '../data/db';
 import type { TextSuggestion } from './extract';
+import { t } from '../i18n';
 
 /** Ajuste «Leer sin IA»: la app se comporta como si el servidor no tuviera clave, para probar las reglas locales. */
 export const AI_OFF_KEY = 'ai.off';
@@ -55,7 +56,7 @@ export async function extractWithAi(bytes: ArrayBuffer, mime: string, name: stri
       return { status: 'nothing' };
     }
     if (!response.ok) {
-      throw new ApiError(response.status, 'No se ha podido leer con IA.');
+      throw new ApiError(response.status, t('No se ha podido leer con IA.'));
     }
     return { status: 'ok', extraction: (await response.json()) as AiExtraction };
   } catch {

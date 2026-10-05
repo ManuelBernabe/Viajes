@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { t } from './i18n';
 
 const CHECK_EVERY_MS = 60_000;
 
@@ -33,11 +34,11 @@ export function UpdatePrompt() {
   return (
     <div className="update-backdrop" role="dialog" aria-modal="true" aria-labelledby="update-title">
       <div className="update-card">
-        <h2 id="update-title">Hay una versión nueva</h2>
-        <p>Se ha publicado una actualización de Viajes. Actualiza para usarla.</p>
-        <button onClick={() => void updateServiceWorker(true)}>Actualizar ahora</button>
+        <h2 id="update-title">{t('Hay una versión nueva')}</h2>
+        <p>{t('Se ha publicado una actualización de Viajes. Actualiza para usarla.')}</p>
+        <button onClick={() => void updateServiceWorker(true)}>{t('Actualizar ahora')}</button>
         <button className="secondary" onClick={() => setNeedRefresh(false)}>
-          Más tarde
+          {t('Más tarde')}
         </button>
       </div>
     </div>

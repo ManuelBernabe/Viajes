@@ -4,12 +4,12 @@ import type { Messages } from './types';
 export const common: Messages = {
   'No se ha podido completar. Inténtalo de nuevo.': {
     en: 'It could not be completed. Please try again.',
-    fr: 'Impossible de terminer. Réessayez.',
+    fr: 'Impossible de terminer. Réessaie.',
     it: 'Non è stato possibile completare. Riprova.',
   },
   'Sin conexión. Inténtalo cuando tengas cobertura.': {
     en: 'No connection. Try again when you have signal.',
-    fr: 'Pas de connexion. Réessayez quand vous aurez du réseau.',
+    fr: 'Pas de connexion. Réessaie quand tu auras du réseau.',
     it: 'Nessuna connessione. Riprova quando avrai campo.',
   },
 };

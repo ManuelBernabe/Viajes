@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { describeError } from '../api';
 import { useSession } from '../app/SessionContext';
 import { checkPasswordReset, resetPassword } from '../household/household';
+import { t } from '../i18n';
 
 /** Página del enlace para cambiar una contraseña olvidada. Lo genera quien administra el hogar; sirve una vez y 24 horas. */
 export function ResetPasswordPage() {
@@ -31,7 +32,7 @@ export function ResetPasswordPage() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (password !== repeat) {
-      setMessage('Las dos contraseñas no coinciden.');
+      setMessage(t('Las dos contraseñas no coinciden.'));
       return;
     }
     setBusy(true);
@@ -56,38 +57,38 @@ export function ResetPasswordPage() {
   return (
     <main className="page no-tabs">
       <div className="topbar">
-        <h1>Nueva contraseña</h1>
+        <h1>{t('Nueva contraseña')}</h1>
       </div>
       <section className="card">
-        {state === 'checking' && <p className="muted">Comprobando el enlace…</p>}
+        {state === 'checking' && <p className="muted">{t('Comprobando el enlace…')}</p>}
         {state === 'invalid' && (
           <>
             <p className="error">{message}</p>
             <Link className="btn block" to="/">
-              Ir a la entrada
+              {t('Ir a la entrada')}
             </Link>
           </>
         )}
         {state === 'valid' && (
           <form onSubmit={submit}>
             <p>
-              Pon una contraseña nueva para <strong>{email ?? 'tu cuenta'}</strong>. Al guardarla entrarás directamente, y se cerrará la
-              sesión en los demás dispositivos donde la tuvieras abierta.
+              {t('Pon una contraseña nueva para')} <strong>{email ?? t('tu cuenta')}</strong>.{' '}
+              {t('Al guardarla entrarás directamente, y se cerrará la sesión en los demás dispositivos donde la tuvieras abierta.')}
             </p>
             {/* El email oculto ayuda al llavero de iOS a guardar la contraseña nueva con la cuenta correcta. */}
             <input type="email" autoComplete="username" value={email ?? ''} readOnly hidden />
             <div className="field">
-              <label htmlFor="new-password">Contraseña nueva</label>
+              <label htmlFor="new-password">{t('Contraseña nueva')}</label>
               <input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="field">
-              <label htmlFor="repeat-password">Repítela</label>
+              <label htmlFor="repeat-password">{t('Repítela')}</label>
               <input id="repeat-password" type="password" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} required />
             </div>
-            <p className="small muted">Al menos 10 caracteres, con mayúsculas, minúsculas y números.</p>
+            <p className="small muted">{t('Al menos 10 caracteres, con mayúsculas, minúsculas y números.')}</p>
             {message && <p className="error">{message}</p>}
             <button className="btn primary block" type="submit" disabled={busy}>
-              Guardar y entrar
+              {t('Guardar y entrar')}
             </button>
           </form>
         )}

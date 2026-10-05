@@ -11,6 +11,7 @@ import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { groupByDay, isInProgress, isPast, nextBooking, TYPE_INFO } from '../domain/agenda';
+import { t } from '../i18n';
 
 export function TripPage() {
   const { tripId = '' } = useParams();
@@ -28,16 +29,16 @@ export function TripPage() {
   const [busy, setBusy] = useState('');
 
   if (trip === undefined || bookings === undefined) {
-    return <main className="page muted">Cargando…</main>;
+    return <main className="page muted">{t('Cargando…')}</main>;
   }
   if (!trip) {
     return (
       <main className="page">
         <div className="topbar">
           <BackLink to="/" />
-          <h1>Viaje</h1>
+          <h1>{t('Viaje')}</h1>
         </div>
-        <p className="empty">Este viaje ya no existe.</p>
+        <p className="empty">{t('Este viaje ya no existe.')}</p>
       </main>
     );
   }
@@ -56,22 +57,22 @@ export function TripPage() {
     const wanted = !offline.wanted;
     await setManualOffline(tripId, wanted);
     if (wanted) {
-      setBusy('Bajando adjuntos…');
+      setBusy(t('Bajando adjuntos…'));
       const result = await downloadMissing(tripId, downloadAttachment);
-      setBusy(result.failed ? 'No se han podido bajar todos: sin conexión.' : '');
+      setBusy(result.failed ? t('No se han podido bajar todos: sin conexión.') : '');
     } else {
       await dropBlobs(tripId);
     }
   }
 
   async function retryDownload() {
-    setBusy('Bajando adjuntos…');
+    setBusy(t('Bajando adjuntos…'));
     const result = await downloadMissing(tripId, downloadAttachment);
-    setBusy(result.failed ? 'No se han podido bajar todos: sin conexión.' : '');
+    setBusy(result.failed ? t('No se han podido bajar todos: sin conexión.') : '');
   }
 
   async function remove() {
-    if (!confirm(`¿Borrar el viaje «${trip!.title}» con todas sus reservas?`)) {
+    if (!confirm(t('¿Borrar el viaje «{name}» con todas sus reservas?', { name: trip!.title }))) {
       return;
     }
     await deleteTrip(tripId);
@@ -84,7 +85,7 @@ export function TripPage() {
         <BackLink to="/" />
         <h1>{trip.title}</h1>
         <Link className="btn small" to={`/trips/${tripId}/edit`}>
-          Editar
+          {t('Editar')}
         </Link>
       </div>
       <div className="muted">{[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}</div>
@@ -92,24 +93,24 @@ export function TripPage() {
       {highlight?.next && (
         <section className={`card highlight type-${highlight.next.type}`}>
           <div className="small eyebrow-type">
-            {isInProgress(highlight.next, Date.now()) ? 'En curso' : 'Lo siguiente'} · {TYPE_INFO[highlight.next.type].label}
+            {isInProgress(highlight.next, Date.now()) ? t('En curso') : t('Lo siguiente')} · {TYPE_INFO[highlight.next.type].label}
           </div>
           <h3>
             {TYPE_INFO[highlight.next.type].icon} {highlight.next.title}
           </h3>
           {highlight.next.changeNote && <div className="error small" style={{ whiteSpace: 'pre-line' }}>⚠️ {highlight.next.changeNote}</div>}
           <div>
-            {formatDay(highlight.next.startLocal)} · {timeOf(highlight.next.startLocal)} hora de {zoneLabel(highlight.next.startTz)}
+            {formatDay(highlight.next.startLocal)} · {t('{time} hora de {zone}', { time: timeOf(highlight.next.startLocal), zone: zoneLabel(highlight.next.startTz) })}
             {highlight.next.startPlace && ` · ${highlight.next.startPlace}`}
           </div>
           <div className="actions">
             {highlight.qr && (
               <Link className="btn primary" to={`/bookings/${highlight.next.id}/qr`}>
-                Ver QR
+                {t('Ver QR')}
               </Link>
             )}
             <Link className="btn" to={`/bookings/${highlight.next.id}`}>
-              Ver reserva
+              {t('Ver reserva')}
             </Link>
           </div>
         </section>
@@ -120,31 +121,31 @@ export function TripPage() {
           <OfflineBadge state={offline} />
           {offline && offline.total > 0 && (
             <button className="btn small" onClick={() => void toggleOffline()}>
-              {offline.wanted ? 'Quitar del móvil' : 'Guardar en el móvil'}
+              {offline.wanted ? t('Quitar del móvil') : t('Guardar en el móvil')}
             </button>
           )}
         </div>
         {offline && offline.wanted && offline.missing > 0 && (
           <button className="btn small" style={{ marginTop: 8 }} onClick={() => void retryDownload()}>
-            Bajar lo que falta
+            {t('Bajar lo que falta')}
           </button>
         )}
         {offline && offline.pendingUpload > 0 && (
-          <p className="muted small">{offline.pendingUpload} adjunto{offline.pendingUpload > 1 ? 's' : ''} pendiente{offline.pendingUpload > 1 ? 's' : ''} de subir.</p>
+          <p className="muted small">{offline.pendingUpload === 1 ? t('1 adjunto pendiente de subir.') : t('{n} adjuntos pendientes de subir.', { n: offline.pendingUpload })}</p>
         )}
         {busy && <p className="muted small">{busy}</p>}
       </section>
 
       <Link className="btn primary block" to={`/trips/${tripId}/bookings/new`}>
-        + Añadir reserva
+        {t('+ Añadir reserva')}
       </Link>
 
       <div style={{ marginTop: 12 }}>
         <TypeChips types={typesPresent} value={filter} onChange={setFilter} />
       </div>
 
-      {visible.length === 0 && <p className="empty">Sin reservas todavía.</p>}
-      {visible.length > 0 && days.length === 0 && <p className="muted small">No queda ninguna reserva por delante en este viaje.</p>}
+      {visible.length === 0 && <p className="empty">{t('Sin reservas todavía.')}</p>}
+      {visible.length > 0 && days.length === 0 && <p className="muted small">{t('No queda ninguna reserva por delante en este viaje.')}</p>}
       {days.map((day) => (
         <section key={day.date}>
           <div className="day">{formatLongDay(day.date)}</div>
@@ -156,7 +157,7 @@ export function TripPage() {
 
       {pastDays.length > 0 && (
         <>
-          <h2>Histórico</h2>
+          <h2>{t('Histórico')}</h2>
           {pastDays.map((day) => (
             <section key={day.date}>
               <div className="day">{formatLongDay(day.date)}</div>
@@ -170,7 +171,7 @@ export function TripPage() {
 
       <div className="spacer" />
       <button className="btn danger block" onClick={() => void remove()}>
-        Borrar viaje
+        {t('Borrar viaje')}
       </button>
     </main>
   );

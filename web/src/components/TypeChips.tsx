@@ -1,5 +1,6 @@
 import type { BookingType } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
+import { t } from '../i18n';
 
 /** Filtro por tipo de reserva: una píldora por tipo presente, cada una con el color de su tipo. */
 export function TypeChips({ types, value, onChange }: { types: Iterable<BookingType>; value: BookingType | null; onChange: (type: BookingType | null) => void }) {
@@ -8,9 +9,9 @@ export function TypeChips({ types, value, onChange }: { types: Iterable<BookingT
     return null;
   }
   return (
-    <div className="chips" role="group" aria-label="Filtrar por tipo">
+    <div className="chips" role="group" aria-label={t('Filtrar por tipo')}>
       <button type="button" className={value === null ? 'on' : ''} onClick={() => onChange(null)}>
-        Todo
+        {t('Todo')}
       </button>
       {present.map((type) => (
         <button key={type} type="button" className={`type-${type}${value === type ? ' on' : ''}`} onClick={() => onChange(value === type ? null : type)}>

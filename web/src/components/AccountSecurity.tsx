@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { api, describeError } from '../api';
+import { t } from '../i18n';
 
 /** Cambiar la contraseña y cerrar la sesión en todos los dispositivos (por ejemplo, si se pierde el móvil). */
 export function AccountSecurity({ onSignedOutEverywhere }: { onSignedOutEverywhere: () => Promise<void> }) {
@@ -18,7 +19,7 @@ export function AccountSecurity({ onSignedOutEverywhere }: { onSignedOutEverywhe
       setCurrent('');
       setNext('');
       setOpen(false);
-      setMessage('Contraseña cambiada. Las sesiones de otros dispositivos se cerrarán en un minuto.');
+      setMessage(t('Contraseña cambiada. Las sesiones de otros dispositivos se cerrarán en un minuto.'));
     } catch (error) {
       setMessage(describeError(error));
     } finally {
@@ -27,7 +28,7 @@ export function AccountSecurity({ onSignedOutEverywhere }: { onSignedOutEverywhe
   }
 
   async function everywhere() {
-    if (!confirm('¿Cerrar la sesión en todos los dispositivos, también en este? Tendrás que volver a entrar con tu contraseña.')) {
+    if (!confirm(t('¿Cerrar la sesión en todos los dispositivos, también en este? Tendrás que volver a entrar con tu contraseña.'))) {
       return;
     }
     setBusy(true);
@@ -44,30 +45,30 @@ export function AccountSecurity({ onSignedOutEverywhere }: { onSignedOutEverywhe
     <>
       {!open ? (
         <button className="btn block" type="button" style={{ marginTop: 8 }} disabled={busy} onClick={() => setOpen(true)}>
-          Cambiar contraseña
+          {t('Cambiar contraseña')}
         </button>
       ) : (
         <form onSubmit={changePassword}>
           <div className="field">
-            <label htmlFor="current-password">Contraseña actual</label>
+            <label htmlFor="current-password">{t('Contraseña actual')}</label>
             <input id="current-password" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
           </div>
           <div className="field">
-            <label htmlFor="new-password">Nueva contraseña (10 caracteres o más)</label>
+            <label htmlFor="new-password">{t('Nueva contraseña (10 caracteres o más)')}</label>
             <input id="new-password" type="password" autoComplete="new-password" minLength={10} value={next} onChange={(e) => setNext(e.target.value)} required />
           </div>
           <button className="btn primary block" type="submit" disabled={busy}>
-            Guardar contraseña
+            {t('Guardar contraseña')}
           </button>
           <button className="btn block" type="button" style={{ marginTop: 8 }} onClick={() => setOpen(false)}>
-            Cancelar
+            {t('Cancelar')}
           </button>
         </form>
       )}
       <button className="btn danger block" type="button" style={{ marginTop: 8 }} disabled={busy} onClick={() => void everywhere()}>
-        Cerrar sesión en todos los dispositivos
+        {t('Cerrar sesión en todos los dispositivos')}
       </button>
-      <p className="muted small">Útil si pierdes el móvil: desde cualquier otro dispositivo cortas el acceso en un minuto.</p>
+      <p className="muted small">{t('Útil si pierdes el móvil: desde cualquier otro dispositivo cortas el acceso en un minuto.')}</p>
       {message && <p className="small">{message}</p>}
     </>
   );

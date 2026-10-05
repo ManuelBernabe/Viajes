@@ -1,4 +1,195 @@
 import type { Messages } from './types';
 
 /** Traducciones: auth. Clave = el texto en español tal y como aparece en el código. */
-export const auth: Messages = {};
+export const auth: Messages = {
+  // Entrada y alta
+  'Sin conexión: no se ha podido comprobar la sesión. Inténtalo cuando tengas red.': {
+    en: "No connection: couldn't check your session. Try again when you're online.",
+    fr: "Pas de connexion : impossible de vérifier ta session. Réessaie quand tu auras du réseau.",
+    it: 'Nessuna connessione: impossibile verificare la sessione. Riprova quando avrai campo.',
+  },
+  'Iniciar sesión': { en: 'Sign in', fr: 'Connexion', it: 'Accedi' },
+  'Crear cuenta': { en: 'Create account', fr: 'Créer un compte', it: 'Crea account' },
+  Email: { en: 'Email', fr: 'E-mail', it: 'Email' },
+  Contraseña: { en: 'Password', fr: 'Mot de passe', it: 'Password' },
+  'Código de registro': { en: 'Sign-up code', fr: "Code d'inscription", it: 'Codice di registrazione' },
+  Entrar: { en: 'Sign in', fr: 'Se connecter', it: 'Entra' },
+  'No tengo cuenta': { en: "I don't have an account", fr: "Je n'ai pas de compte", it: 'Non ho un account' },
+  'Ya tengo cuenta': { en: 'I already have an account', fr: "J'ai déjà un compte", it: 'Ho già un account' },
+
+  // Contraseña olvidada
+  '¿Has olvidado la contraseña?': { en: 'Forgot your password?', fr: 'Mot de passe oublié ?', it: 'Hai dimenticato la password?' },
+  Si: { en: 'If', fr: 'Si', it: 'Se' },
+  'tiene cuenta, en uno o dos minutos te llegará un correo con un enlace para poner una contraseña nueva (mira también en spam). Ábrelo en este móvil. Si no llega, pide a quien administra tu hogar el enlace desde Ajustes → Hogar → «Contraseña».':
+    {
+      en: 'has an account, within a minute or two you’ll get an email with a link to set a new password (check your spam too). Open it on this phone. If it doesn’t arrive, ask your household admin for the link from Settings → Household → “Password”.',
+      fr: 'a un compte, tu recevras d’ici une ou deux minutes un e-mail avec un lien pour choisir un nouveau mot de passe (regarde aussi dans les spams). Ouvre-le sur ce téléphone. S’il n’arrive pas, demande le lien à la personne qui gère ton foyer depuis Réglages → Foyer → « Mot de passe ».',
+      it: 'ha un account, entro un paio di minuti ti arriverà un’email con un link per impostare una nuova password (controlla anche lo spam). Aprila su questo telefono. Se non arriva, chiedi il link a chi gestisce la tua famiglia da Impostazioni → Famiglia → «Password».',
+    },
+  'Escribe el email de tu cuenta y te mandamos un enlace para poner una contraseña nueva:': {
+    en: 'Enter your account email and we’ll send you a link to set a new password:',
+    fr: 'Saisis l’e-mail de ton compte et on t’envoie un lien pour choisir un nouveau mot de passe :',
+    it: 'Scrivi l’email del tuo account e ti mandiamo un link per impostare una nuova password:',
+  },
+  'Enviarme el enlace': { en: 'Send me the link', fr: 'M’envoyer le lien', it: 'Inviami il link' },
+
+  // Invitación
+  'Ya formas parte de «{name}».': { en: 'You’re now part of “{name}”.', fr: 'Tu fais maintenant partie de « {name} ».', it: 'Ora fai parte di «{name}».' },
+  Invitación: { en: 'Invitation', fr: 'Invitation', it: 'Invito' },
+  'Comprobando la invitación…': { en: 'Checking the invitation…', fr: 'Vérification de l’invitation…', it: 'Verifica dell’invito…' },
+  Alguien: { en: 'Someone', fr: 'Quelqu’un', it: 'Qualcuno' },
+  'te invita a ver y editar sus viajes en Viajes (hogar «{household}»).': {
+    en: 'is inviting you to view and edit their trips in Viajes (household “{household}”).',
+    fr: 't’invite à voir et modifier ses voyages dans Viajes (foyer « {household} »).',
+    it: 'ti invita a vedere e modificare i suoi viaggi su Viajes (famiglia «{household}»).',
+  },
+  'te invita a ver y editar sus viajes en Viajes.': {
+    en: 'is inviting you to view and edit their trips in Viajes.',
+    fr: 't’invite à voir et modifier ses voyages dans Viajes.',
+    it: 'ti invita a vedere e modificare i suoi viaggi su Viajes.',
+  },
+  'Tienes la sesión iniciada como {email}.': {
+    en: 'You’re signed in as {email}.',
+    fr: 'Ta session est ouverte avec {email}.',
+    it: 'Hai effettuato l’accesso come {email}.',
+  },
+  'Unirme con esta cuenta': { en: 'Join with this account', fr: 'Rejoindre avec ce compte', it: 'Unisciti con questo account' },
+  'Usar otra cuenta': { en: 'Use another account', fr: 'Utiliser un autre compte', it: 'Usa un altro account' },
+  'Crear mi cuenta': { en: 'Create my account', fr: 'Créer mon compte', it: 'Crea il mio account' },
+  'Entrar con mi cuenta': { en: 'Sign in with my account', fr: 'Me connecter avec mon compte', it: 'Entra con il mio account' },
+  'Crear cuenta y unirme': { en: 'Create account and join', fr: 'Créer un compte et rejoindre', it: 'Crea account e unisciti' },
+  'Entrar y unirme': { en: 'Sign in and join', fr: 'Me connecter et rejoindre', it: 'Entra e unisciti' },
+  'Después, añade la app a la pantalla de inicio (Compartir → Añadir a pantalla de inicio) y activa los avisos en Ajustes. Todo está explicado en la':
+    {
+      en: 'Then add the app to your Home Screen (Share → Add to Home Screen) and turn on notifications in Settings. It’s all explained in the',
+      fr: 'Ensuite, ajoute l’app à l’écran d’accueil (Partager → Sur l’écran d’accueil) et active les notifications dans Réglages. Tout est expliqué dans le',
+      it: 'Poi aggiungi l’app alla schermata Home (Condividi → Aggiungi alla schermata Home) e attiva le notifiche in Impostazioni. È tutto spiegato nella',
+    },
+  'guía de uso': { en: 'user guide', fr: 'guide d’utilisation', it: 'guida all’uso' },
+  'Esta invitación ha caducado. Pide otra a quien te la envió.': {
+    en: 'This invitation has expired. Ask whoever sent it for a new one.',
+    fr: 'Cette invitation a expiré. Demandes-en une autre à la personne qui te l’a envoyée.',
+    it: 'Questo invito è scaduto. Chiedine un altro a chi te l’ha mandato.',
+  },
+  'Esta invitación ya se ha usado. Pide otra a quien te la envió.': {
+    en: 'This invitation has already been used. Ask whoever sent it for a new one.',
+    fr: 'Cette invitation a déjà été utilisée. Demandes-en une autre à la personne qui te l’a envoyée.',
+    it: 'Questo invito è già stato usato. Chiedine un altro a chi te l’ha mandato.',
+  },
+  'Esta invitación se ha anulado.': { en: 'This invitation has been cancelled.', fr: 'Cette invitation a été annulée.', it: 'Questo invito è stato annullato.' },
+  'Esta invitación no existe. Comprueba el enlace.': {
+    en: 'This invitation doesn’t exist. Check the link.',
+    fr: 'Cette invitation n’existe pas. Vérifie le lien.',
+    it: 'Questo invito non esiste. Controlla il link.',
+  },
+
+  // Nueva contraseña
+  'Las dos contraseñas no coinciden.': { en: 'The two passwords don’t match.', fr: 'Les deux mots de passe ne correspondent pas.', it: 'Le due password non coincidono.' },
+  'Nueva contraseña': { en: 'New password', fr: 'Nouveau mot de passe', it: 'Nuova password' },
+  'Comprobando el enlace…': { en: 'Checking the link…', fr: 'Vérification du lien…', it: 'Verifica del link…' },
+  'Ir a la entrada': { en: 'Go to sign-in', fr: 'Aller à la connexion', it: 'Vai all’accesso' },
+  'Pon una contraseña nueva para': { en: 'Set a new password for', fr: 'Choisis un nouveau mot de passe pour', it: 'Imposta una nuova password per' },
+  'tu cuenta': { en: 'your account', fr: 'ton compte', it: 'il tuo account' },
+  'Al guardarla entrarás directamente, y se cerrará la sesión en los demás dispositivos donde la tuvieras abierta.': {
+    en: 'Once you save it you’ll be signed in straight away, and you’ll be signed out on any other devices.',
+    fr: 'En l’enregistrant, tu entreras directement, et la session sera fermée sur tes autres appareils.',
+    it: 'Salvandola entrerai subito e verrà chiusa la sessione sugli altri dispositivi in cui era aperta.',
+  },
+  'Contraseña nueva': { en: 'New password', fr: 'Nouveau mot de passe', it: 'Nuova password' },
+  Repítela: { en: 'Repeat it', fr: 'Confirme-le', it: 'Ripetila' },
+  'Al menos 10 caracteres, con mayúsculas, minúsculas y números.': {
+    en: 'At least 10 characters, with upper case, lower case and numbers.',
+    fr: 'Au moins 10 caractères, avec majuscules, minuscules et chiffres.',
+    it: 'Almeno 10 caratteri, con maiuscole, minuscole e numeri.',
+  },
+  'Guardar y entrar': { en: 'Save and sign in', fr: 'Enregistrer et se connecter', it: 'Salva ed entra' },
+
+  // App y errores de pantalla
+  'Abriendo…': { en: 'Opening…', fr: 'Ouverture…', it: 'Apertura…' },
+  'Algo ha fallado': { en: 'Something went wrong', fr: 'Un problème est survenu', it: 'Qualcosa è andato storto' },
+  'Esta pantalla no se ha podido mostrar. Tus datos siguen guardados.': {
+    en: 'This screen couldn’t be shown. Your data is still saved.',
+    fr: 'Cet écran n’a pas pu s’afficher. Tes données sont toujours enregistrées.',
+    it: 'Non è stato possibile mostrare questa schermata. I tuoi dati sono ancora salvati.',
+  },
+  'Volver a Inicio': { en: 'Back to Home', fr: 'Retour à l’accueil', it: 'Torna alla Home' },
+  Recargar: { en: 'Reload', fr: 'Recharger', it: 'Ricarica' },
+  'No se puede leer la imagen.': { en: 'Can’t read the image.', fr: 'Impossible de lire l’image.', it: 'Impossibile leggere l’immagine.' },
+
+  // Diagnóstico (/diag)
+  'Viajes · diagnóstico': { en: 'Viajes · diagnostics', fr: 'Viajes · diagnostic', it: 'Viajes · diagnostica' },
+  '1 · Sesión': { en: '1 · Session', fr: '1 · Session', it: '1 · Sessione' },
+  'Sesión iniciada: {email}': { en: 'Signed in: {email}', fr: 'Session ouverte : {email}', it: 'Accesso effettuato: {email}' },
+  'Cerrar sesión': { en: 'Sign out', fr: 'Se déconnecter', it: 'Esci' },
+  'Sin conexión: la sesión se comprobará al volver la red.': {
+    en: 'No connection: the session will be checked once you’re back online.',
+    fr: 'Pas de connexion : la session sera vérifiée au retour du réseau.',
+    it: 'Nessuna connessione: la sessione verrà verificata quando torna la rete.',
+  },
+  'Código de registro (solo para crear cuenta)': {
+    en: 'Sign-up code (only to create an account)',
+    fr: 'Code d’inscription (uniquement pour créer un compte)',
+    it: 'Codice di registrazione (solo per creare un account)',
+  },
+  '2 · Cambios sin conexión': { en: '2 · Offline changes', fr: '2 · Modifications hors ligne', it: '2 · Modifiche offline' },
+  '{n} marcas': { en: '{n} marks', fr: '{n} marques', it: '{n} segni' },
+  'última: {mark}': { en: 'latest: {mark}', fr: 'dernière : {mark}', it: 'ultimo: {mark}' },
+  'Enviadas {sent} · descartadas {dropped} · quedan {left}': {
+    en: 'Sent {sent} · dropped {dropped} · left {left}',
+    fr: 'Envoyées {sent} · rejetées {dropped} · restantes {left}',
+    it: 'Inviati {sent} · scartati {dropped} · rimasti {left}',
+  },
+  'En cola en el móvil: {n}': { en: 'Queued on the phone: {n}', fr: 'En attente sur le téléphone : {n}', it: 'In coda sul telefono: {n}' },
+  'En el servidor: {state}': { en: 'On the server: {state}', fr: 'Sur le serveur : {state}', it: 'Sul server: {state}' },
+  'Añadir marca': { en: 'Add mark', fr: 'Ajouter une marque', it: 'Aggiungi segno' },
+  '3 y 4 · Adjuntar, guardar en el móvil y subir': {
+    en: '3 and 4 · Attach, save on the phone and upload',
+    fr: '3 et 4 · Joindre, enregistrer sur le téléphone et envoyer',
+    it: '3 e 4 · Allega, salva sul telefono e carica',
+  },
+  subido: { en: 'uploaded', fr: 'envoyé', it: 'caricato' },
+  'error {status}': { en: 'error {status}', fr: 'erreur {status}', it: 'errore {status}' },
+  'descargado {size} MB': { en: 'downloaded {size} MB', fr: 'téléchargé {size} Mo', it: 'scaricato {size} MB' },
+  'mismo tamaño': { en: 'same size', fr: 'même taille', it: 'stessa dimensione' },
+  'tamaño distinto': { en: 'different size', fr: 'taille différente', it: 'dimensione diversa' },
+  'Elegido: {name}': { en: 'Chosen: {name}', fr: 'Choisi : {name}', it: 'Scelto: {name}' },
+  'sin tipo': { en: 'no type', fr: 'sans type', it: 'senza tipo' },
+  'En el móvil: {name} ({size} MB), guardado hace {days} días': {
+    en: 'On the phone: {name} ({size} MB), saved {days} days ago',
+    fr: 'Sur le téléphone : {name} ({size} Mo), enregistré il y a {days} jours',
+    it: 'Sul telefono: {name} ({size} MB), salvato {days} giorni fa',
+  },
+  íntegro: { en: 'intact', fr: 'intact', it: 'integro' },
+  dañado: { en: 'damaged', fr: 'endommagé', it: 'danneggiato' },
+  'Nada guardado en el móvil todavía.': { en: 'Nothing saved on the phone yet.', fr: 'Rien d’enregistré sur le téléphone pour l’instant.', it: 'Ancora niente salvato sul telefono.' },
+  'Subir al servidor': { en: 'Upload to server', fr: 'Envoyer au serveur', it: 'Carica sul server' },
+  'Descargar del servidor': { en: 'Download from server', fr: 'Télécharger depuis le serveur', it: 'Scarica dal server' },
+  '5 · Pantalla encendida': { en: '5 · Screen on', fr: '5 · Écran allumé', it: '5 · Schermo acceso' },
+  'Estado: {status}': { en: 'Status: {status}', fr: 'État : {status}', it: 'Stato: {status}' },
+  'Mantener encendida': { en: 'Keep on', fr: 'Garder allumé', it: 'Tieni acceso' },
+  // Estados de WakeLockCheck (se traducen con t(status)).
+  'sin probar': { en: 'not tested', fr: 'pas testé', it: 'non provato' },
+  activo: { en: 'active', fr: 'actif', it: 'attivo' },
+  'no soportado': { en: 'not supported', fr: 'non pris en charge', it: 'non supportato' },
+  rechazado: { en: 'rejected', fr: 'refusé', it: 'rifiutato' },
+  '6 · Cifrado': { en: '6 · Encryption', fr: '6 · Chiffrement', it: '6 · Cifratura' },
+  'Calculando…': { en: 'Calculating…', fr: 'Calcul en cours…', it: 'Calcolo in corso…' },
+  'Probar 600.000 iteraciones': { en: 'Test 600,000 iterations', fr: 'Tester 600 000 itérations', it: 'Prova 600.000 iterazioni' },
+  '(dentro del límite de 2 s)': { en: '(within the 2 s limit)', fr: '(dans la limite de 2 s)', it: '(entro il limite di 2 s)' },
+  'supera 2 s': { en: 'over 2 s', fr: 'dépasse 2 s', it: 'supera 2 s' },
+  Entorno: { en: 'Environment', fr: 'Environnement', it: 'Ambiente' },
+  'comprobando…': { en: 'checking…', fr: 'vérification…', it: 'verifica…' },
+  'consultando…': { en: 'querying…', fr: 'requête en cours…', it: 'interrogazione…' },
+  concedido: { en: 'granted', fr: 'accordé', it: 'concesso' },
+  denegado: { en: 'denied', fr: 'refusé', it: 'negato' },
+  'sin respuesta (¿sin conexión?)': { en: 'no response (offline?)', fr: 'pas de réponse (hors ligne ?)', it: 'nessuna risposta (offline?)' },
+  'Versión de la app: {version}': { en: 'App version: {version}', fr: 'Version de l’app : {version}', it: 'Versione dell’app: {version}' },
+  'Servidor: {server}': { en: 'Server: {server}', fr: 'Serveur : {server}', it: 'Server: {server}' },
+  'Modo: {mode}': { en: 'Mode: {mode}', fr: 'Mode : {mode}', it: 'Modalità: {mode}' },
+  'instalada en la pantalla de inicio': { en: 'installed on the Home Screen', fr: 'installée sur l’écran d’accueil', it: 'installata nella schermata Home' },
+  'dentro de Safari, sin instalar': { en: 'inside Safari, not installed', fr: 'dans Safari, non installée', it: 'dentro Safari, non installata' },
+  'Almacenamiento persistente: {state}': { en: 'Persistent storage: {state}', fr: 'Stockage persistant : {state}', it: 'Archiviazione persistente: {state}' },
+  'Red: {state}': { en: 'Network: {state}', fr: 'Réseau : {state}', it: 'Rete: {state}' },
+  'con conexión': { en: 'online', fr: 'connecté', it: 'connesso' },
+  'sin conexión': { en: 'offline', fr: 'hors ligne', it: 'offline' },
+};

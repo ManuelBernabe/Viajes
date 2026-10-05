@@ -2,6 +2,7 @@ import { attachmentsOfTrip, getManualOffline, offlineStatus, storedBlobIds, want
 import type { Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { todayLocal } from '../domain/agenda';
+import { t } from '../i18n';
 
 export interface TripOffline {
   wanted: boolean;
@@ -27,13 +28,13 @@ export function OfflineBadge({ state }: { state: TripOffline | undefined }) {
     return null;
   }
   if (state.total === 0) {
-    return <span className="badge">Sin adjuntos</span>;
+    return <span className="badge">{t('Sin adjuntos')}</span>;
   }
   if (state.missing === 0) {
-    return <span className="badge ok">✅ Listo sin conexión</span>;
+    return <span className="badge ok">✅ {t('Listo sin conexión')}</span>;
   }
   if (state.wanted) {
-    return <span className="badge warn">⚠️ Faltan {state.missing} de {state.total}</span>;
+    return <span className="badge warn">⚠️ {t('Faltan {missing} de {total}', { missing: state.missing, total: state.total })}</span>;
   }
-  return <span className="badge">{state.total - state.missing} de {state.total} en el móvil</span>;
+  return <span className="badge">{t('{n} de {total} en el móvil', { n: state.total - state.missing, total: state.total })}</span>;
 }

@@ -20,6 +20,7 @@ import { TripFormPage } from './pages/TripFormPage';
 import { TripPage } from './pages/TripPage';
 import { UpdatePrompt } from './UpdatePrompt';
 import './app/theme.css';
+import { t } from './i18n';
 
 /** Con el desplazamiento en un contenedor interior, cada pantalla nueva empieza arriba (el navegador ya no lo hace solo). */
 function ScrollToTop() {
@@ -34,7 +35,7 @@ function Gate() {
   const session = useSession();
   const location = useLocation();
   if (session.status === 'loading') {
-    return <main className="page no-tabs center muted">Abriendo…</main>;
+    return <main className="page no-tabs center muted">{t('Abriendo…')}</main>;
   }
   // El enlace de invitación, el de cambiar la contraseña y la guía se abren con o sin sesión: la propia página decide qué pedir.
   if (location.pathname.startsWith('/invitacion/') || location.pathname.startsWith('/restablecer/') || (location.pathname === '/guia' && session.status !== 'in')) {

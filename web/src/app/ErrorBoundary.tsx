@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { t } from '../i18n';
 
 interface State {
   error: Error | null;
@@ -23,19 +24,19 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     return (
       <main className="page no-tabs">
         <div className="topbar">
-          <h1>Algo ha fallado</h1>
+          <h1>{t('Algo ha fallado')}</h1>
         </div>
         <section className="card">
-          <p>Esta pantalla no se ha podido mostrar. Tus datos siguen guardados.</p>
+          <p>{t('Esta pantalla no se ha podido mostrar. Tus datos siguen guardados.')}</p>
           <p className="muted small" style={{ wordBreak: 'break-word' }}>
             {this.state.error.name}: {this.state.error.message}
           </p>
           <div className="actions">
             <a className="btn primary" href="/">
-              Volver a Inicio
+              {t('Volver a Inicio')}
             </a>
             <button className="btn" type="button" onClick={() => location.reload()}>
-              Recargar
+              {t('Recargar')}
             </button>
           </div>
         </section>

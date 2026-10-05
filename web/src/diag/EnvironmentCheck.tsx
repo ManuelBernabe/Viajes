@@ -2,21 +2,22 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { isStandalone, type DisplayEnv } from '../platform/standalone';
 import { describeServer, formatBuild, type ServerVersion } from '../platform/version';
+import { t } from '../i18n';
 
 const APP_VERSION = formatBuild(new Date(__BUILD_AT__), __BUILD_COMMIT__);
 
 export function EnvironmentCheck() {
-  const [persisted, setPersisted] = useState('comprobando…');
+  const [persisted, setPersisted] = useState(t('comprobando…'));
   const [online, setOnline] = useState(navigator.onLine);
-  const [server, setServer] = useState('consultando…');
+  const [server, setServer] = useState(t('consultando…'));
 
   useEffect(() => {
     if (!navigator.storage?.persist) {
-      setPersisted('no soportado');
+      setPersisted(t('no soportado'));
       return;
     }
     navigator.storage.persist().then(
-      (granted) => setPersisted(granted ? '✅ concedido' : '⚠️ denegado'),
+      (granted) => setPersisted(granted ? `✅ ${t('concedido')}` : `⚠️ ${t('denegado')}`),
       () => setPersisted('error'),
     );
   }, []);
@@ -36,7 +37,7 @@ export function EnvironmentCheck() {
     const load = () =>
       api<ServerVersion>('/api/version').then(
         (info) => setServer(describeServer(info, new Date())),
-        () => setServer('sin respuesta (¿sin conexión?)'),
+        () => setServer(t('sin respuesta (¿sin conexión?)')),
       );
     void load();
     const onVisible = () => {
@@ -52,12 +53,12 @@ export function EnvironmentCheck() {
 
   return (
     <section>
-      <h2>Entorno</h2>
-      <p>Versión de la app: {APP_VERSION}</p>
-      <p>Servidor: {server}</p>
-      <p>Modo: {standalone ? '✅ instalada en la pantalla de inicio' : '⚠️ dentro de Safari, sin instalar'}</p>
-      <p>Almacenamiento persistente: {persisted}</p>
-      <p>Red: {online ? 'con conexión' : 'sin conexión'}</p>
+      <h2>{t('Entorno')}</h2>
+      <p>{t('Versión de la app: {version}', { version: APP_VERSION })}</p>
+      <p>{t('Servidor: {server}', { server })}</p>
+      <p>{t('Modo: {mode}', { mode: standalone ? `✅ ${t('instalada en la pantalla de inicio')}` : `⚠️ ${t('dentro de Safari, sin instalar')}` })}</p>
+      <p>{t('Almacenamiento persistente: {state}', { state: persisted })}</p>
+      <p>{t('Red: {state}', { state: online ? t('con conexión') : t('sin conexión') })}</p>
     </section>
   );
 }

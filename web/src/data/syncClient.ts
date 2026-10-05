@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { api, ApiError } from '../api';
+import { t } from '../i18n';
 import { isAiOff } from '../attachments/aiExtract';
 import { subscribe } from './bus';
 import { getMeta, openDb } from './db';
@@ -88,7 +89,7 @@ async function upload(attachment: Attachment, blob: StoredBlob): Promise<SendRes
     if (response.ok) {
       return 'ok';
     }
-    const error = new ApiError(response.status, 'No se ha podido subir el fichero.');
+    const error = new ApiError(response.status, t('No se ha podido subir el fichero.'));
     noteExpired(error);
     return toSendResult(error);
   } catch {
@@ -116,7 +117,7 @@ export async function downloadAttachment(attachment: Attachment): Promise<ArrayB
     return null;
   }
   if (!response.ok) {
-    const error = new ApiError(response.status, 'No se ha podido bajar el fichero.');
+    const error = new ApiError(response.status, t('No se ha podido bajar el fichero.'));
     noteExpired(error);
     throw error;
   }
@@ -127,7 +128,7 @@ export async function downloadAttachment(attachment: Attachment): Promise<ArrayB
 export async function downloadInboxAttachment(itemId: string, attachmentId: string): Promise<ArrayBuffer> {
   const response = await fetch(`/api/inbox/${itemId}/attachments/${attachmentId}/content`);
   if (!response.ok) {
-    const error = new ApiError(response.status, 'No se ha podido bajar el adjunto del correo.');
+    const error = new ApiError(response.status, t('No se ha podido bajar el adjunto del correo.'));
     noteExpired(error);
     throw error;
   }

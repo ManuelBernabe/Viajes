@@ -13,6 +13,7 @@ import type { Booking } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { applyChanges, diffBooking, findExistingBooking, type Change } from '../domain/changes';
+import { t } from '../i18n';
 
 export interface InboxPrefill {
   inboxItemId: string;
@@ -49,16 +50,16 @@ export function InboxItemPage() {
   const [working, setWorking] = useState('');
 
   if (item === undefined || trips === undefined) {
-    return <main className="page muted">Cargando…</main>;
+    return <main className="page muted">{t('Cargando…')}</main>;
   }
   if (!item) {
     return (
       <main className="page">
         <div className="topbar">
           <BackLink to="/inbox" />
-          <h1>Correo</h1>
+          <h1>{t('Correo')}</h1>
         </div>
-        <p className="empty">Este borrador ya se ha tratado.</p>
+        <p className="empty">{t('Este borrador ya se ha tratado.')}</p>
       </main>
     );
   }
@@ -73,7 +74,7 @@ export function InboxItemPage() {
    */
   async function createBooking() {
     if (!chosen) {
-      setMessage('Crea primero un viaje donde guardar la reserva.');
+      setMessage(t('Crea primero un viaje donde guardar la reserva.'));
       return;
     }
     setPreparing(true);
@@ -85,10 +86,10 @@ export function InboxItemPage() {
       const again = await reExtractInbox(source.id);
       if (again) {
         source = again;
-        sources.push('la lectura con IA del correo');
+        sources.push(t('la lectura con IA del correo'));
       }
     } else {
-      sources.push('la lectura con IA del correo');
+      sources.push(t('la lectura con IA del correo'));
     }
     let prefill: InboxPrefill = {
       inboxItemId: source.id,
@@ -108,7 +109,7 @@ export function InboxItemPage() {
       !!(prefill.type && prefill.startLocal && prefill.reference && prefill.startPlace && prefill.endPlace);
     const warnings: string[] = [];
     if (prefill.type && sources.length === 0) {
-      sources.push('los datos estructurados del correo');
+      sources.push(t('los datos estructurados del correo'));
     }
     try {
       // El billete adjunto es más fiable que el texto del correo: va primero.
@@ -125,7 +126,7 @@ export function InboxItemPage() {
             prefill = applySuggestion(prefill, suggestion);
             sources.push(attachment.name);
           } else {
-            warnings.push(`${attachment.name}: sin datos reconocibles (${text.length} caracteres de texto).`);
+            warnings.push(t('{name}: sin datos reconocibles ({n} caracteres de texto).', { name: attachment.name, n: text.length }));
           }
         } catch (error) {
           // Sin red o PDF ilegible: se sigue con lo que hay, pero se dice, con detalle para poder arreglarlo.
@@ -138,7 +139,7 @@ export function InboxItemPage() {
       }
       if (!complete() && item!.bodyText) {
         prefill = applySuggestion(prefill, suggestFromText(item!.bodyText, item!.subject));
-        sources.push('el texto del correo');
+        sources.push(t('el texto del correo'));
       }
     } finally {
       setPreparing(false);
@@ -161,7 +162,7 @@ export function InboxItemPage() {
     if (!match) {
       return;
     }
-    setWorking('Actualizando la reserva…');
+    setWorking(t('Actualizando la reserva…'));
     try {
       const body = applyChanges(match.existing, match.prefill, match.changes, new Date());
       await saveBooking(body, session.email ?? '', match.existing.id);
@@ -179,7 +180,7 @@ export function InboxItemPage() {
     if (!match) {
       return;
     }
-    setWorking('Añadiendo los adjuntos…');
+    setWorking(t('Añadiendo los adjuntos…'));
     try {
       await importInboxAttachments(item!.id, match.existing.id, session.email ?? '', setWorking);
       navigate(`/bookings/${match.existing.id}`, { replace: true });
@@ -197,7 +198,7 @@ export function InboxItemPage() {
   }
 
   async function discard() {
-    if (!confirm('¿Descartar este correo? No se creará ninguna reserva.')) {
+    if (!confirm(t('¿Descartar este correo? No se creará ninguna reserva.'))) {
       return;
     }
     try {
@@ -216,8 +217,8 @@ export function InboxItemPage() {
       </div>
 
       <section className="card">
-        <div className="small muted">De {item.fromAddress}</div>
-        <div className="small muted">Asunto: {item.subject}</div>
+        <div className="small muted">{t('De {from}', { from: item.fromAddress })}</div>
+        <div className="small muted">{t('Asunto: {subject}', { subject: item.subject })}</div>
         {item.suggestedType && (
           <p>
             {TYPE_INFO[item.suggestedType].icon} {TYPE_INFO[item.suggestedType].label}
@@ -225,27 +226,27 @@ export function InboxItemPage() {
             {item.suggestedReference && ` · ${item.suggestedReference}`}
           </p>
         )}
-        {!item.suggestedType && <p className="small">No se han encontrado datos estructurados: la reserva se rellena a mano con el asunto y los adjuntos.</p>}
+        {!item.suggestedType && <p className="small">{t('No se han encontrado datos estructurados: la reserva se rellena a mano con el asunto y los adjuntos.')}</p>}
         {item.attachments.length > 0 && (
           <ul className="small">
             {item.attachments.map((a) => (
               <li key={a.id}>
                 {a.name} · {formatSize(a.size)}
-                {a.qrText && ' · código de barras leído'}
+                {a.qrText && ` · ${t('código de barras leído')}`}
               </li>
             ))}
           </ul>
         )}
         {item.bodyText && (
           <button className="btn small" type="button" onClick={() => setShowBody(!showBody)}>
-            {showBody ? 'Ocultar el correo' : 'Ver el texto del correo'}
+            {showBody ? t('Ocultar el correo') : t('Ver el texto del correo')}
           </button>
         )}
         {showBody && <pre className="small" style={{ whiteSpace: 'pre-wrap' }}>{item.bodyText}</pre>}
       </section>
 
       <div className="field">
-        <label htmlFor="trip">Viaje</label>
+        <label htmlFor="trip">{t('Viaje')}</label>
         {options.length > 0 ? (
           <select id="trip" value={chosen} onChange={(e) => setTripId(e.target.value)}>
             {options.map((trip) => (
@@ -256,7 +257,7 @@ export function InboxItemPage() {
           </select>
         ) : (
           <Link className="btn" to="/trips/new">
-            Crear un viaje
+            {t('Crear un viaje')}
           </Link>
         )}
       </div>
@@ -265,7 +266,7 @@ export function InboxItemPage() {
 
       {match ? (
         <section className="card highlight">
-          <h3>Esta reserva ya está en la app</h3>
+          <h3>{t('Esta reserva ya está en la app')}</h3>
           <p>
             {TYPE_INFO[match.existing.type].icon} {match.existing.title}
             {match.existing.reference && ` · ${match.existing.reference}`}
@@ -273,7 +274,7 @@ export function InboxItemPage() {
           {match.changes.length > 0 ? (
             <>
               <p className="error">
-                <strong>El correo trae cambios:</strong>
+                <strong>{t('El correo trae cambios:')}</strong>
               </p>
               <ul>
                 {match.changes.map((change) => (
@@ -284,17 +285,17 @@ export function InboxItemPage() {
               </ul>
               <div className="actions">
                 <button className="btn primary" disabled={!!working} onClick={() => void updateExisting()}>
-                  {working || 'Actualizar la reserva'}
+                  {working || t('Actualizar la reserva')}
                 </button>
               </div>
             </>
           ) : (
             <>
-              <p className="muted small">Los datos del correo coinciden con los de la reserva.</p>
+              <p className="muted small">{t('Los datos del correo coinciden con los de la reserva.')}</p>
               {item.attachments.length > 0 && (
                 <div className="actions">
                   <button className="btn primary" disabled={!!working} onClick={() => void attachToExisting()}>
-                    {working || 'Añadir los adjuntos a la reserva'}
+                    {working || t('Añadir los adjuntos a la reserva')}
                   </button>
                 </div>
               )}
@@ -302,20 +303,20 @@ export function InboxItemPage() {
           )}
           <div className="actions">
             <button className="btn" disabled={!!working} onClick={createAnyway}>
-              Crear como reserva nueva
+              {t('Crear como reserva nueva')}
             </button>
             <button className="btn danger" disabled={!!working} onClick={() => void discard()}>
-              Descartar el correo
+              {t('Descartar el correo')}
             </button>
           </div>
         </section>
       ) : (
         <div className="actions">
           <button className="btn primary" disabled={preparing} onClick={() => void createBooking()}>
-            {preparing ? 'Leyendo el correo…' : 'Crear reserva'}
+            {preparing ? t('Leyendo el correo…') : t('Crear reserva')}
           </button>
           <button className="btn danger" onClick={() => void discard()}>
-            Descartar
+            {t('Descartar')}
           </button>
         </div>
       )}

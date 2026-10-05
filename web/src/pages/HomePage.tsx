@@ -7,6 +7,7 @@ import { useSyncStatus } from '../data/syncClient';
 import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBooking, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
+import { t } from '../i18n';
 
 /** Resumen de las reservas de un viaje para su tarjeta: cuántas hay y cuál es la siguiente. */
 interface TripSummary {
@@ -24,20 +25,20 @@ function TripCard({ trip, summary, done = false, current = false }: { trip: Trip
         <div className="grow">
           <h3>
             {trip.title}
-            {done && <span className="badge done">Realizado</span>}
-            {current && <span className="badge">En curso</span>}
+            {done && <span className="badge done">{t('Realizado')}</span>}
+            {current && <span className="badge">{t('En curso')}</span>}
           </h3>
           <div className="muted small">
             {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
           </div>
           {!done && next && (
             <div className="small" style={{ marginTop: 4 }}>
-              {summary?.inProgress ? 'En curso' : 'Lo siguiente'}: {TYPE_INFO[next.type].icon} {next.title} · {formatDay(next.startLocal)} {timeOf(next.startLocal)}
+              {summary?.inProgress ? t('En curso') : t('Lo siguiente')}: {TYPE_INFO[next.type].icon} {next.title} · {formatDay(next.startLocal)} {timeOf(next.startLocal)}
             </div>
           )}
           {summary && (
             <div className="muted small">
-              {summary.count === 0 ? 'Sin reservas todavía' : summary.count === 1 ? '1 reserva' : `${summary.count} reservas`}
+              {summary.count === 0 ? t('Sin reservas todavía') : summary.count === 1 ? t('1 reserva') : t('{n} reservas', { n: summary.count })}
             </div>
           )}
         </div>
@@ -56,15 +57,15 @@ function History({ trips }: { trips: Trip[] }) {
   }
   const years = new Map<string, Trip[]>();
   for (const trip of trips) {
-    const year = (trip.endDate ?? trip.startDate ?? '').slice(0, 4) || 'Sin fecha';
+    const year = (trip.endDate ?? trip.startDate ?? '').slice(0, 4) || t('Sin fecha');
     years.set(year, [...(years.get(year) ?? []), trip]);
   }
   return (
     <>
-      <h2>Histórico</h2>
+      <h2>{t('Histórico')}</h2>
       {!open ? (
         <button className="btn block" type="button" onClick={() => setOpen(true)}>
-          Ver el histórico ({trips.length} {trips.length === 1 ? 'viaje realizado' : 'viajes realizados'})
+          {trips.length === 1 ? t('Ver el histórico (1 viaje realizado)') : t('Ver el histórico ({n} viajes realizados)', { n: trips.length })}
         </button>
       ) : (
         <>
@@ -77,7 +78,7 @@ function History({ trips }: { trips: Trip[] }) {
             </section>
           ))}
           <button className="btn block" type="button" onClick={() => setOpen(false)}>
-            Plegar el histórico
+            {t('Plegar el histórico')}
           </button>
         </>
       )}
@@ -111,26 +112,26 @@ export function HomePage() {
   return (
     <main className="page">
       <div className="topbar">
-        <h1 className="two-words">Viajes y reservas</h1>
-        <Link className="btn primary add" to="/trips/new" aria-label="Nuevo viaje">
+        <h1 className="two-words">{t('Viajes y reservas')}</h1>
+        <Link className="btn primary add" to="/trips/new" aria-label={t('Nuevo viaje')}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
             <path d="M12 7v10M7 12h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
           </svg>
-          Nuevo viaje
+          {t('Nuevo viaje')}
         </Link>
       </div>
       {sync.pending > 0 && (
         <p className="muted small">
-          {sync.pending} {sync.pending === 1 ? 'cambio pendiente' : 'cambios pendientes'} de enviar
-          {sync.incomplete ? ' · sin conexión con el servidor' : ''}
+          {sync.pending === 1 ? t('1 cambio pendiente de enviar') : t('{n} cambios pendientes de enviar', { n: sync.pending })}
+          {sync.incomplete ? ` · ${t('sin conexión con el servidor')}` : ''}
         </p>
       )}
       {inboxCount > 0 && (
         <Link className="card highlight" to="/inbox">
           <div className="row between">
             <span>
-              ✉️ {inboxCount} {inboxCount === 1 ? 'correo por revisar' : 'correos por revisar'}
+              ✉️ {inboxCount === 1 ? t('1 correo por revisar') : t('{n} correos por revisar', { n: inboxCount })}
             </span>
             <span className="muted">›</span>
           </div>
@@ -138,15 +139,15 @@ export function HomePage() {
       )}
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (
         <div className="empty">
-          <p>Todavía no hay viajes.</p>
+          <p>{t('Todavía no hay viajes.')}</p>
           <Link className="btn primary" to="/trips/new">
-            Crear el primer viaje
+            {t('Crear el primer viaje')}
           </Link>
         </div>
       )}
       {current.length > 0 && (
         <>
-          <h2>En curso</h2>
+          <h2>{t('En curso')}</h2>
           {current.map((trip) => (
             <TripCard key={trip.id} trip={trip} summary={summaryOf(trip)} current />
           ))}
@@ -154,7 +155,7 @@ export function HomePage() {
       )}
       {upcoming.length > 0 && (
         <>
-          <h2>Próximos viajes</h2>
+          <h2>{t('Próximos viajes')}</h2>
           {upcoming.map((trip) => (
             <TripCard key={trip.id} trip={trip} summary={summaryOf(trip)} />
           ))}

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { addAttachment } from '../data/repo';
 import { formatSize, mimeOf, tooBig } from './files';
 import { readQr } from './qr';
+import { t } from '../i18n';
 
 export interface AttachProgress {
   busy: boolean;
@@ -22,19 +23,19 @@ export async function readFiles(files: FileList | File[], onProgress?: (message:
   for (const file of Array.from(files)) {
     const mime = mimeOf(file);
     if (tooBig(file.size)) {
-      result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: `${file.name}: supera los 20 MB (${formatSize(file.size)}).` });
+      result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: t('{name}: supera los 20 MB ({size}).', { name: file.name, size: formatSize(file.size) }) });
       continue;
     }
     try {
       const bytes = await file.arrayBuffer();
       if (bytes.byteLength === 0) {
-        result.push({ file, bytes, mime, qrText: null, error: `${file.name}: el fichero está vacío. Si está en iCloud, ábrelo antes en Archivos para descargarlo.` });
+        result.push({ file, bytes, mime, qrText: null, error: t('{name}: el fichero está vacío. Si está en iCloud, ábrelo antes en Archivos para descargarlo.', { name: file.name }) });
         continue;
       }
-      onProgress?.(`Buscando QR en ${file.name}…`);
+      onProgress?.(t('Buscando QR en {name}…', { name: file.name }));
       result.push({ file, bytes, mime, qrText: await readQr(bytes, mime), error: null });
     } catch (error) {
-      result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: `${file.name}: ${error instanceof Error ? error.message : 'no se ha podido leer.'}` });
+      result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: `${file.name}: ${error instanceof Error ? error.message : t('no se ha podido leer.')}` });
     }
   }
   return result;
@@ -46,7 +47,7 @@ export function useAttachFiles(createdBy: string) {
 
   const attachRead = useCallback(
     async (bookingId: string, read: ReadFile[]) => {
-      setProgress({ busy: true, message: 'Guardando…' });
+      setProgress({ busy: true, message: t('Guardando…') });
       const errors: string[] = [];
       for (const item of read) {
         if (item.error) {
@@ -60,7 +61,7 @@ export function useAttachFiles(createdBy: string) {
             createdBy,
           );
         } catch (error) {
-          errors.push(`${item.file.name}: ${error instanceof Error ? error.message : 'no se ha podido guardar.'}`);
+          errors.push(`${item.file.name}: ${error instanceof Error ? error.message : t('no se ha podido guardar.')}`);
         }
       }
       setProgress({ busy: false, message: errors.join(' ') });
@@ -73,7 +74,7 @@ export function useAttachFiles(createdBy: string) {
       if (files.length === 0) {
         return;
       }
-      setProgress({ busy: true, message: 'Leyendo…' });
+      setProgress({ busy: true, message: t('Leyendo…') });
       const read = await readFiles(files, (message) => setProgress({ busy: true, message }));
       await attachRead(bookingId, read);
     },

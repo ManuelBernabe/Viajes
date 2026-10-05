@@ -1,5 +1,6 @@
 import { dateOf, toUtcMs } from '../data/localTime';
 import type { Booking, BookingType, Trip } from '../data/types';
+import { t } from '../i18n';
 
 const HOUR = 3_600_000;
 
@@ -102,13 +103,19 @@ function key(trip: Trip): string {
   return trip.startDate ?? trip.endDate ?? '9999-99-99';
 }
 
+/**
+ * Palabras con dos sentidos («Entrada» del hotel o de un concierto, «Inicio» de la reserva o de la app): la clave lleva
+ * el contexto entre corchetes, que en español se quita.
+ */
+const noContext = (text: string) => text.replace(/ \[[^\]]*\]$/, '');
+
 export const TYPE_INFO: Record<BookingType, { icon: string; label: string; startLabel: string; endLabel: string }> = {
-  flight: { icon: '✈️', label: 'Vuelo', startLabel: 'Salida', endLabel: 'Llegada' },
-  train: { icon: '🚄', label: 'Tren', startLabel: 'Salida', endLabel: 'Llegada' },
-  hotel: { icon: '🏨', label: 'Hotel', startLabel: 'Entrada', endLabel: 'Salida' },
-  car: { icon: '🚗', label: 'Coche', startLabel: 'Recogida', endLabel: 'Devolución' },
-  ticket: { icon: '🎟️', label: 'Entrada', startLabel: 'Inicio', endLabel: 'Fin' },
-  other: { icon: '📌', label: 'Otro', startLabel: 'Inicio', endLabel: 'Fin' },
+  flight: { icon: '✈️', label: t('Vuelo'), startLabel: t('Salida'), endLabel: t('Llegada') },
+  train: { icon: '🚄', label: t('Tren'), startLabel: t('Salida'), endLabel: t('Llegada') },
+  hotel: { icon: '🏨', label: t('Hotel'), startLabel: noContext(t('Entrada [hotel]')), endLabel: noContext(t('Salida [hotel]')) },
+  car: { icon: '🚗', label: t('Coche'), startLabel: t('Recogida'), endLabel: t('Devolución') },
+  ticket: { icon: '🎟️', label: t('Entrada'), startLabel: noContext(t('Inicio [reserva]')), endLabel: t('Fin') },
+  other: { icon: '📌', label: t('Otro'), startLabel: noContext(t('Inicio [reserva]')), endLabel: t('Fin') },
 };
 
 /** «2026-10-12» de hoy en la zona del móvil. */

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, describeError } from '../api';
 import { formatSize } from '../attachments/files';
-import { locale } from '../i18n';
+import { locale, t } from '../i18n';
 
 interface LocalBackup {
   name: string;
@@ -19,7 +19,7 @@ interface TokenRow {
 }
 
 function when(ms: number | null): string {
-  return ms ? new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+  return ms ? new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) : t('nunca');
 }
 
 /** Sección «Copias de seguridad» de Ajustes: copias diarias del servidor y token para la copia en Google Drive. */
@@ -57,7 +57,7 @@ export function BackupSettings({ admin = false }: { admin?: boolean }) {
   }
 
   async function revoke(id: string) {
-    if (!confirm('¿Revocar este token? El script dejará de poder descargar copias con él.')) {
+    if (!confirm(t('¿Revocar este token? El script dejará de poder descargar copias con él.'))) {
       return;
     }
     try {
@@ -76,7 +76,7 @@ export function BackupSettings({ admin = false }: { admin?: boolean }) {
       await navigator.clipboard.writeText(fresh);
       setCopied(true);
     } catch {
-      setMessage('No se ha podido copiar; selecciónalo y cópialo a mano.');
+      setMessage(t('No se ha podido copiar; selecciónalo y cópialo a mano.'));
     }
   }
 
@@ -84,42 +84,49 @@ export function BackupSettings({ admin = false }: { admin?: boolean }) {
 
   return (
     <section className="card">
-      <h3>Copias de seguridad</h3>
+      <h3>{t('Copias de seguridad')}</h3>
       <p className="small">
-        En el servidor: {local === null ? 'consultando…' : latest ? `última copia ${latest.name.slice(7, 17)} (${formatSize(latest.size)}), ${local.length} guardadas` : 'todavía ninguna'}.
-        Se hace una al día y se conservan las 14 últimas.
+        {t('En el servidor:')}{' '}
+        {local === null
+          ? t('consultando…')
+          : latest
+            ? t('última copia {date} ({size}), {n} guardadas', { date: latest.name.slice(7, 17), size: formatSize(latest.size), n: local.length })
+            : t('todavía ninguna')}
+        .{' '}{t('Se hace una al día y se conservan las 14 últimas.')}
       </p>
       <p className="small muted">
-        Para tener también una copia fuera del servidor, el script de Google puede guardar cada noche un zip con todo (base de datos,
-        billetes y claves) en tu Drive. Necesita un token de copia; las instrucciones están en <code>integrations/gmail</code>.
+        {t(
+          'Para tener también una copia fuera del servidor, el script de Google puede guardar cada noche un zip con todo (base de datos, billetes y claves) en tu Drive. Necesita un token de copia; las instrucciones están en',
+        )}{' '}
+        <code>integrations/gmail</code>.
       </p>
       {fresh && (
         <div className="notice">
-          <div className="small">Token de copia nuevo. Cópialo ahora: no se volverá a mostrar.</div>
+          <div className="small">{t('Token de copia nuevo. Cópialo ahora: no se volverá a mostrar.')}</div>
           <code style={{ wordBreak: 'break-all', display: 'block', margin: '6px 0' }}>{fresh}</code>
           <button className="btn small" type="button" onClick={() => void copy()}>
-            {copied ? 'Copiado ✓' : 'Copiar'}
+            {copied ? t('Copiado ✓') : t('Copiar')}
           </button>
         </div>
       )}
       {tokens?.map((token) => (
         <div key={token.id} className="row between small" style={{ margin: '6px 0' }}>
           <span>
-            {token.label} · creado {when(token.createdMs)} · última copia {when(token.lastUsedMs)}
+            {token.label} · {t('creado {when}', { when: when(token.createdMs) })} · {t('última copia {when}', { when: when(token.lastUsedMs) })}
           </span>
           {admin && (
             <button className="btn small danger" type="button" onClick={() => void revoke(token.id)}>
-              Revocar
+              {t('Revocar')}
             </button>
           )}
         </div>
       ))}
       {admin ? (
         <button className="btn block" type="button" onClick={() => void create()}>
-          Generar token de copia para Drive
+          {t('Generar token de copia para Drive')}
         </button>
       ) : (
-        <p className="muted small">Solo quien administra el hogar puede generar o revocar el token de copia.</p>
+        <p className="muted small">{t('Solo quien administra el hogar puede generar o revocar el token de copia.')}</p>
       )}
       {message && <p className="error small">{message}</p>}
     </section>

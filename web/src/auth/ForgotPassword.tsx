@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api, describeError } from '../api';
+import { t } from '../i18n';
 
 /**
  * «¿Has olvidado la contraseña?»: pide un enlace por correo con el email de la cuenta. Lo envía el script de Gmail del
@@ -36,7 +37,7 @@ export function ForgotPassword({ email: initial }: { email: string }) {
           setOpen(true);
         }}
       >
-        ¿Has olvidado la contraseña?
+        {t('¿Has olvidado la contraseña?')}
       </button>
     );
   }
@@ -45,19 +46,18 @@ export function ForgotPassword({ email: initial }: { email: string }) {
     <div className="notice" style={{ marginTop: 12 }}>
       {sent ? (
         <p className="small" style={{ margin: 0 }}>
-          Si <strong>{email.trim()}</strong> tiene cuenta, en uno o dos minutos te llegará un correo con un enlace para poner una
-          contraseña nueva (mira también en spam). Ábrelo en este móvil. Si no llega, pide a quien administra tu hogar el enlace desde
-          Ajustes → Hogar → «Contraseña».
+          {t('Si')} <strong>{email.trim()}</strong>{' '}
+          {t('tiene cuenta, en uno o dos minutos te llegará un correo con un enlace para poner una contraseña nueva (mira también en spam). Ábrelo en este móvil. Si no llega, pide a quien administra tu hogar el enlace desde Ajustes → Hogar → «Contraseña».')}
         </p>
       ) : (
         <>
-          <div className="small">Escribe el email de tu cuenta y te mandamos un enlace para poner una contraseña nueva:</div>
+          <div className="small">{t('Escribe el email de tu cuenta y te mandamos un enlace para poner una contraseña nueva:')}</div>
           <div className="field" style={{ marginTop: 8 }}>
             <input type="email" autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           {message && <p className="error small">{message}</p>}
           <button className="btn primary block" type="button" disabled={busy || !email.trim()} onClick={() => void request()}>
-            Enviarme el enlace
+            {t('Enviarme el enlace')}
           </button>
         </>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApiError, describeError } from '../api';
+import { t } from '../i18n';
 
 /** Los errores del navegador (permiso, suscripción, worker) se enseñan tal cual: son la pista para arreglarlo. */
 function describePushError(error: unknown): string {
@@ -32,7 +33,7 @@ export function PushSettings() {
   const [diagnostics, setDiagnostics] = useState<PushDiagnostics | null>(null);
 
   useEffect(() => {
-    pushState().then(setState, () => setState({ kind: 'unsupported', reason: 'No se ha podido comprobar.' }));
+    pushState().then(setState, () => setState({ kind: 'unsupported', reason: t('No se ha podido comprobar.') }));
   }, []);
 
   async function refreshDiagnostics() {
@@ -49,19 +50,25 @@ export function PushSettings() {
     try {
       const result = await action();
       if (result === undefined) {
-        setMessage('Aviso local mostrado. Si no lo ves, revisa Ajustes del iPhone → Notificaciones → Viajes y el modo de concentración.');
+        setMessage(t('Aviso local mostrado. Si no lo ves, revisa Ajustes del iPhone → Notificaciones → Viajes y el modo de concentración.'));
       } else if (typeof result === 'number') {
         if (result < 0) {
-          setMessage(`Llegará en ${TEST_DELAY_S} segundos: cierra la app y espera en la pantalla de inicio.`);
+          setMessage(t('Llegará en {n} segundos: cierra la app y espera en la pantalla de inicio.', { n: TEST_DELAY_S }));
         } else {
-          setMessage(result > 0 ? `Aviso enviado a ${result} dispositivo${result === 1 ? '' : 's'}.` : 'No hay ningún dispositivo con avisos activados.');
+          setMessage(
+            result === 1
+              ? t('Aviso enviado a 1 dispositivo.')
+              : result > 0
+                ? t('Aviso enviado a {n} dispositivos.', { n: result })
+                : t('No hay ningún dispositivo con avisos activados.'),
+          );
         }
       } else {
         setState(result);
         if (result.kind === 'denied') {
-          setMessage('Permiso denegado. Actívalo en Ajustes del iPhone → Notificaciones → Viajes.');
+          setMessage(t('Permiso denegado. Actívalo en Ajustes del iPhone → Notificaciones → Viajes.'));
         } else if (result.kind === 'on') {
-          setMessage('Avisos activados en este móvil.');
+          setMessage(t('Avisos activados en este móvil.'));
         }
       }
     } catch (error) {
@@ -73,46 +80,45 @@ export function PushSettings() {
 
   return (
     <section className="card">
-      <h3>Avisos</h3>
+      <h3>{t('Avisos')}</h3>
       <p className="small">
-        La víspera a las 20:00 (hora del lugar), tres horas antes de la salida y al instante si un correo modifica una
-        reserva.
+        {t('La víspera a las 20:00 (hora del lugar), tres horas antes de la salida y al instante si un correo modifica una reserva.')}
       </p>
-      {state === null && <p className="muted small">Comprobando…</p>}
+      {state === null && <p className="muted small">{t('Comprobando…')}</p>}
       {state?.kind === 'unsupported' && <p className="muted small">{state.reason}</p>}
       {state?.kind === 'denied' && (
-        <p className="muted small">Permiso denegado. Actívalo en Ajustes del iPhone → Notificaciones → Viajes.</p>
+        <p className="muted small">{t('Permiso denegado. Actívalo en Ajustes del iPhone → Notificaciones → Viajes.')}</p>
       )}
       {state?.kind === 'off' && (
         <button className="btn block" disabled={busy} onClick={() => void run(() => enablePush((step) => setMessage(`${step}…`)))}>
-          Activar avisos en este móvil
+          {t('Activar avisos en este móvil')}
         </button>
       )}
       {state?.kind === 'on' && (
         <>
           <button className="btn block" disabled={busy} onClick={() => void run(showLocalTest)}>
-            Mostrar un aviso local (sin servidor)
+            {t('Mostrar un aviso local (sin servidor)')}
           </button>
           <button className="btn block" disabled={busy} onClick={() => void run(() => sendTestPush(TEST_DELAY_S))}>
-            Enviar un aviso de prueba en {TEST_DELAY_S} s
+            {t('Enviar un aviso de prueba en {n} s', { n: TEST_DELAY_S })}
           </button>
           <button className="btn block secondary" disabled={busy} onClick={() => void run(disablePush)}>
-            Desactivar avisos en este móvil
+            {t('Desactivar avisos en este móvil')}
           </button>
         </>
       )}
       {message && <p className="muted small">{message}</p>}
       {(state?.kind === 'on' || state?.kind === 'off') && (
         <details onToggle={(event) => event.currentTarget.open && void refreshDiagnostics()}>
-          <summary className="small">Diagnóstico de avisos</summary>
+          <summary className="small">{t('Diagnóstico de avisos')}</summary>
           {diagnostics ? (
             <div className="small">
-              <p>Service worker: {diagnostics.workerBuild ?? 'sin respuesta (versión antigua sin avisos)'}</p>
-              <p>Estado: {diagnostics.workerState}</p>
-              <p>Servicio push: {diagnostics.endpointHost ?? 'ninguno'}</p>
-              <p>Bitácora del móvil ({diagnostics.log.length}):</p>
+              <p>Service worker: {diagnostics.workerBuild ?? t('sin respuesta (versión antigua sin avisos)')}</p>
+              <p>{t('Estado: {state}', { state: diagnostics.workerState })}</p>
+              <p>{t('Servicio push: {host}', { host: diagnostics.endpointHost ?? t('ninguno') })}</p>
+              <p>{t('Bitácora del móvil ({n}):', { n: diagnostics.log.length })}</p>
               {diagnostics.log.length === 0 ? (
-                <p className="muted">Ningún push ha llegado todavía a este móvil.</p>
+                <p className="muted">{t('Ningún push ha llegado todavía a este móvil.')}</p>
               ) : (
                 <ul>
                   {diagnostics.log.map((line, i) => (
@@ -121,11 +127,11 @@ export function PushSettings() {
                 </ul>
               )}
               <button className="btn block secondary" onClick={() => void refreshDiagnostics()}>
-                Actualizar diagnóstico
+                {t('Actualizar diagnóstico')}
               </button>
             </div>
           ) : (
-            <p className="muted small">Consultando…</p>
+            <p className="muted small">{t('Consultando…')}</p>
           )}
         </details>
       )}

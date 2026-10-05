@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
 import { getTrip, saveTrip } from '../data/repo';
+import { t } from '../i18n';
 
 export function TripFormPage() {
   const { tripId } = useParams();
@@ -33,11 +34,11 @@ export function TripFormPage() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!title.trim()) {
-      setError('Ponle un título al viaje.');
+      setError(t('Ponle un título al viaje.'));
       return;
     }
     if (startDate && endDate && endDate < startDate) {
-      setError('La vuelta no puede ser antes de la ida.');
+      setError(t('La vuelta no puede ser antes de la ida.'));
       return;
     }
     const trip = await saveTrip(
@@ -49,35 +50,35 @@ export function TripFormPage() {
   }
 
   if (!loaded) {
-    return <main className="page muted">Cargando…</main>;
+    return <main className="page muted">{t('Cargando…')}</main>;
   }
 
   return (
     <main className="page">
       <div className="topbar">
         <BackLink to={tripId ? `/trips/${tripId}` : '/'} />
-        <h1>{tripId ? 'Editar viaje' : 'Nuevo viaje'}</h1>
+        <h1>{tripId ? t('Editar viaje') : t('Nuevo viaje')}</h1>
       </div>
       <form onSubmit={submit}>
         <div className="field">
-          <label htmlFor="title">Título</label>
-          <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Japón 2026" autoFocus={!tripId} />
+          <label htmlFor="title">{t('Título')}</label>
+          <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('Japón 2026')} autoFocus={!tripId} />
         </div>
         <div className="field">
-          <label htmlFor="destination">Destino</label>
-          <input id="destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Tokio" />
+          <label htmlFor="destination">{t('Destino')}</label>
+          <input id="destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={t('Tokio')} />
         </div>
         <div className="field">
-          <label htmlFor="start">Ida</label>
+          <label htmlFor="start">{t('Ida')}</label>
           <input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="end">Vuelta</label>
+          <label htmlFor="end">{t('Vuelta')}</label>
           <input id="end" type="date" value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)} />
         </div>
         {error && <p className="error">{error}</p>}
         <button className="btn primary block" type="submit">
-          Guardar
+          {t('Guardar')}
         </button>
       </form>
     </main>

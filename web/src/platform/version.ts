@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 export interface ServerVersion {
   commit: string | null;
   deploymentId: string | null;
@@ -18,7 +20,7 @@ export function formatBuild(builtAt: Date, commitSha?: string): string {
 /** «a1b2c3d · arrancado hace 12 min»: qué despliegue responde y desde cuándo. */
 export function describeServer(info: ServerVersion, now: Date): string {
   const minutes = Math.max(0, Math.round((now.getTime() - new Date(info.startedAt).getTime()) / 60_000));
-  const age = minutes < 60 ? `hace ${minutes} min` : `hace ${Math.floor(minutes / 60)} h`;
-  const id = info.commit ?? info.deploymentId?.slice(0, 8) ?? 'sin identificar';
-  return `${id} · arrancado ${age}`;
+  const age = minutes < 60 ? t('hace {n} min', { n: minutes }) : t('hace {n} h', { n: Math.floor(minutes / 60) });
+  const id = info.commit ?? info.deploymentId?.slice(0, 8) ?? t('sin identificar');
+  return `${id} · ${t('arrancado {age}', { age })}`;
 }

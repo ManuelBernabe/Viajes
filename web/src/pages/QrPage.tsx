@@ -10,6 +10,7 @@ import { getBlob, getBooking, listAttachments, updateAttachment } from '../data/
 import type { Attachment } from '../data/types';
 import { downloadAttachment } from '../data/syncClient';
 import { useLiveQuery } from '../data/useLive';
+import { t } from '../i18n';
 
 /** Un QR para enseñar: un adjunto puede traer varios (uno por pasajero). */
 interface QrEntry {
@@ -26,7 +27,7 @@ function entriesOf(attachments: readonly Attachment[]): QrEntry[] {
     codes.forEach((code, index) => {
       // En las tarjetas de embarque el propio código lleva el nombre del pasajero.
       const passenger = parseBoardingPass(code)?.passenger;
-      entries.push({ key: `${attachment.id}:${index}`, attachment, code, label: passenger || `Pasajero ${index + 1}` });
+      entries.push({ key: `${attachment.id}:${index}`, attachment, code, label: passenger || t('Pasajero {n}', { n: index + 1 }) });
     });
   }
   // Con un solo código por adjunto, la etiqueta útil es el nombre del fichero.
@@ -92,12 +93,12 @@ export function QrPage() {
     const size = Math.round(Math.min(window.innerWidth * 0.92, window.innerHeight * 0.7) * (window.devicePixelRatio || 1));
     drawQr(canvas.current, current.code, size).then(
       () => setDrawError(''),
-      () => setDrawError('No se ha podido dibujar el QR. Abre el original.'),
+      () => setDrawError(t('No se ha podido dibujar el QR. Abre el original.')),
     );
   }, [current?.key, current?.code]);
 
   if (!data) {
-    return <div className="qr-page">Cargando…</div>;
+    return <div className="qr-page">{t('Cargando…')}</div>;
   }
 
   const total = data.entries.length;
@@ -107,14 +108,14 @@ export function QrPage() {
     <div className="qr-page">
       <div className="row" style={{ width: '100%' }}>
         <button className="btn small" onClick={() => navigate(-1)}>
-          Cerrar
+          {t('Cerrar')}
         </button>
         <div className="grow center">
           {data.booking && (
             <>
               <strong>{data.booking.title}</strong>
               <div className="small">
-                {timeOf(data.booking.startLocal)} hora de {zoneLabel(data.booking.startTz)}
+                {t('{time} hora de {zone}', { time: timeOf(data.booking.startLocal), zone: zoneLabel(data.booking.startTz) })}
                 {data.booking.startPlace && ` · ${data.booking.startPlace}`}
               </div>
             </>
@@ -126,7 +127,7 @@ export function QrPage() {
         <>
           {total > 1 && (
             <div className="center" style={{ fontWeight: 600 }}>
-              {current.label} · {position + 1} de {total}
+              {current.label} · {t('{n} de {total}', { n: position + 1, total })}
             </div>
           )}
           <canvas ref={canvas} className="qr-canvas" />
@@ -143,16 +144,16 @@ export function QrPage() {
           )}
           <div className="actions">
             <Link className="btn" to={`/attachments/${current.attachment.id}`}>
-              Ver original
+              {t('Ver original')}
             </Link>
           </div>
         </>
       ) : (
-        <p className="empty">Esta reserva no tiene ningún QR leído.</p>
+        <p className="empty">{t('Esta reserva no tiene ningún QR leído.')}</p>
       )}
 
       <p className="small muted center" style={{ marginTop: 'auto' }}>
-        Sube el brillo al máximo. {wakeLock === 'activo' ? 'La pantalla no se apagará.' : ''}
+        {t('Sube el brillo al máximo.')} {wakeLock === 'activo' ? t('La pantalla no se apagará.') : ''}
       </p>
     </div>
   );

@@ -6,6 +6,7 @@ import { FilesCheck } from './FilesCheck';
 import { OutboxCheck } from './OutboxCheck';
 import { WakeLockCheck } from './WakeLockCheck';
 import '../App.css';
+import { t } from '../i18n';
 
 export function DiagPage() {
   const [signedIn, setSignedIn] = useState(false);
@@ -13,7 +14,7 @@ export function DiagPage() {
 
   return (
     <main className="diag">
-      <h1>Viajes · diagnóstico</h1>
+      <h1>{t('Viajes · diagnóstico')}</h1>
       <EnvironmentCheck />
       <AuthCheck onSignedIn={onSignedIn} />
       <OutboxCheck signedIn={signedIn} />

@@ -2,6 +2,7 @@ import { api } from '../api';
 import { setMeta } from '../data/db';
 import { VERSION_KEY } from '../data/sync';
 import { syncNow } from '../data/syncClient';
+import { t } from '../i18n';
 
 export interface Member {
   userId: string;
@@ -75,13 +76,13 @@ export function describeInvitationState(state: InvitationState): string {
     case 'valid':
       return '';
     case 'expired':
-      return 'Esta invitación ha caducado. Pide otra a quien te la envió.';
+      return t('Esta invitación ha caducado. Pide otra a quien te la envió.');
     case 'used':
-      return 'Esta invitación ya se ha usado. Pide otra a quien te la envió.';
+      return t('Esta invitación ya se ha usado. Pide otra a quien te la envió.');
     case 'revoked':
-      return 'Esta invitación se ha anulado.';
+      return t('Esta invitación se ha anulado.');
     default:
-      return 'Esta invitación no existe. Comprueba el enlace.';
+      return t('Esta invitación no existe. Comprueba el enlace.');
   }
 }
 

@@ -1,5 +1,6 @@
 import { formatDay, timeOf, zoneLabel } from '../data/localTime';
 import type { Booking, BookingBody } from '../data/types';
+import { t } from '../i18n';
 
 /** Lo que propone un correo, tal y como lo entrega la bandeja de entrada. */
 export interface Proposal {
@@ -72,7 +73,7 @@ export interface Change {
 
 function describeMoment(local: string | null, tz: string | null): string {
   if (!local) {
-    return 'sin hora';
+    return t('sin hora');
   }
   return `${formatDay(local)} ${timeOf(local)}${tz ? ` (${zoneLabel(tz)})` : ''}`;
 }
@@ -91,23 +92,23 @@ function momentChange(beforeLocal: string | null, beforeTz: string | null, after
 export function diffBooking(existing: Booking, proposal: Proposal): Change[] {
   const changes: Change[] = [];
   if (proposal.startLocal && proposal.startLocal !== existing.startLocal) {
-    changes.push({ field: 'startLocal', label: 'Salida', ...momentChange(existing.startLocal, existing.startTz, proposal.startLocal, proposal.startTz) });
+    changes.push({ field: 'startLocal', label: t('Salida'), ...momentChange(existing.startLocal, existing.startTz, proposal.startLocal, proposal.startTz) });
   }
   if (proposal.endLocal && proposal.endLocal !== existing.endLocal) {
-    changes.push({ field: 'endLocal', label: 'Llegada', ...momentChange(existing.endLocal, existing.endTz ?? existing.startTz, proposal.endLocal, proposal.endTz) });
+    changes.push({ field: 'endLocal', label: t('Llegada'), ...momentChange(existing.endLocal, existing.endTz ?? existing.startTz, proposal.endLocal, proposal.endTz) });
   }
   if (proposal.startPlace && norm(proposal.startPlace) !== norm(existing.startPlace)) {
-    changes.push({ field: 'startPlace', label: 'Origen', before: existing.startPlace ?? 'sin lugar', after: proposal.startPlace });
+    changes.push({ field: 'startPlace', label: t('Origen'), before: existing.startPlace ?? t('sin lugar'), after: proposal.startPlace });
   }
   if (proposal.endPlace && norm(proposal.endPlace) !== norm(existing.endPlace)) {
-    changes.push({ field: 'endPlace', label: 'Destino', before: existing.endPlace ?? 'sin lugar', after: proposal.endPlace });
+    changes.push({ field: 'endPlace', label: t('Destino'), before: existing.endPlace ?? t('sin lugar'), after: proposal.endPlace });
   }
   if (proposal.reference && existing.reference && norm(proposal.reference) !== norm(existing.reference)) {
-    changes.push({ field: 'reference', label: 'Localizador', before: existing.reference, after: proposal.reference });
+    changes.push({ field: 'reference', label: t('Localizador'), before: existing.reference, after: proposal.reference });
   }
   // El título no se compara: cada fuente lo redacta a su manera y no es un dato de la reserva.
   if (proposal.notes && norm(proposal.notes) !== norm(existing.notes)) {
-    changes.push({ field: 'notes', label: 'Notas', before: existing.notes ?? 'sin notas', after: proposal.notes });
+    changes.push({ field: 'notes', label: t('Notas'), before: existing.notes ?? t('sin notas'), after: proposal.notes });
   }
   return changes;
 }
@@ -120,7 +121,7 @@ export function diffBooking(existing: Booking, proposal: Proposal): Change[] {
 export function describeChanges(changes: readonly Change[], when: Date): string {
   const date = `${String(when.getDate()).padStart(2, '0')}/${String(when.getMonth() + 1).padStart(2, '0')}`;
   const lines = changes.map((c) => `• ${c.label}: ${c.before} → ${c.after}`);
-  return [`Modificada el ${date} según correo:`, ...lines].join('\n');
+  return [t('Modificada el {date} según correo:', { date }), ...lines].join('\n');
 }
 
 /** La reserva existente con los cambios del correo aplicados y el aviso puesto. */

@@ -6,6 +6,7 @@ import { useWakeLock } from '../attachments/useWakeLock';
 import { deleteAttachment, getAttachment, getBlob, putBlob } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { Attachment, StoredBlob } from '../data/types';
+import { t } from '../i18n';
 
 export function AttachmentViewerPage() {
   const { attachmentId = '' } = useParams();
@@ -30,17 +31,17 @@ export function AttachmentViewerPage() {
       }
       let stored = await getBlob(attachmentId);
       if (!stored) {
-        setMessage('Bajando del servidor…');
+        setMessage(t('Bajando del servidor…'));
         try {
           const bytes = await downloadAttachment(meta);
           if (bytes) {
             stored = { id: meta.id, mime: meta.mime, size: bytes.byteLength, bytes };
             await putBlob(stored);
           } else {
-            setMessage('El fichero aún no está en el servidor.');
+            setMessage(t('El fichero aún no está en el servidor.'));
           }
         } catch {
-          setMessage('No está en el móvil y no hay conexión para bajarlo.');
+          setMessage(t('No está en el móvil y no hay conexión para bajarlo.'));
         }
       }
       if (alive && stored) {
@@ -64,7 +65,7 @@ export function AttachmentViewerPage() {
     }
     if (isPdf(blob.mime)) {
       let alive = true;
-      setMessage('Preparando el PDF…');
+      setMessage(t('Preparando el PDF…'));
       renderPdf(blob.bytes).then(
         (canvases) => {
           if (!alive || !pages.current) {
@@ -73,17 +74,17 @@ export function AttachmentViewerPage() {
           pages.current.replaceChildren(...canvases);
           setMessage('');
         },
-        () => setMessage('No se ha podido mostrar el PDF.'),
+        () => setMessage(t('No se ha podido mostrar el PDF.')),
       );
       return () => {
         alive = false;
       };
     }
-    setMessage('Este tipo de fichero no se puede mostrar aquí.');
+    setMessage(t('Este tipo de fichero no se puede mostrar aquí.'));
   }, [blob]);
 
   async function remove() {
-    if (!attachment || !confirm(`¿Borrar «${attachment.name}»?`)) {
+    if (!attachment || !confirm(t('¿Borrar «{name}»?', { name: attachment.name }))) {
       return;
     }
     await deleteAttachment(attachment.id);
@@ -93,17 +94,17 @@ export function AttachmentViewerPage() {
   return (
     <div className="viewer">
       <div className="topbar">
-        <a className="back" href="#" onClick={(e) => { e.preventDefault(); navigate(-1); }} aria-label="Atrás">
+        <a className="back" href="#" onClick={(e) => { e.preventDefault(); navigate(-1); }} aria-label={t('Atrás')}>
           ‹
         </a>
-        <h1>{attachment?.name ?? 'Adjunto'}</h1>
+        <h1>{attachment?.name ?? t('Adjunto')}</h1>
         {attachment && (
           <button className="btn small danger" onClick={() => void remove()}>
-            Borrar
+            {t('Borrar')}
           </button>
         )}
       </div>
-      {attachment === null && <p className="empty">Este adjunto ya no existe.</p>}
+      {attachment === null && <p className="empty">{t('Este adjunto ya no existe.')}</p>}
       {message && <p className="center muted" style={{ padding: 16 }}>{message}</p>}
       {imageUrl && <img src={imageUrl} alt={attachment?.name ?? ''} />}
       <div ref={pages} />

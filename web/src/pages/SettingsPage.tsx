@@ -15,6 +15,7 @@ import { dropBlobs } from '../data/offline';
 import { listTrips } from '../data/repo';
 import { syncNow, useSyncStatus } from '../data/syncClient';
 import { loadHousehold } from '../household/household';
+import { t } from '../i18n';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal } from '../domain/agenda';
 import { describeServer, formatBuild, type ServerVersion } from '../platform/version';
@@ -23,23 +24,23 @@ const APP_VERSION = formatBuild(new Date(__BUILD_AT__), __BUILD_COMMIT__);
 
 function ago(ms: number | null): string {
   if (!ms) {
-    return 'nunca';
+    return t('nunca');
   }
   const minutes = Math.round((Date.now() - ms) / 60_000);
   if (minutes < 1) {
-    return 'ahora mismo';
+    return t('ahora mismo');
   }
   if (minutes < 60) {
-    return `hace ${minutes} min`;
+    return t('hace {n} min', { n: minutes });
   }
-  return `hace ${Math.floor(minutes / 60)} h`;
+  return t('hace {n} h', { n: Math.floor(minutes / 60) });
 }
 
 export function SettingsPage() {
   const session = useSession();
   const sync = useSyncStatus();
   const [storage, setStorage] = useState('');
-  const [server, setServer] = useState('consultando…');
+  const [server, setServer] = useState(t('consultando…'));
   const [message, setMessage] = useState('');
   const trips = useLiveQuery(listTrips, []);
   // Los tokens y la gestión de miembros solo los toca quien administra el hogar; hasta saberlo, se esconden.
@@ -52,12 +53,16 @@ export function SettingsPage() {
   useEffect(() => {
     navigator.storage?.estimate?.().then((estimate) => {
       if (estimate.usage !== undefined) {
-        setStorage(`${formatSize(estimate.usage)}${estimate.quota ? ` de ${formatSize(estimate.quota)} disponibles` : ''}`);
+        setStorage(
+          estimate.quota
+            ? t('{used} de {quota} disponibles', { used: formatSize(estimate.usage), quota: formatSize(estimate.quota) })
+            : formatSize(estimate.usage),
+        );
       }
     });
     api<ServerVersion>('/api/version').then(
       (info) => setServer(describeServer(info, new Date())),
-      () => setServer('sin respuesta'),
+      () => setServer(t('sin respuesta')),
     );
   }, []);
 
@@ -66,14 +71,14 @@ export function SettingsPage() {
     for (const trip of past) {
       removed += await dropBlobs(trip.id);
     }
-    setMessage(removed ? `Quitados ${removed} ficheros de viajes pasados.` : 'No había nada que quitar.');
+    setMessage(removed ? t('Quitados {n} ficheros de viajes pasados.', { n: removed }) : t('No había nada que quitar.'));
   }
 
   async function signOut() {
-    if (sync.pending > 0 && !confirm(`Hay ${sync.pending} cambios sin enviar que se perderán. ¿Cerrar sesión igualmente?`)) {
+    if (sync.pending > 0 && !confirm(t('Hay {n} cambios sin enviar que se perderán. ¿Cerrar sesión igualmente?', { n: sync.pending }))) {
       return;
     }
-    if (!confirm('Al cerrar sesión se borra la copia de este móvil. ¿Seguir?')) {
+    if (!confirm(t('Al cerrar sesión se borra la copia de este móvil. ¿Seguir?'))) {
       return;
     }
     await session.signOut();
@@ -82,26 +87,26 @@ export function SettingsPage() {
   return (
     <main className="page">
       <div className="topbar">
-        <h1>Ajustes</h1>
+        <h1>{t('Ajustes')}</h1>
       </div>
 
       <section className="card">
-        <h3>Cuenta</h3>
+        <h3>{t('Cuenta')}</h3>
         <p>{session.email}</p>
         <button className="btn block" onClick={() => void signOut()}>
-          Cerrar sesión
+          {t('Cerrar sesión')}
         </button>
         <AccountSecurity onSignedOutEverywhere={() => session.signOut()} />
       </section>
 
       <section className="card">
-        <h3>Sincronización</h3>
+        <h3>{t('Sincronización')}</h3>
         <p className="small">
-          Última: {ago(sync.lastAt)} · Pendientes: {sync.pending}
-          {sync.incomplete ? ' · ⚠️ incompleta (¿sin conexión?)' : ''}
+          {t('Última: {when} · Pendientes: {n}', { when: ago(sync.lastAt), n: sync.pending })}
+          {sync.incomplete ? ` · ⚠️ ${t('incompleta (¿sin conexión?)')}` : ''}
         </p>
         <button className="btn block" disabled={sync.running} onClick={() => void syncNow()}>
-          {sync.running ? 'Sincronizando…' : 'Sincronizar ahora'}
+          {sync.running ? t('Sincronizando…') : t('Sincronizar ahora')}
         </button>
       </section>
 
@@ -120,28 +125,28 @@ export function SettingsPage() {
       <BackupSettings admin={admin} />
 
       <section className="card">
-        <h3>Espacio en el móvil</h3>
-        <p className="small">{storage || 'No disponible'}</p>
+        <h3>{t('Espacio en el móvil')}</h3>
+        <p className="small">{storage || t('No disponible')}</p>
         <button className="btn block" onClick={() => void freePast()} disabled={past.length === 0}>
-          Quitar del móvil los adjuntos de viajes pasados
+          {t('Quitar del móvil los adjuntos de viajes pasados')}
         </button>
         {message && <p className="muted small">{message}</p>}
       </section>
 
       <section className="card">
-        <h3>Ayuda</h3>
-        <p className="small muted">Cómo instalar la app, añadir reservas, usar los QR sin conexión, los correos y los avisos.</p>
+        <h3>{t('Ayuda')}</h3>
+        <p className="small muted">{t('Cómo instalar la app, añadir reservas, usar los QR sin conexión, los correos y los avisos.')}</p>
         <Link to="/guia" className="btn block">
-          Guía de uso
+          {t('Guía de uso')}
         </Link>
       </section>
 
       <section className="card">
-        <h3>Versión</h3>
-        <p className="small">App: {APP_VERSION}</p>
-        <p className="small">Servidor: {server}</p>
+        <h3>{t('Versión')}</h3>
+        <p className="small">{t('App: {version}', { version: APP_VERSION })}</p>
+        <p className="small">{t('Servidor: {server}', { server })}</p>
         <Link to="/diag" className="small">
-          Página de diagnóstico
+          {t('Página de diagnóstico')}
         </Link>
       </section>
     </main>
