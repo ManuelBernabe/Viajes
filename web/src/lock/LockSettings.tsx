@@ -22,7 +22,7 @@ export function LockSettings() {
       await enableLock(session.email ?? '', 1);
       setMessage(`✓ ${t('Activado. A partir de ahora la app pedirá Face ID al abrirla.')}`);
     } catch {
-      setMessage(t('No se ha podido activar (¿cancelado?). Vuelve a intentarlo.'));
+      setMessage(t('No se ha podido activar. Si el iPhone abre otra app (Microsoft Authenticator, por ejemplo), esa app no sirve para esto: al guardar la llave elige «Contraseñas». Si no te deja elegir, ve a Ajustes del iPhone → General → Autorrelleno y contraseñas, activa «Contraseñas» y vuelve a intentarlo.'))
     }
   }
 

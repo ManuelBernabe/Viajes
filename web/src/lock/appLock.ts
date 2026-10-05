@@ -89,7 +89,10 @@ export function disableLock() {
 }
 
 const toBase64Url = (bytes: ArrayBuffer) =>
-  btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  btoa(String.fromCharCode(...new Uint8Array(bytes)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
 function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
   const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
@@ -113,20 +116,28 @@ export async function lockSupported(): Promise<boolean> {
 
 /** Crea la credencial (pide Face ID una vez) y activa el bloqueo. */
 export async function enableLock(email: string, afterMinutes: number): Promise<void> {
-  const credential = (await navigator.credentials.create({
-    publicKey: {
-      challenge: random(32),
-      rp: { name: 'Viajes', id: location.hostname },
-      user: { id: random(16), name: email || 'viajes', displayName: email || 'Viajes' },
-      pubKeyCredParams: [
-        { type: 'public-key', alg: -7 },
-        { type: 'public-key', alg: -257 },
-      ],
-      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
-      attestation: 'none',
-      timeout: 60_000,
+  // «hints» aún no está en los tipos de TypeScript.
+  const publicKey: PublicKeyCredentialCreationOptions & { hints?: string[] } = {
+    challenge: random(32),
+    rp: { name: 'Viajes', id: location.hostname },
+    user: { id: random(16), name: email ? `Viajes · ${email}` : 'Viajes', displayName: email ? `Viajes · ${email}` : 'Viajes' },
+    pubKeyCredParams: [
+      { type: 'public-key', alg: -7 },
+      { type: 'public-key', alg: -257 },
+    ],
+    // «preferred»: los gestores de llaves (Contraseñas de iCloud, 1Password…) solo guardan llaves «descubribles».
+    authenticatorSelection: {
+      authenticatorAttachment: 'platform',
+      userVerification: 'required',
+      residentKey: 'preferred',
+      requireResidentKey: false,
     },
-  })) as PublicKeyCredential | null;
+    // Pista para que el iPhone proponga su propio llavero y no otra app.
+    hints: ['client-device'],
+    attestation: 'none',
+    timeout: 60_000,
+  };
+  const credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null;
   if (!credential) {
     throw new Error('cancelled');
   }
