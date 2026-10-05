@@ -5,6 +5,7 @@ import { useSession } from '../app/SessionContext';
 import { useAttachFiles } from '../attachments/useAttachFiles';
 import { Alternatives } from '../components/Alternatives';
 import { AttachmentThumbs } from '../components/AttachmentThumbs';
+import { SeatCheckIn } from '../components/SeatCheckIn';
 import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
 import { deleteBooking, getBooking, listAttachments, saveBooking } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
@@ -130,6 +131,8 @@ export function BookingPage() {
           </>
         )}
       </dl>
+
+      <SeatCheckIn booking={booking} />
 
       <Alternatives booking={booking} />
 

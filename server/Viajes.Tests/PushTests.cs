@@ -201,4 +201,32 @@ public sealed class ReminderRuleTests
         var deleted = Flight("2026-10-12T10:05", deleted: true);
         Assert.Empty(Reminders.Due([deleted], Utc(2026, 10, 12, 5, 10), new HashSet<(Guid, string, long)>()));
     }
+
+    [Fact]
+    public void Flights_get_a_check_in_reminder_when_their_airline_opens_it()
+    {
+        var jetsmart = Flight("2026-10-06T13:33", "America/Argentina/Buenos_Aires");
+        jetsmart.Title = "JA 3140 AEP → IGR";
+        // JetSMART abre 72 h antes: 13:33 del 3/10 en Buenos Aires = 16:33 UTC.
+        Assert.Equal(Utc(2026, 10, 3, 16, 33), Reminders.CheckInMs(jetsmart));
+        var due = Reminders.Due([jetsmart], Utc(2026, 10, 3, 16, 40), new HashSet<(Guid, string, long)>());
+        Assert.Equal(["checkin"], due.Select(r => r.Kind));
+        Assert.Equal("Check-in abierto: JA 3140 AEP → IGR", due[0].Message.Title);
+
+        var unknown = Flight("2026-10-12T10:05");
+        Assert.Equal(unknown.StartUtcMs - 24 * 3_600_000L, Reminders.CheckInMs(unknown));
+
+        var train = Flight("2026-10-12T10:05");
+        train.Type = "train";
+        Assert.Null(Reminders.CheckInMs(train));
+    }
+
+    [Theory]
+    [InlineData("JA 3140 AEP → IGR", 72)]
+    [InlineData("G31234 IGR → GIG", 48)]
+    [InlineData("IB 3170 MAD → LHR", 24)]
+    [InlineData("VY 1234 BCN → FCO", 168)]
+    [InlineData("AVE 05143 Alicante → Madrid", 24)]
+    public void Check_in_hours_come_from_the_airline_code(string title, int hours) =>
+        Assert.Equal(hours, Airlines.CheckInHoursFor(title));
 }
