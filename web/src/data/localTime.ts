@@ -1,3 +1,5 @@
+import { locale } from '../i18n';
+
 /** Hora local de un lugar («2026-10-12T10:05» en «Europe/Madrid») ↔ instante UTC, con Intl y sin librerías. */
 
 const LOCAL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
@@ -77,9 +79,9 @@ export function dateOf(local: string): string {
   return local.slice(0, 10);
 }
 
-const dayFormatter = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-const longDayFormatter = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-const shortDateFormatter = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const dayFormatter = new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+const longDayFormatter = new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+const shortDateFormatter = new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
 function asUtcDate(date: string): Date {
   const [y, m, d] = date.slice(0, 10).split('-').map(Number);

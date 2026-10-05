@@ -7,6 +7,7 @@ import { AccountSecurity } from '../components/AccountSecurity';
 import { AiSettings } from '../components/AiSettings';
 import { BackupSettings } from '../components/BackupSettings';
 import { HouseholdSettings } from '../components/HouseholdSettings';
+import { LanguageSettings } from '../components/LanguageSettings';
 import { ShareShortcut } from '../components/ShareShortcut';
 import { ImportTokens } from '../components/ImportTokens';
 import { PushSettings } from '../components/PushSettings';
@@ -103,6 +104,8 @@ export function SettingsPage() {
           {sync.running ? 'Sincronizando…' : 'Sincronizar ahora'}
         </button>
       </section>
+
+      <LanguageSettings />
 
       <HouseholdSettings />
 

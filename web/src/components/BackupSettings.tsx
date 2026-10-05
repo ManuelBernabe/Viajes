@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, describeError } from '../api';
 import { formatSize } from '../attachments/files';
+import { locale } from '../i18n';
 
 interface LocalBackup {
   name: string;
@@ -18,7 +19,7 @@ interface TokenRow {
 }
 
 function when(ms: number | null): string {
-  return ms ? new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+  return ms ? new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
 }
 
 /** Sección «Copias de seguridad» de Ajustes: copias diarias del servidor y token para la copia en Google Drive. */

@@ -3,10 +3,11 @@ import { BackLink } from '../app/Layout';
 import { listInbox } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
+import { locale } from '../i18n';
 
 /** «vie 26 sept, 15:28»: con varios correos parecidos, el día y la hora los distinguen. */
 function received(ms: number): string {
-  return new Date(ms).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(ms).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 export function InboxPage() {

@@ -1,3 +1,5 @@
+import { t, translateServer } from './i18n';
+
 const GENERIC = 'No se ha podido completar. Inténtalo de nuevo.';
 
 export class ApiError extends Error {
@@ -35,10 +37,11 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export function describeError(error: unknown): string {
   if (error instanceof ApiError) {
-    return error.message;
+    // Los mensajes del servidor llegan en español: se traducen si son de los conocidos.
+    return translateServer(error.message);
   }
   if (error instanceof TypeError) {
-    return 'Sin conexión. Inténtalo cuando tengas cobertura.';
+    return t('Sin conexión. Inténtalo cuando tengas cobertura.');
   }
-  return GENERIC;
+  return t(GENERIC);
 }

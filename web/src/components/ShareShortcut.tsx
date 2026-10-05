@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, describeError } from '../api';
+import { locale } from '../i18n';
 
 interface TokenRow {
   id: string;
@@ -17,7 +18,7 @@ interface TokenRow {
 export const SHORTCUT_ICLOUD_URL = 'https://www.icloud.com/shortcuts/92078364cf7240f6b0103cfff51fb95e';
 
 function when(ms: number | null): string {
-  return ms ? new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+  return ms ? new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
 }
 
 /** Ajustes → «Atajo de iPhone»: la clave personal del atajo y cómo instalarlo. */

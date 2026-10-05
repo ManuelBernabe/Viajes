@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, describeError } from '../api';
+import { locale } from '../i18n';
 
 interface TokenRow {
   id: string;
@@ -11,7 +12,7 @@ interface TokenRow {
 }
 
 function when(ms: number | null): string {
-  return ms ? new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+  return ms ? new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
 }
 
 /** Tokens con los que el script de Gmail puede crear borradores. El valor solo se enseña al crearlo. */

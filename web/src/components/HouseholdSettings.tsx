@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { describeError } from '../api';
 import { createInvitation, createPasswordResetLink, deleteFormerAccount, loadHousehold, removeMember, revokeInvitation, type Household } from '../household/household';
+import { locale } from '../i18n';
 
 function when(ms: number): string {
-  return new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
 }
 
 /** Sección «Hogar» de Ajustes: quién ve los viajes, invitar a alguien y quitar miembros. */

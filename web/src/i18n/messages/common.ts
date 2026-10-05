@@ -1,0 +1,15 @@
+import type { Messages } from './types';
+
+/** Traducciones: common. Clave = el texto en español tal y como aparece en el código. */
+export const common: Messages = {
+  'No se ha podido completar. Inténtalo de nuevo.': {
+    en: 'It could not be completed. Please try again.',
+    fr: 'Impossible de terminer. Réessayez.',
+    it: 'Non è stato possibile completare. Riprova.',
+  },
+  'Sin conexión. Inténtalo cuando tengas cobertura.': {
+    en: 'No connection. Try again when you have signal.',
+    fr: 'Pas de connexion. Réessayez quand vous aurez du réseau.',
+    it: 'Nessuna connessione. Riprova quando avrai campo.',
+  },
+};
