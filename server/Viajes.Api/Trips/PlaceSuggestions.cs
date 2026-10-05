@@ -93,7 +93,7 @@ public static class PlaceSuggestions
         app.MapDelete("/api/trips/{id:guid}/place-suggestions/{ideaId:guid}", Dismiss).RequireAuthorization();
     }
 
-    /// <summary>Las ideas guardadas del viaje que siguen pendientes: ni descartadas ni ya añadidas a «Lugares».</summary>
+    /// <summary>Las ideas guardadas del viaje que no se han descartado.</summary>
     private static async Task<IResult> List(
         Guid id, string? lang, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, IJsonAsker ai,
         ILoggerFactory loggers, CancellationToken ct)
@@ -192,13 +192,14 @@ public static class PlaceSuggestions
         return result;
     }
 
+    /// <summary>
+    /// Todas las ideas no descartadas, también las ya añadidas a «Lugares»: la app las oculta mientras el sitio siga en la
+    /// lista y las vuelve a enseñar si se quita de ahí.
+    /// </summary>
     private static async Task<List<IdeaDto>> Pending(AppDbContext db, Guid tripId, CancellationToken ct)
     {
-        var places = (await db.Places.Where(p => p.TripId == tripId && p.DeletedAtMs == null).Select(p => p.Name).ToListAsync(ct))
-            .Select(Key).ToHashSet();
         var ideas = await db.PlaceIdeas.Where(i => i.TripId == tripId && i.DismissedAtMs == null).ToListAsync(ct);
         return ideas
-            .Where(i => !places.Contains(Key(i.Name)))
             .OrderByDescending(i => i.CreatedAtMs)
             .Select(i => new IdeaDto(i.Id, i.Name, i.Category, i.Description, i.Address, string.IsNullOrEmpty(i.Area) ? null : i.Area))
             .ToList();

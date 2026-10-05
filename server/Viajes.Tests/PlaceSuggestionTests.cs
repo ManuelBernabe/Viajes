@@ -86,12 +86,12 @@ public sealed class PlaceSuggestionTests(PlaceAiApp app) : IClassFixture<PlaceAi
         Assert.Equal(4, again.GetProperty("suggestions").GetArrayLength());
         Assert.Contains("Don Julio", app.Fake.Prompts.Last());
 
-        // Añadida a «Lugares» o quitada: deja de salir en las ideas.
+        // Añadida a «Lugares» sigue en la lista (la app la oculta mientras esté ahí); quitada, ya no sale.
         (await ana.Client.PutAsJsonAsync($"/api/places/{Guid.NewGuid()}", new { tripId, name = "Caminito", category = "see", visited = false })).EnsureSuccessStatusCode();
         var body = await ana.Client.GetFromJsonAsync<JsonElement>($"/api/trips/{tripId}/place-suggestions");
         var donJulio = body.GetProperty("suggestions").EnumerateArray().First(s => s.GetProperty("name").GetString() == "Don Julio").GetProperty("id").GetGuid();
         Assert.Equal(HttpStatusCode.NoContent, (await ana.Client.DeleteAsync($"/api/trips/{tripId}/place-suggestions/{donJulio}")).StatusCode);
-        Assert.Equal(["Mercado de San Telmo", "Sitio raro"], await Listed());
+        Assert.Equal(["Caminito", "Mercado de San Telmo", "Sitio raro"], await Listed());
 
         var luis = await TripsApi.SignUp(app, "sugerencias4-luis@example.com");
         Assert.Equal(HttpStatusCode.NotFound, (await luis.Client.GetAsync($"/api/trips/{tripId}/place-suggestions")).StatusCode);
