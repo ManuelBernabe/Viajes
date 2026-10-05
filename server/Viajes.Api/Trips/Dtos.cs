@@ -23,6 +23,27 @@ public sealed record BookingBody(
 
 public sealed record PlaceBody(Guid TripId, string? Name, string? Category, string? Notes, string? Url, string? Address, bool Visited);
 
+public sealed record DocumentBody(
+    string? Person, string? Kind, string? Number, string? Country, string? IssuedDate, string? ExpiryDate, string? Notes, string? Visibility);
+
+public sealed record DocumentDto(
+    Guid Id,
+    string Person,
+    string Kind,
+    string? Number,
+    string? Country,
+    string? IssuedDate,
+    string? ExpiryDate,
+    string? Notes,
+    string Visibility,
+    string CreatedBy,
+    long Version,
+    long? DeletedAtMs)
+{
+    public static DocumentDto From(TravelDocument d) =>
+        new(d.Id, d.Person, d.Kind, d.Number, d.Country, d.IssuedDate, d.ExpiryDate, d.Notes, d.Visibility, d.CreatedBy, d.Version, d.DeletedAtMs);
+}
+
 public sealed record AttachmentBody(Guid BookingId, string? Name, string? Mime, long Size, string? QrText);
 
 public sealed record TripDto(
@@ -135,4 +156,8 @@ public sealed record SyncResponse(
     IReadOnlyList<AttachmentDto> Attachments,
     IReadOnlyList<InboxItemDto> Inbox,
     /// <summary>Lugares recomendados de los viajes visibles (con los borrados, para quitarlos del móvil).</summary>
-    IReadOnlyList<PlaceDto> Places);
+    IReadOnlyList<PlaceDto> Places,
+    /// <summary>Documentos de viaje cambiados (con los borrados).</summary>
+    IReadOnlyList<DocumentDto> Documents,
+    /// <summary>Todos los documentos que la persona ve ahora: el móvil purga los que ya no estén (pasados a privados).</summary>
+    IReadOnlyList<Guid> DocumentIds);
