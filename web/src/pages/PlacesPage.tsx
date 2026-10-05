@@ -235,8 +235,6 @@ export function PlacesPage() {
 
       <PlaceForm tripId={tripId} />
 
-      <PlaceSuggestions trip={trip} existing={places} />
-
       {places.length === 0 && (
         <p className="empty">
           {t('Aún no hay sitios. Apunta lo que queráis ver, dónde comer o tomar algo; todo el hogar lo ve y puede marcarlo como visitado.')}
@@ -272,6 +270,9 @@ export function PlacesPage() {
           {showVisited && visited.map((place) => <PlaceCard key={place.id} place={place} destination={trip.destination ?? trip.title} />)}
         </>
       )}
+
+      {/* Las ideas de la IA, después de vuestra lista: lo que habéis apuntado (lo último, primero) queda siempre arriba. */}
+      <PlaceSuggestions trip={trip} existing={places} />
     </main>
   );
 }
