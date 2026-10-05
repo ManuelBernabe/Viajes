@@ -22,6 +22,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TripFormPage } from './pages/TripFormPage';
 import { TripPage } from './pages/TripPage';
 import { UpdatePrompt } from './UpdatePrompt';
+import { AppLock } from './lock/AppLock';
 import './app/theme.css';
 import { t } from './i18n';
 
@@ -41,7 +42,11 @@ function Gate() {
     return <main className="page no-tabs center muted">{t('Abriendo…')}</main>;
   }
   // El enlace de invitación, el de cambiar la contraseña y la guía se abren con o sin sesión: la propia página decide qué pedir.
-  if (location.pathname.startsWith('/invitacion/') || location.pathname.startsWith('/restablecer/') || (location.pathname === '/guia' && session.status !== 'in')) {
+  if (
+    location.pathname.startsWith('/invitacion/') ||
+    location.pathname.startsWith('/restablecer/') ||
+    (location.pathname === '/guia' && session.status !== 'in')
+  ) {
     return (
       <Routes>
         <Route path="/invitacion/:token" element={<InvitationPage />} />
@@ -55,29 +60,32 @@ function Gate() {
     return <LoginPage />;
   }
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/trips/new" element={<TripFormPage />} />
-        <Route path="/trips/:tripId" element={<TripPage />} />
-        <Route path="/trips/:tripId/edit" element={<TripFormPage />} />
-        <Route path="/trips/:tripId/places" element={<PlacesPage />} />
-        <Route path="/trips/:tripId/bookings/new" element={<BookingFormPage />} />
-        <Route path="/bookings/:bookingId" element={<BookingPage />} />
-        <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/guia" element={<GuidePage />} />
-        <Route path="/inbox" element={<InboxPage />} />
-        <Route path="/inbox/:itemId" element={<InboxItemPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/documents/new" element={<DocumentFormPage />} />
-        <Route path="/documents/:documentId" element={<DocumentFormPage />} />
-      </Route>
-      <Route path="/bookings/:bookingId/qr" element={<QrPage />} />
-      <Route path="/attachments/:attachmentId" element={<AttachmentViewerPage />} />
-      <Route path="/diag" element={<DiagPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <AppLock />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/trips/new" element={<TripFormPage />} />
+          <Route path="/trips/:tripId" element={<TripPage />} />
+          <Route path="/trips/:tripId/edit" element={<TripFormPage />} />
+          <Route path="/trips/:tripId/places" element={<PlacesPage />} />
+          <Route path="/trips/:tripId/bookings/new" element={<BookingFormPage />} />
+          <Route path="/bookings/:bookingId" element={<BookingPage />} />
+          <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/guia" element={<GuidePage />} />
+          <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/inbox/:itemId" element={<InboxItemPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/documents/new" element={<DocumentFormPage />} />
+          <Route path="/documents/:documentId" element={<DocumentFormPage />} />
+        </Route>
+        <Route path="/bookings/:bookingId/qr" element={<QrPage />} />
+        <Route path="/attachments/:attachmentId" element={<AttachmentViewerPage />} />
+        <Route path="/diag" element={<DiagPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 

@@ -10,6 +10,7 @@ import { HouseholdSettings } from '../components/HouseholdSettings';
 import { LanguageSettings } from '../components/LanguageSettings';
 import { ShareShortcut } from '../components/ShareShortcut';
 import { CalendarSettings } from '../components/CalendarSettings';
+import { LockSettings } from '../lock/LockSettings';
 import { ImportTokens } from '../components/ImportTokens';
 import { PushSettings } from '../components/PushSettings';
 import { dropBlobs } from '../data/offline';
@@ -132,6 +133,8 @@ export function SettingsPage() {
       <HouseholdSettings />
 
       <PushSettings />
+
+      <LockSettings />
 
       <CalendarSettings />
 
