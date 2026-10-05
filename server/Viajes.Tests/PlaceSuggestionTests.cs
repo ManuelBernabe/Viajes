@@ -62,6 +62,41 @@ public sealed class PlaceSuggestionTests(PlaceAiApp app) : IClassFixture<PlaceAi
     }
 
     [Fact]
+    public async Task Ideas_are_kept_in_the_trip_and_new_requests_add_to_them()
+    {
+        var ana = await TripsApi.SignUp(app, "sugerencias4@example.com");
+        var tripId = Guid.NewGuid();
+        (await ana.PutTrip(tripId, "Argentina", "Buenos Aires")).EnsureSuccessStatusCode();
+
+        async Task<string?[]> Listed()
+        {
+            var body = await ana.Client.GetFromJsonAsync<JsonElement>($"/api/trips/{tripId}/place-suggestions");
+            return body.GetProperty("suggestions").EnumerateArray().Select(s => s.GetProperty("name").GetString()).ToArray();
+        }
+
+        Assert.Empty(await Listed());
+        (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/place-suggestions", new { lang = "es" })).EnsureSuccessStatusCode();
+        Assert.Equal(["Caminito", "Don Julio", "Mercado de San Telmo", "Sitio raro"], await Listed());
+
+        // Otra petición: la IA no ve nada nuevo (repite las mismas), así que no se duplica nada y se le dice que ya las propuso.
+        var again = await (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/place-suggestions", new { lang = "es" })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, again.GetProperty("added").GetInt32());
+        Assert.Equal(4, again.GetProperty("suggestions").GetArrayLength());
+        Assert.Contains("Don Julio", app.Fake.Prompts.Last());
+
+        // Añadida a «Lugares» o quitada: deja de salir en las ideas.
+        (await ana.Client.PutAsJsonAsync($"/api/places/{Guid.NewGuid()}", new { tripId, name = "Caminito", category = "see", visited = false })).EnsureSuccessStatusCode();
+        var body = await ana.Client.GetFromJsonAsync<JsonElement>($"/api/trips/{tripId}/place-suggestions");
+        var donJulio = body.GetProperty("suggestions").EnumerateArray().First(s => s.GetProperty("name").GetString() == "Don Julio").GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.Client.DeleteAsync($"/api/trips/{tripId}/place-suggestions/{donJulio}")).StatusCode);
+        Assert.Equal(["Mercado de San Telmo", "Sitio raro"], await Listed());
+
+        var luis = await TripsApi.SignUp(app, "sugerencias4-luis@example.com");
+        Assert.Equal(HttpStatusCode.NotFound, (await luis.Client.GetAsync($"/api/trips/{tripId}/place-suggestions")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await luis.Client.DeleteAsync($"/api/trips/{tripId}/place-suggestions/{donJulio}")).StatusCode);
+    }
+
+    [Fact]
     public async Task Someone_outside_the_household_gets_404_and_a_useless_answer_is_502()
     {
         var ana = await TripsApi.SignUp(app, "sugerencias2-ana@example.com");

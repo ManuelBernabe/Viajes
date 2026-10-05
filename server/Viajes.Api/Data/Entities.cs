@@ -93,6 +93,30 @@ public sealed class Place : IVersioned
     public long? DeletedAtMs { get; set; }
 }
 
+/// <summary>
+/// Una idea de sitio propuesta por la IA para un viaje. Se guarda para no tener que volver a pedirla: la lista de ideas se
+/// queda en el viaje hasta que alguien la añade a «Lugares» o la descarta. No se sincroniza; se lee con la API.
+/// </summary>
+public sealed class PlaceIdea
+{
+    public Guid Id { get; set; }
+
+    public Guid TripId { get; set; }
+
+    public required string Name { get; set; }
+
+    public required string Category { get; set; }
+
+    public required string Description { get; set; }
+
+    public string? Address { get; set; }
+
+    public long CreatedAtMs { get; set; }
+
+    /// <summary>Cuándo alguien la quitó de la lista. Se guarda igual, para no volver a proponerla.</summary>
+    public long? DismissedAtMs { get; set; }
+}
+
 public sealed class Booking : IVersioned
 {
     public static readonly IReadOnlySet<string> Types =
