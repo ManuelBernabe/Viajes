@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
 import { useAttachFiles } from '../attachments/useAttachFiles';
+import { Alternatives } from '../components/Alternatives';
 import { AttachmentThumbs } from '../components/AttachmentThumbs';
 import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
 import { deleteBooking, getBooking, listAttachments, saveBooking } from '../data/repo';
@@ -129,6 +130,8 @@ export function BookingPage() {
           </>
         )}
       </dl>
+
+      <Alternatives booking={booking} />
 
       <h2>{t('Adjuntos')}</h2>
       <AttachmentThumbs attachments={attachments} />

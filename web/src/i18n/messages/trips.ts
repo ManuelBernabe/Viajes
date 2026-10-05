@@ -301,4 +301,21 @@ export const trips: Messages = {
     fr: 'Modifiée le {date} selon un e-mail :',
     it: 'Modificata il {date} secondo un’email:',
   },
+  'Buscar otros vuelos': { en: 'Find other flights', fr: 'Chercher d’autres vols', it: 'Cerca altri voli' },
+  'Buscar otros trenes': { en: 'Find other trains', fr: 'Chercher d’autres trains', it: 'Cerca altri treni' },
+  Día: { en: 'Day', fr: 'Jour', it: 'Giorno' },
+  'Vuelos directos': { en: 'Direct flights', fr: 'Vols directs', it: 'Voli diretti' },
+  'También con escalas': { en: 'Including stopovers', fr: 'Avec escales aussi', it: 'Anche con scalo' },
+  'gestionar reserva': { en: 'manage booking', fr: 'gérer ma réservation', it: 'gestisci prenotazione' },
+  'Cambiar el billete en la aerolínea ({code})': {
+    en: 'Change the ticket with the airline ({code})',
+    fr: 'Modifier le billet auprès de la compagnie ({code})',
+    it: 'Cambia il biglietto con la compagnia ({code})',
+  },
+  trenes: { en: 'trains', fr: 'trains', it: 'treni' },
+  'Se abre la búsqueda ya hecha con el mismo trayecto y día. El cambio se hace en la web de la compañía; cuando llegue el correo del cambio, la app actualizará esta reserva.': {
+    en: 'The search opens ready for the same route and day. The change itself is done on the company’s website; when the change email arrives, the app will update this booking.',
+    fr: 'La recherche s’ouvre déjà faite pour le même trajet et le même jour. La modification se fait sur le site de la compagnie ; quand l’e-mail de modification arrivera, l’app mettra à jour cette réservation.',
+    it: 'La ricerca si apre già pronta per la stessa tratta e lo stesso giorno. Il cambio si fa sul sito della compagnia; quando arriverà l’email del cambio, l’app aggiornerà questa prenotazione.',
+  },
 };
