@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Viajes.Api.Ai;
+using Viajes.Api.Data;
 using Viajes.Api.Trips;
 
 namespace Viajes.Tests;
@@ -13,8 +15,8 @@ public sealed class FakePlaceAi : IBookingExtractor, IJsonAsker
 
     public string? Answer { get; set; } = """
         {"places": [
-          {"name": "Caminito", "category": "see", "description": "Casas de colores en La Boca.", "address": "La Boca"},
-          {"name": "Don Julio", "category": "eat", "description": "Parrilla clásica; reserva antes.", "address": null},
+          {"name": "Caminito", "category": "see", "description": "Casas de colores en La Boca.", "address": "La Boca", "area": "Argentina"},
+          {"name": "Don Julio", "category": "eat", "description": "Parrilla clásica; reserva antes.", "address": null, "area": "Argentina"},
           {"name": "caminito", "category": "see", "description": "Repetido.", "address": null},
           {"name": "Mercado de San Telmo", "category": "eat", "description": "Ya está en la lista.", "address": null},
           {"name": "Sitio raro", "category": "fiesta", "description": "Categoría desconocida.", "address": null}
@@ -94,6 +96,44 @@ public sealed class PlaceSuggestionTests(PlaceAiApp app) : IClassFixture<PlaceAi
         var luis = await TripsApi.SignUp(app, "sugerencias4-luis@example.com");
         Assert.Equal(HttpStatusCode.NotFound, (await luis.Client.GetAsync($"/api/trips/{tripId}/place-suggestions")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await luis.Client.DeleteAsync($"/api/trips/{tripId}/place-suggestions/{donJulio}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Ideas_bring_their_country_and_old_ideas_are_classified_once()
+    {
+        var ana = await TripsApi.SignUp(app, "sugerencias5@example.com");
+        var tripId = Guid.NewGuid();
+        (await ana.PutTrip(tripId, "Argentina Brasil", "Argentina y Brasil")).EnsureSuccessStatusCode();
+        (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/place-suggestions", new { lang = "es" })).EnsureSuccessStatusCode();
+        Assert.Contains("area: el país", app.Fake.Prompts.Last());
+
+        // Una idea guardada antes de que existiera el país.
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.PlaceIdeas.Add(new PlaceIdea { Id = Guid.NewGuid(), TripId = tripId, Name = "Escadaria Selarón", Category = "see", Description = "Escalera de azulejos.", CreatedAtMs = 1 });
+            await db.SaveChangesAsync();
+        }
+
+        var previous = app.Fake.Answer;
+        app.Fake.Answer = """{"areas": [{"name": "Escadaria Selarón", "area": "Brasil"}]}""";
+        try
+        {
+            var body = await ana.Client.GetFromJsonAsync<JsonElement>($"/api/trips/{tripId}/place-suggestions?lang=es");
+            var areas = body.GetProperty("suggestions").EnumerateArray()
+                .ToDictionary(s => s.GetProperty("name").GetString()!, s => s.GetProperty("area").ValueKind == JsonValueKind.Null ? null : s.GetProperty("area").GetString());
+            Assert.Equal("Argentina", areas["Caminito"]);
+            Assert.Equal("Brasil", areas["Escadaria Selarón"]);
+            Assert.Null(areas["Sitio raro"]);
+
+            var asked = app.Fake.Prompts.Count;
+            await ana.Client.GetFromJsonAsync<JsonElement>($"/api/trips/{tripId}/place-suggestions?lang=es");
+            Assert.Equal(asked, app.Fake.Prompts.Count);
+        }
+        finally
+        {
+            app.Fake.Answer = previous;
+        }
     }
 
     [Fact]

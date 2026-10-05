@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Place } from '../data/types';
-import { mapsUrl, parsePasted, sortPlaces } from './places';
+import { groupByArea, mapsUrl, parsePasted, sortPlaces } from './places';
 
 const place = (name: string, category: Place['category'], visited = false): Place => ({
   id: name, tripId: 't', name, category, notes: null, url: null, address: null, visited, createdBy: 'yo', version: 1, deletedAtMs: null,
@@ -44,5 +44,24 @@ describe('sortPlaces', () => {
     const { pending, visited } = sortPlaces([place('Zoo', 'see'), place('Asado', 'eat'), place('Bar', 'drink', true), place('Arte', 'see')]);
     expect(pending.map((p) => p.name)).toEqual(['Arte', 'Zoo', 'Asado']);
     expect(visited.map((p) => p.name)).toEqual(['Bar']);
+  });
+});
+
+describe('groupByArea', () => {
+  it('agrupa por país en el orden del viaje; los demás después y los sin país al final', () => {
+    const ideas = [
+      { name: 'Cristo Redentor', area: 'Brasil' },
+      { name: 'Caminito', area: 'Argentina' },
+      { name: 'Sitio raro', area: null },
+      { name: 'Colonia', area: 'Uruguay' },
+      { name: 'Cataratas', area: 'Argentina' },
+    ];
+    const groups = groupByArea(ideas, 'Argentina Brasil · Buenos Aires, Río');
+    expect(groups.map((g) => g.area)).toEqual(['Argentina', 'Brasil', 'Uruguay', null]);
+    expect(groups[0].items.map((i) => i.name)).toEqual(['Caminito', 'Cataratas']);
+  });
+
+  it('sin acentos ni mayúsculas', () => {
+    expect(groupByArea([{ area: 'Perú' }, { area: 'méxico' }], 'Mexico y Peru').map((g) => g.area)).toEqual(['méxico', 'Perú']);
   });
 });

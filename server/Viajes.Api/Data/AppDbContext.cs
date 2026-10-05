@@ -102,6 +102,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             idea.Property(i => i.Category).HasMaxLength(20);
             idea.Property(i => i.Description).HasMaxLength(500);
             idea.Property(i => i.Address).HasMaxLength(300);
+            idea.Property(i => i.Area).HasMaxLength(100);
             idea.HasIndex(i => i.TripId);
         });
 
