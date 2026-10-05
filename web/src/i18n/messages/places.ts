@@ -75,6 +75,7 @@ export const places: Messages = {
     it: 'Proposte dall’IA e salvate nel viaggio. Aggiungi alla lista quelle che ti piacciono; le altre puoi toglierle.',
   },
   'Quitar {name} de las ideas': { en: 'Remove {name} from the ideas', fr: 'Retirer {name} des idées', it: 'Togli {name} dalle idee' },
+  'Otros sitios': { en: 'Other places', fr: 'Autres lieux', it: 'Altri luoghi' },
   'Sugerir sitios': { en: 'Suggest places', fr: 'Suggérer des lieux', it: 'Suggerisci luoghi' },
   'Sugerir más': { en: 'Suggest more', fr: 'Suggérer d’autres', it: 'Suggerisci altri' },
   'Otras ideas': { en: 'Other ideas', fr: 'D’autres idées', it: 'Altre idee' },

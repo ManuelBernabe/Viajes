@@ -111,6 +111,9 @@ public sealed class PlaceIdea
 
     public string? Address { get; set; }
 
+    /// <summary>País del sitio («Argentina», «Brasil»), para agrupar las ideas. Vacío si no se sabe; null si aún no se ha mirado.</summary>
+    public string? Area { get; set; }
+
     public long CreatedAtMs { get; set; }
 
     /// <summary>Cuándo alguien la quitó de la lista. Se guarda igual, para no volver a proponerla.</summary>

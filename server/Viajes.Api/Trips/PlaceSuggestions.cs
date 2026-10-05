@@ -19,9 +19,30 @@ public static class PlaceSuggestions
 
     public sealed record SuggestRequest(string? Lang, string? Category);
 
-    public sealed record Suggestion(string Name, string Category, string Description, string? Address);
+    public sealed record Suggestion(string Name, string Category, string Description, string? Address, string? Area = null);
 
-    public sealed record IdeaDto(Guid Id, string Name, string Category, string Description, string? Address);
+    public sealed record IdeaDto(Guid Id, string Name, string Category, string Description, string? Address, string? Area);
+
+    private static readonly JsonElement AreasSchema = JsonSerializer.SerializeToElement(new
+    {
+        type = "object",
+        properties = new
+        {
+            areas = new
+            {
+                type = "array",
+                items = new
+                {
+                    type = "object",
+                    properties = new { name = new { type = "string" }, area = new { type = "string" } },
+                    required = new[] { "name", "area" },
+                    additionalProperties = false,
+                },
+            },
+        },
+        required = new[] { "areas" },
+        additionalProperties = false,
+    });
 
     private static readonly Dictionary<string, string> Languages = new()
     {
@@ -54,8 +75,9 @@ public static class PlaceSuggestions
                         category = new { type = "string", @enum = Place.Categories.ToArray() },
                         description = new { type = "string" },
                         address = new { type = new[] { "string", "null" } },
+                        area = new { type = "string" },
                     },
-                    required = new[] { "name", "category", "description", "address" },
+                    required = new[] { "name", "category", "description", "address", "area" },
                     additionalProperties = false,
                 },
             },
@@ -73,7 +95,8 @@ public static class PlaceSuggestions
 
     /// <summary>Las ideas guardadas del viaje que siguen pendientes: ni descartadas ni ya añadidas a «Lugares».</summary>
     private static async Task<IResult> List(
-        Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, CancellationToken ct)
+        Guid id, string? lang, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, IJsonAsker ai,
+        ILoggerFactory loggers, CancellationToken ct)
     {
         var trip = await access.VisibleTrip(users.GetUserId(principal)!, id);
         if (trip is null || trip.DeletedAtMs is not null)
@@ -81,6 +104,7 @@ public static class PlaceSuggestions
             return Results.NotFound();
         }
 
+        await FillAreas(db, ai, id, Languages.GetValueOrDefault(lang ?? "es", "español"), loggers, ct);
         return Results.Ok(new { suggestions = await Pending(db, id, ct), added = 0 });
     }
 
@@ -99,6 +123,75 @@ public static class PlaceSuggestions
         return Results.NoContent();
     }
 
+    /// <summary>
+    /// Las ideas guardadas antes de que se apuntara el país (Area null) se clasifican una vez con la IA, para poder
+    /// agruparlas por país. Si no se sabe, queda vacío y no se vuelve a preguntar.
+    /// </summary>
+    private static async Task FillAreas(AppDbContext db, IJsonAsker ai, Guid tripId, string language, ILoggerFactory loggers, CancellationToken ct)
+    {
+        var missing = await db.PlaceIdeas.Where(i => i.TripId == tripId && i.Area == null).ToListAsync(ct);
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        var areas = new Dictionary<string, string>();
+        if (ai.IsAvailable)
+        {
+            var list = string.Join("\n", missing.Select(i => $"- {i.Name}{(i.Address is null ? "" : $" ({i.Address})")}"));
+            var prompt = $"""
+                Di en qué país está cada uno de estos sitios. area: el nombre del país en {language}, siempre igual escrito.
+                name: el nombre tal cual te lo doy.
+                {list}
+                """;
+            try
+            {
+                areas = ParseAreas(await ai.AskJsonAsync(SystemPrompt, prompt, AreasSchema, 1500, ct));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                loggers.CreateLogger("Viajes.Places").LogWarning(error, "No se ha podido clasificar las ideas por país.");
+            }
+        }
+
+        foreach (var idea in missing)
+        {
+            idea.Area = areas.GetValueOrDefault(Key(idea.Name), "");
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>{"areas": [{"name", "area"}]} → nombre normalizado → país. Lo que no se entiende se ignora.</summary>
+    public static Dictionary<string, string> ParseAreas(string? json)
+    {
+        var result = new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return result;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty("areas", out var areas) && areas.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in areas.EnumerateArray())
+                {
+                    if (Text(item, "name", 200) is { } name && Text(item, "area", 100) is { } area)
+                    {
+                        result[Key(name)] = area;
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return result;
+    }
+
     private static async Task<List<IdeaDto>> Pending(AppDbContext db, Guid tripId, CancellationToken ct)
     {
         var places = (await db.Places.Where(p => p.TripId == tripId && p.DeletedAtMs == null).Select(p => p.Name).ToListAsync(ct))
@@ -107,7 +200,7 @@ public static class PlaceSuggestions
         return ideas
             .Where(i => !places.Contains(Key(i.Name)))
             .OrderByDescending(i => i.CreatedAtMs)
-            .Select(i => new IdeaDto(i.Id, i.Name, i.Category, i.Description, i.Address))
+            .Select(i => new IdeaDto(i.Id, i.Name, i.Category, i.Description, i.Address, string.IsNullOrEmpty(i.Area) ? null : i.Area))
             .ToList();
     }
 
@@ -145,6 +238,7 @@ public static class PlaceSuggestions
             - category: see (ver/visitar), eat (comer), drink (tomar algo), shop (compras), nature (naturaleza), other.
             - description: una frase corta en {language} con por qué merece la pena y un consejo práctico.
             - address: barrio o dirección si la conoces con seguridad; si no, null.
+            - area: el país donde está el sitio, en {language} («Argentina», «Brasil»…), siempre igual escrito para el mismo país.
             """;
 
         var log = loggers.CreateLogger("Viajes.Places");
@@ -166,11 +260,13 @@ public static class PlaceSuggestions
             Category = s.Category,
             Description = s.Description,
             Address = s.Address,
+            Area = s.Area ?? "",
             CreatedAtMs = nowMs - index,
         }));
         await db.SaveChangesAsync(ct);
 
         log.LogInformation("Sugerencias de lugares: {Total} para «{Destino}».", suggestions.Count, destination);
+        await FillAreas(db, ai, id, language, loggers, ct);
         return Results.Ok(new { suggestions = await Pending(db, id, ct), added = suggestions.Count });
     }
 
@@ -201,7 +297,7 @@ public static class PlaceSuggestions
                 }
 
                 var category = Text(item, "category", 20) is { } c && Place.Categories.Contains(c) ? c : "other";
-                result.Add(new Suggestion(name, category, Text(item, "description", 500) ?? "", Text(item, "address", 300)));
+                result.Add(new Suggestion(name, category, Text(item, "description", 500) ?? "", Text(item, "address", 300), Text(item, "area", 100)));
                 if (result.Count == MaxSuggestions)
                 {
                     break;
