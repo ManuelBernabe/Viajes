@@ -9,7 +9,7 @@ namespace Viajes.Api.Ai;
 /// Lee billetes y confirmaciones (PDF, imágenes o texto) con Claude y devuelve los campos de la reserva
 /// como JSON validado contra un esquema. El modelo solo extrae: lo que no está en el documento queda a null.
 /// </summary>
-public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<ClaudeBookingExtractor> log) : IBookingExtractor
+public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<ClaudeBookingExtractor> log) : IBookingExtractor, IJsonAsker
 {
     public const string ModelId = "claude-opus-5";
 
@@ -113,6 +113,44 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
         catch (JsonException e)
         {
             log.LogWarning(e, "Extracción con IA: la respuesta no era el JSON esperado.");
+            return null;
+        }
+    }
+
+    public async Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct)
+    {
+        try
+        {
+            var response = await client.Messages.Create(new MessageCreateParams
+            {
+                Model = ModelId,
+                MaxTokens = maxTokens,
+                System = new List<TextBlockParam> { new() { Text = system } },
+                OutputConfig = new OutputConfig
+                {
+                    Effort = Effort.Low,
+                    Format = new JsonOutputFormat { Schema = schema.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.Clone()) },
+                },
+                Messages = [new() { Role = Role.User, Content = new List<ContentBlockParam> { new TextBlockParam { Text = user } } }],
+            }, ct);
+
+            if (response.StopReason == "refusal")
+            {
+                log.LogWarning("El modelo no quiso responder ({Categoria}).", response.StopDetails?.Category);
+                return null;
+            }
+
+            var json = string.Concat(response.Content.Select(b => b.Value).OfType<TextBlock>().Select(t => t.Text));
+            return string.IsNullOrWhiteSpace(json) ? null : json;
+        }
+        catch (AnthropicRateLimitException e)
+        {
+            log.LogWarning(e, "Claude: límite de peticiones.");
+            return null;
+        }
+        catch (AnthropicApiException e)
+        {
+            log.LogWarning(e, "Claude: error de la API.");
             return null;
         }
     }

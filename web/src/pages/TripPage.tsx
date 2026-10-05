@@ -6,7 +6,7 @@ import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TypeChips } from '../components/TypeChips';
 import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
-import { deleteTrip, getTrip, listAttachments, listBookings } from '../data/repo';
+import { deleteTrip, getTrip, listAttachments, listBookings, listPlaces } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
@@ -18,6 +18,7 @@ export function TripPage() {
   const navigate = useNavigate();
   const trip = useLiveQuery(() => getTrip(tripId), [tripId]);
   const bookings = useLiveQuery(() => listBookings(tripId), [tripId]);
+  const placeCount = useLiveQuery(async () => (await listPlaces(tripId)).filter((p) => !p.visited).length, [tripId]);
   // La próxima reserva vigente del viaje, destacada arriba con su QR (lo que antes iba en Inicio).
   const highlight = useLiveQuery(async () => {
     const next = nextBooking(await listBookings(tripId), Date.now());
@@ -136,9 +137,21 @@ export function TripPage() {
         {busy && <p className="muted small">{busy}</p>}
       </section>
 
-      <Link className="btn primary block" to={`/trips/${tripId}/bookings/new`}>
-        {t('+ Añadir reserva')}
-      </Link>
+      <div className="actions" style={{ margin: '12px 0 0' }}>
+
+        <Link className="btn primary" to={`/trips/${tripId}/bookings/new`}>
+
+          {t('+ Añadir reserva')}
+
+        </Link>
+
+        <Link className="btn" to={`/trips/${tripId}/places`}>
+
+          📍 {placeCount ? t('Lugares ({n})', { n: placeCount }) : t('Lugares')}
+
+        </Link>
+
+      </div>
 
       <div style={{ marginTop: 12 }}>
         <TypeChips types={typesPresent} value={filter} onChange={setFilter} />

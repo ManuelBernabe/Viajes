@@ -10,7 +10,7 @@ namespace Viajes.Api.Ai;
 /// Lee billetes y confirmaciones con DeepSeek (API compatible con OpenAI, modelo «deepseek-flash»: texto e imágenes,
 /// sin PDF). Los PDF se convierten a texto antes de enviarlos; la salida se fuerza a JSON y se valida aquí.
 /// </summary>
-public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBookingExtractor> log) : IBookingExtractor
+public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBookingExtractor> log) : IBookingExtractor, IJsonAsker
 {
     public const string ModelId = "deepseek-flash";
 
@@ -126,6 +126,56 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
             log.LogInformation("Extracción con DeepSeek: tipo {Tipo}, localizador {Ref}, {Entrada} tokens de entrada, {Salida} de salida.",
                 result?.Type ?? "ninguno", result?.Reference is null ? "no" : "sí", completion?.Usage?.PromptTokens, completion?.Usage?.CompletionTokens);
             return result is null or { Type: null, Title: null, Reference: null, StartLocal: null } ? null : result;
+        }
+        catch (HttpRequestException e)
+        {
+            log.LogWarning(e, "DeepSeek: error de red.");
+            return null;
+        }
+        catch (TaskCanceledException e) when (!ct.IsCancellationRequested)
+        {
+            log.LogWarning(e, "DeepSeek: tiempo de espera agotado.");
+            return null;
+        }
+        catch (JsonException e)
+        {
+            log.LogWarning(e, "DeepSeek: la respuesta no era el JSON esperado.");
+            return null;
+        }
+    }
+
+    public async Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct)
+    {
+        // DeepSeek no valida contra un esquema: se le enseña en el propio mensaje.
+        var body = new
+        {
+            model = ModelId,
+            messages = new object[]
+            {
+                new { role = "system", content = $"{system}\n\nResponde únicamente con un objeto JSON que cumpla este esquema, sin explicaciones ni marcas de código:\n{schema.GetRawText()}" },
+                new { role = "user", content = user },
+            },
+            response_format = new { type = "json_object" },
+            max_tokens = maxTokens,
+            temperature = 0.4,
+        };
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
+            };
+            using var response = await http.SendAsync(request, ct);
+            var payload = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                log.LogWarning("DeepSeek respondió {Codigo}: {Cuerpo}", (int)response.StatusCode, payload.Length > 300 ? payload[..300] : payload);
+                return null;
+            }
+
+            var content = JsonSerializer.Deserialize<Completion>(payload, JsonOptions)?.Choices?.FirstOrDefault()?.Message?.Content;
+            return string.IsNullOrWhiteSpace(content) ? null : StripFences(content);
         }
         catch (HttpRequestException e)
         {

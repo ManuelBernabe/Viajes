@@ -68,6 +68,15 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     }
   }
 
+  for (const place of response.places ?? []) {
+    applied++;
+    if (place.deletedAtMs !== null) {
+      await database.delete('places', place.id);
+    } else if (keep.has(place.tripId)) {
+      await database.put('places', place);
+    }
+  }
+
   // Un viaje que ya no está en la lista (acceso retirado) se purga aunque no llegue ninguna fila suya.
   for (const trip of await database.getAll('trips')) {
     if (!keep.has(trip.id)) {
@@ -101,6 +110,9 @@ async function removeTrip(id: string): Promise<void> {
   const database = await openDb();
   for (const booking of await database.getAllFromIndex('bookings', 'tripId', id)) {
     await removeBooking(booking.id);
+  }
+  for (const place of await database.getAllFromIndex('places', 'tripId', id)) {
+    await database.delete('places', place.id);
   }
   await database.delete('trips', id);
 }

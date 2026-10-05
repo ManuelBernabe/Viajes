@@ -71,6 +71,12 @@ async function send(op: Op): Promise<SendResult> {
       case 'delete-attachment':
         await api(`/api/attachments/${op.id}`, { method: 'DELETE' });
         break;
+      case 'put-place':
+        await api(`/api/places/${op.id}`, { method: 'PUT', body: JSON.stringify(op.body) });
+        break;
+      case 'delete-place':
+        await api(`/api/places/${op.id}`, { method: 'DELETE' });
+        break;
     }
     return 'ok';
   } catch (error) {
