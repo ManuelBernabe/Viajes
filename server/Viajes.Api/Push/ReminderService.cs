@@ -48,8 +48,8 @@ public sealed class ReminderService(IServiceProvider services, IPushSender sende
         var access = scope.ServiceProvider.GetRequiredService<Access.AccessService>();
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        // Solo reservas de las próximas 48 horas: las demás no pueden tener avisos pendientes.
-        var horizon = now + 48 * 3_600_000L;
+        // Solo reservas de los próximos 8 días: el aviso más temprano es el check-in de Vueling, 7 días antes.
+        var horizon = now + 8 * 24 * 3_600_000L;
         var bookings = await db.Bookings
             .Where(b => b.DeletedAtMs == null && b.StartUtcMs >= now && b.StartUtcMs <= horizon)
             .ToListAsync(ct);

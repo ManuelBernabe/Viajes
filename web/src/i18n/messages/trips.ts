@@ -318,4 +318,28 @@ export const trips: Messages = {
     fr: 'La recherche s’ouvre déjà faite pour le même trajet et le même jour. La modification se fait sur le site de la compagnie ; quand l’e-mail de modification arrivera, l’app mettra à jour cette réservation.',
     it: 'La ricerca si apre già pronta per la stessa tratta e lo stesso giorno. Il cambio si fa sul sito della compagnia; quando arriverà l’email del cambio, l’app aggiornerà questa prenotazione.',
   },
+  'Asiento y check-in': { en: 'Seat and check-in', fr: 'Siège et enregistrement', it: 'Posto e check-in' },
+  'Tu asiento:': { en: 'Your seat:', fr: 'Ton siège :', it: 'Il tuo posto:' },
+  'Vuestros asientos:': { en: 'Your seats:', fr: 'Vos sièges :', it: 'I vostri posti:' },
+  'La reserva no dice el asiento.': { en: 'The booking doesn’t show a seat.', fr: 'La réservation n’indique pas de siège.', it: 'La prenotazione non indica il posto.' },
+  'El vuelo ya ha salido.': { en: 'The flight has already left.', fr: 'Le vol est déjà parti.', it: 'Il volo è già partito.' },
+  'El check-in online de {name} ya está abierto: es el momento de elegir o cambiar asiento.': {
+    en: '{name} online check-in is already open: now’s the time to choose or change your seat.',
+    fr: 'L’enregistrement en ligne de {name} est déjà ouvert : c’est le moment de choisir ou changer de siège.',
+    it: 'Il check-in online di {name} è già aperto: è il momento di scegliere o cambiare posto.',
+  },
+  'El check-in online de {name} abre {hours} h antes: {when} (hora de {zone}). Te avisaremos.': {
+    en: '{name} online check-in opens {hours} h before: {when} ({zone} time). We’ll let you know.',
+    fr: 'L’enregistrement en ligne de {name} ouvre {hours} h avant : {when} (heure de {zone}). On te préviendra.',
+    it: 'Il check-in online di {name} apre {hours} h prima: {when} (ora di {zone}). Ti avviseremo.',
+  },
+  'Elegir o cambiar asiento en {name}': { en: 'Choose or change seat with {name}', fr: 'Choisir ou changer de siège chez {name}', it: 'Scegli o cambia posto con {name}' },
+  'Copiar localizador {ref}': { en: 'Copy booking ref {ref}', fr: 'Copier la référence {ref}', it: 'Copia codice {ref}' },
+  'Los asientos libres solo los muestra la aerolínea: entra con tu localizador y el apellido.': {
+    en: 'Only the airline shows free seats: sign in with your booking reference and surname.',
+    fr: 'Seule la compagnie montre les sièges libres : connecte-toi avec ta référence et ton nom.',
+    it: 'Solo la compagnia mostra i posti liberi: entra con il codice di prenotazione e il cognome.',
+  },
+  'check-in online': { en: 'online check-in', fr: 'enregistrement en ligne', it: 'check-in online' },
+  'la aerolínea': { en: 'the airline', fr: 'la compagnie', it: 'la compagnia' },
 };

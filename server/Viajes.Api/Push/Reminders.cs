@@ -9,7 +9,8 @@ public sealed record DueReminder(Booking Booking, string Kind, long DueMs, PushM
 
 /// <summary>
 /// Reglas de los recordatorios, sin base de datos ni red, para poder probarlas:
-/// la víspera a las 20:00 (hora del lugar de salida) y tres horas antes de la salida.
+/// la víspera a las 20:00 (hora del lugar de salida), tres horas antes de la salida y, en los vuelos, cuando abre el
+/// check-in online (el momento de elegir asiento).
 /// Cada aviso se envía una vez por reserva y hora de salida; si la hora cambia, vuelve a tocar.
 /// </summary>
 public static class Reminders
@@ -17,6 +18,7 @@ public static class Reminders
     public const string Eve = "eve";
     public const string Soon = "soon";
     public const string Change = "change";
+    public const string CheckIn = "checkin";
 
     public const int EveHour = 20;
     public static readonly TimeSpan SoonBefore = TimeSpan.FromHours(3);
@@ -50,6 +52,10 @@ public static class Reminders
 
     public static long SoonMs(Booking booking) => booking.StartUtcMs - (long)SoonBefore.TotalMilliseconds;
 
+    /// <summary>Cuando abre el check-in online del vuelo; null si no es un vuelo.</summary>
+    public static long? CheckInMs(Booking booking) =>
+        booking.Type == "flight" ? booking.StartUtcMs - Airlines.CheckInHoursFor(booking.Title) * 3_600_000L : null;
+
     /// <summary>Los avisos que tocan ahora y no se han enviado aún para esa hora de salida.</summary>
     public static IReadOnlyList<DueReminder> Due(IEnumerable<Booking> bookings, long nowMs, ISet<(Guid BookingId, string Kind, long StartUtcMs)> alreadySent)
     {
@@ -68,6 +74,12 @@ public static class Reminders
                 due.Add(new DueReminder(booking, Eve, eve.Value, EveMessage(booking)));
             }
 
+            var checkIn = CheckInMs(booking);
+            if (checkIn is not null && nowMs >= checkIn && nowMs < checkIn + window && !alreadySent.Contains((booking.Id, CheckIn, booking.StartUtcMs)))
+            {
+                due.Add(new DueReminder(booking, CheckIn, checkIn.Value, CheckInMessage(booking)));
+            }
+
             var soon = SoonMs(booking);
             if (nowMs >= soon && nowMs < soon + window && !alreadySent.Contains((booking.Id, Soon, booking.StartUtcMs)))
             {
@@ -83,6 +95,9 @@ public static class Reminders
 
     public static PushMessage SoonMessage(Booking booking) =>
         new($"Hoy a las {booking.StartLocal[11..16]}: {Label(booking)}", $"{booking.Title}{Place(booking)}. Toca para abrir la reserva y su QR.", $"/bookings/{booking.Id}", $"soon-{booking.Id}");
+
+    public static PushMessage CheckInMessage(Booking booking) =>
+        new($"Check-in abierto: {booking.Title}", "Ya puedes hacer el check-in online y elegir o cambiar asiento. Toca para abrir la reserva.", $"/bookings/{booking.Id}", $"checkin-{booking.Id}");
 
     public static PushMessage ChangeMessage(Booking booking) =>
         new($"Reserva modificada: {booking.Title}", (booking.ChangeNote ?? "Hay cambios en esta reserva.").Replace("\n", " "), $"/bookings/{booking.Id}", $"change-{booking.Id}");
