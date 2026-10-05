@@ -116,6 +116,8 @@ export interface Place {
   address: string | null;
   visited: boolean;
   createdBy: string;
+  /** Cuándo se apuntó; 0 o ausente en los sitios de antes de guardarlo. Lo último añadido sale primero. */
+  createdAtMs?: number;
   version: number;
   deletedAtMs: number | null;
 }

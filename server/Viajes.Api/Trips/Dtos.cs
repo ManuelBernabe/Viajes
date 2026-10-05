@@ -118,10 +118,11 @@ public sealed record PlaceDto(
     bool Visited,
     string CreatedBy,
     long Version,
-    long? DeletedAtMs)
+    long? DeletedAtMs,
+    long CreatedAtMs)
 {
     public static PlaceDto From(Place p) =>
-        new(p.Id, p.TripId, p.Name, p.Category, p.Notes, p.Url, p.Address, p.Visited, p.CreatedBy, p.Version, p.DeletedAtMs);
+        new(p.Id, p.TripId, p.Name, p.Category, p.Notes, p.Url, p.Address, p.Visited, p.CreatedBy, p.Version, p.DeletedAtMs, p.CreatedAtMs);
 }
 
 public sealed record SyncResponse(

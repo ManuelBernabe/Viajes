@@ -47,6 +47,18 @@ describe('sortPlaces', () => {
   });
 });
 
+describe('sortPlaces: lo último añadido, primero', () => {
+  it('ordena por fecha de alta y deja los antiguos (sin fecha) después', () => {
+    const { pending } = sortPlaces([
+      place('Zoo', 'see'),
+      { ...place('Nuevo', 'other'), createdAtMs: 2000 },
+      { ...place('Anterior', 'eat'), createdAtMs: 1000 },
+      place('Arte', 'see'),
+    ]);
+    expect(pending.map((p) => p.name)).toEqual(['Nuevo', 'Anterior', 'Arte', 'Zoo']);
+  });
+});
+
 describe('groupByArea', () => {
   it('agrupa por país en el orden del viaje; los demás después y los sin país al final', () => {
     const ideas = [
