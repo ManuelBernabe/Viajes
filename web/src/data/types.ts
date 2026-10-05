@@ -142,7 +142,32 @@ export interface SyncResponse {
   attachments: Attachment[];
   inbox?: InboxItem[];
   places?: Place[];
+  documents?: TravelDocument[];
+  /** Todos los documentos visibles ahora; los locales que no estén aquí se purgan (pasados a privados). */
+  documentIds?: string[];
 }
+
+export type DocumentKind = 'passport' | 'id' | 'visa' | 'insurance' | 'vaccine' | 'license' | 'other';
+
+export const DOCUMENT_KINDS: readonly DocumentKind[] = ['passport', 'id', 'visa', 'insurance', 'vaccine', 'license', 'other'];
+
+/** Un documento de viaje de alguien del hogar. Sus fotos o PDF son adjuntos con `bookingId` = id del documento. */
+export interface TravelDocument {
+  id: string;
+  person: string;
+  kind: DocumentKind;
+  number: string | null;
+  country: string | null;
+  issuedDate: string | null;
+  expiryDate: string | null;
+  notes: string | null;
+  visibility: 'household' | 'private';
+  createdBy: string;
+  version: number;
+  deletedAtMs: number | null;
+}
+
+export type TravelDocumentBody = Omit<TravelDocument, 'id' | 'createdBy' | 'version' | 'deletedAtMs'>;
 
 export interface TripBody {
   title: string;
@@ -170,6 +195,7 @@ export interface BookingBody {
 }
 
 export interface AttachmentBody {
+  /** La reserva, o el documento de viaje, al que pertenece. */
   bookingId: string;
   name: string;
   mime: string;
@@ -185,4 +211,6 @@ export type Op =
   | { kind: 'put-attachment'; id: string; body: AttachmentBody }
   | { kind: 'delete-attachment'; id: string }
   | { kind: 'put-place'; id: string; body: PlaceBody }
-  | { kind: 'delete-place'; id: string };
+  | { kind: 'delete-place'; id: string }
+  | { kind: 'put-document'; id: string; body: TravelDocumentBody }
+  | { kind: 'delete-document'; id: string };

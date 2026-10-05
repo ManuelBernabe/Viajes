@@ -5,7 +5,7 @@ import { isAiOff } from '../attachments/aiExtract';
 import { subscribe } from './bus';
 import { getMeta, openDb } from './db';
 import { todayLocal } from '../domain/agenda';
-import { downloadMissing, getManualOffline, wantedOffline } from './offline';
+import { downloadDocumentFiles, downloadMissing, getManualOffline, wantedOffline } from './offline';
 import { pendingCount, toSendResult, type SendResult } from './outbox';
 import { removeInboxItem } from './repo';
 import { LAST_SYNC_KEY, syncAll, type SyncDeps, type SyncOutcome } from './sync';
@@ -76,6 +76,12 @@ async function send(op: Op): Promise<SendResult> {
         break;
       case 'delete-place':
         await api(`/api/places/${op.id}`, { method: 'DELETE' });
+        break;
+      case 'put-document':
+        await api(`/api/documents/${op.id}`, { method: 'PUT', body: JSON.stringify(op.body) });
+        break;
+      case 'delete-document':
+        await api(`/api/documents/${op.id}`, { method: 'DELETE' });
         break;
     }
     return 'ok';
@@ -167,6 +173,9 @@ export async function setInboxStatus(itemId: string, status: 'confirmed' | 'disc
 export async function downloadWantedTrips(): Promise<void> {
   const database = await openDb();
   const today = todayLocal();
+  if ((await downloadDocumentFiles(downloadAttachment)).failed) {
+    return;
+  }
   for (const trip of await database.getAll('trips')) {
     if (wantedOffline(trip, today, await getManualOffline(trip.id))) {
       const result = await downloadMissing(trip.id, downloadAttachment);

@@ -48,12 +48,23 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     }
   }
 
+  // Documentos de viaje (antes que los adjuntos: sus fotos cuelgan de ellos).
+  const visibleDocuments = response.documentIds ? new Set(response.documentIds) : null;
+  for (const document of response.documents ?? []) {
+    applied++;
+    if (document.deletedAtMs !== null || (visibleDocuments && !visibleDocuments.has(document.id))) {
+      await removeDocument(document.id);
+    } else {
+      await database.put('documents', document);
+    }
+  }
+
   for (const attachment of response.attachments) {
     applied++;
     if (attachment.deletedAtMs !== null) {
       await database.delete('blobs', attachment.id);
       await database.delete('attachments', attachment.id);
-    } else if (await database.get('bookings', attachment.bookingId)) {
+    } else if ((await database.get('bookings', attachment.bookingId)) || (await database.get('documents', attachment.bookingId))) {
       await database.put('attachments', attachment);
     }
   }
@@ -101,12 +112,31 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     }
   }
 
+  // Documentos que ya no se ven (su dueño los ha hecho privados): fuera del móvil, salvo los que esperan en la cola.
+  if (visibleDocuments) {
+    for (const document of await database.getAll('documents')) {
+      if (!visibleDocuments.has(document.id) && !waiting.has(document.id)) {
+        await removeDocument(document.id);
+        applied++;
+      }
+    }
+  }
+
   await setMeta(VERSION_KEY, response.version);
   await setMeta(LAST_SYNC_KEY, Date.now());
   if (applied > 0) {
     emitChange();
   }
   return applied;
+}
+
+async function removeDocument(id: string): Promise<void> {
+  const database = await openDb();
+  for (const attachment of await database.getAllFromIndex('attachments', 'bookingId', id)) {
+    await database.delete('blobs', attachment.id);
+    await database.delete('attachments', attachment.id);
+  }
+  await database.delete('documents', id);
 }
 
 async function removeTrip(id: string): Promise<void> {

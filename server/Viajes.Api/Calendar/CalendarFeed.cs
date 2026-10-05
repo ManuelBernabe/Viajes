@@ -64,7 +64,7 @@ public static class CalendarFeed
     private static readonly Dictionary<string, string> Icons = new()
     {
         ["flight"] = "✈️",
-        ["train"] = "🚆",
+        ["train"] = "🚄",
         ["hotel"] = "🏨",
         ["car"] = "🚗",
         ["ticket"] = "🎟️",
@@ -204,7 +204,7 @@ public static class CalendarFeed
 
     /// <summary>RFC 5545: barra, punto y coma y coma se escapan; los saltos de línea pasan a «\n».</summary>
     public static string Escape(string text) =>
-        text.Replace("\\", "\\\\").Replace(";", "\;").Replace(",", "\\,").Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\\n");
+        text.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\\n");
 
     /// <summary>Líneas de como mucho 75 bytes; las siguientes empiezan con un espacio. Sin partir un carácter UTF-8.</summary>
     private static void Fold(StringBuilder output, string line)

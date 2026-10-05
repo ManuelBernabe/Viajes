@@ -2,9 +2,9 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getMeta, openDb, resetDb } from './db';
 import { pending } from './outbox';
-import { addAttachment, getBlob, listAttachments, listBookings, listTrips, saveBooking, saveTrip } from './repo';
+import { addAttachment, getBlob, listAttachments, listBookings, listDocuments, listTrips, saveBooking, saveDocument, saveTrip } from './repo';
 import { pull, syncAll, uploads, VERSION_KEY } from './sync';
-import type { Attachment, Booking, Op, SyncResponse, Trip } from './types';
+import type { Attachment, Booking, Op, SyncResponse, TravelDocument, Trip } from './types';
 
 beforeEach(() => resetDb());
 
@@ -213,5 +213,32 @@ describe('reservas cuya visibilidad se ha retirado', () => {
     await pull({ fetchSync: async () => response({ tripIds: ['t1'] }) });
 
     expect((await listBookings('t1')).map((b) => b.id)).toEqual(['b1']);
+  });
+});
+
+describe('documentos de viaje', () => {
+  const document = (id: string, extra: Partial<TravelDocument> = {}): TravelDocument => ({
+    id, person: 'Paco', kind: 'passport', number: null, country: null, issuedDate: null, expiryDate: '2030-01-01', notes: null,
+    visibility: 'household', createdBy: 'yo', version: 1, deletedAtMs: null, ...extra,
+  });
+
+  it('guarda los documentos y sus fotos; purga los que ya no se ven, salvo los que esperan en la cola', async () => {
+    await pull({
+      fetchSync: async () =>
+        response({
+          documents: [document('pasaporte'), document('seguro', { kind: 'insurance' })],
+          documentIds: ['pasaporte', 'seguro'],
+          attachments: [attachment('foto', 'pasaporte', { mime: 'image/jpeg' })],
+        }),
+    });
+    expect((await listDocuments()).map((d) => d.id).sort()).toEqual(['pasaporte', 'seguro']);
+    expect((await listAttachments('pasaporte')).map((a) => a.id)).toEqual(['foto']);
+
+    const local = await saveDocument({ person: 'Bea', kind: 'id', number: null, country: null, issuedDate: null, expiryDate: null, notes: null, visibility: 'household' }, 'yo');
+    // El seguro pasa a privado de otra persona: deja de estar en la lista.
+    await pull({ fetchSync: async () => response({ documentIds: ['pasaporte'] }) });
+
+    expect((await listDocuments()).map((d) => d.id).sort()).toEqual([local.id, 'pasaporte'].sort());
+    expect((await listAttachments('pasaporte')).map((a) => a.id)).toEqual(['foto']);
   });
 });

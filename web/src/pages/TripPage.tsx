@@ -6,11 +6,12 @@ import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TypeChips } from '../components/TypeChips';
 import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
-import { deleteTrip, getTrip, listAttachments, listBookings, listPlaces } from '../data/repo';
+import { deleteTrip, getTrip, listAttachments, listBookings, listDocuments, listPlaces } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, isInProgress, isPast, nextBooking, TYPE_INFO } from '../domain/agenda';
+import { groupByDay, isInProgress, isPast, nextBooking, todayLocal, TYPE_INFO } from '../domain/agenda';
+import { documentAlerts } from '../domain/documents';
 import { t } from '../i18n';
 
 export function TripPage() {
@@ -24,6 +25,11 @@ export function TripPage() {
     const next = nextBooking(await listBookings(tripId), Date.now());
     const qr = next ? (await listAttachments(next.id)).some((a) => a.qrText) : false;
     return { next, qr };
+  }, [tripId]);
+  // Documentos que caducan antes o durante este viaje (pasaportes con menos de 6 meses, etc.).
+  const docAlerts = useLiveQuery(async () => {
+    const current = await getTrip(tripId);
+    return current ? documentAlerts(await listDocuments(), [current], todayLocal()).filter((a) => a.trip?.id === tripId) : [];
   }, [tripId]);
   const offline = useTripOffline(trip);
   const [filter, setFilter] = useState<BookingType | null>(null);
@@ -115,6 +121,17 @@ export function TripPage() {
             </Link>
           </div>
         </section>
+      )}
+
+      {docAlerts && docAlerts.length > 0 && (
+        <Link className="card highlight" to="/documents" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+          <strong>⚠️ {t('Documentos')}</strong>
+          {docAlerts.map((alert, index) => (
+            <div key={index} className={`small${alert.level === 'danger' ? ' error' : ''}`}>
+              {alert.message}
+            </div>
+          ))}
+        </Link>
       )}
 
       <section className="card">

@@ -10,6 +10,10 @@ export function Layout() {
           <span className="icon">🧳</span>
           {t('Inicio')}
         </NavLink>
+        <NavLink to="/documents" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span className="icon">🛂</span>
+          {t('Documentos')}
+        </NavLink>
         <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
           <span className="icon">⚙️</span>
           {t('Ajustes')}

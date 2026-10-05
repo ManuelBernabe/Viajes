@@ -1,5 +1,5 @@
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Attachment, Booking, InboxItem, Op, Place, StoredBlob, Trip } from './types';
+import type { Attachment, Booking, InboxItem, Op, Place, StoredBlob, TravelDocument, Trip } from './types';
 
 export interface ViajesDb extends DBSchema {
   trips: { key: string; value: Trip };
@@ -10,6 +10,7 @@ export interface ViajesDb extends DBSchema {
   meta: { key: string; value: unknown };
   inbox: { key: string; value: InboxItem };
   places: { key: string; value: Place; indexes: { tripId: string } };
+  documents: { key: string; value: TravelDocument };
 }
 
 export const DB_NAME = 'viajes';
@@ -18,7 +19,7 @@ let opening: Promise<IDBPDatabase<ViajesDb>> | null = null;
 
 /** Una sola conexión compartida: abrir y cerrar en cada consulta es lento en iOS. */
 export function openDb(): Promise<IDBPDatabase<ViajesDb>> {
-  opening ??= openDB<ViajesDb>(DB_NAME, 3, {
+  opening ??= openDB<ViajesDb>(DB_NAME, 4, {
     upgrade(database, oldVersion) {
       if (oldVersion < 1) {
         database.createObjectStore('trips', { keyPath: 'id' });
@@ -33,6 +34,9 @@ export function openDb(): Promise<IDBPDatabase<ViajesDb>> {
       }
       if (oldVersion < 3) {
         database.createObjectStore('places', { keyPath: 'id' }).createIndex('tripId', 'tripId');
+      }
+      if (oldVersion < 4) {
+        database.createObjectStore('documents', { keyPath: 'id' });
       }
     },
     blocked() {

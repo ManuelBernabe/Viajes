@@ -52,7 +52,7 @@ public sealed class CalendarFeedTests(TestApp app) : IClassFixture<TestApp>
         Assert.Contains("LOCATION:MAD → HND", ics);
         // El hotel de varias noches, día a día; con los caracteres especiales escapados.
         Assert.Contains("DTSTART;VALUE=DATE:20261012\r\nDTEND;VALUE=DATE:20261015", ics);
-        Assert.Contains("Localizador: H1\; B2", ics);
+        Assert.Contains(@"Localizador: H1\; B2", ics);
         Assert.DoesNotContain("Hotel secreto", ics);
 
         // Revocada, el enlace deja de funcionar; uno inventado, tampoco.
