@@ -151,7 +151,7 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
         string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct)
     {
         // Las imágenes van como partes del mensaje; de un PDF, su texto.
-        object content = user;
+        object userContent = user;
         if (files.Count > 0)
         {
             var parts = new List<object>();
@@ -169,7 +169,7 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
             }
 
             parts.Add(new { type = "text", text = text.ToString() });
-            content = parts;
+            userContent = parts;
         }
 
         // DeepSeek no valida contra un esquema: se le enseña en el propio mensaje.
@@ -179,7 +179,7 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
             messages = new object[]
             {
                 new { role = "system", content = $"{system}\n\nResponde únicamente con un objeto JSON que cumpla este esquema, sin explicaciones ni marcas de código:\n{schema.GetRawText()}" },
-                new { role = "user", content },
+                new { role = "user", content = userContent },
             },
             response_format = new { type = "json_object" },
             max_tokens = maxTokens,
