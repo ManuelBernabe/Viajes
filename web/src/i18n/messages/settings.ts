@@ -76,10 +76,10 @@ export const settings: Messages = {
     fr: 'Activé. Désormais l’app demandera Face ID à l’ouverture.',
     it: 'Attivato. D’ora in poi l’app chiederà Face ID all’apertura.',
   },
-  'No se ha podido activar (¿cancelado?). Vuelve a intentarlo.': {
-    en: 'It couldn’t be enabled (cancelled?). Try again.',
-    fr: 'Impossible de l’activer (annulé ?). Réessaie.',
-    it: 'Impossibile attivarlo (annullato?). Riprova.',
+  'No se ha podido activar. Si el iPhone abre otra app (Microsoft Authenticator, por ejemplo), esa app no sirve para esto: al guardar la llave elige «Contraseñas». Si no te deja elegir, ve a Ajustes del iPhone → General → Autorrelleno y contraseñas, activa «Contraseñas» y vuelve a intentarlo.': {
+    en: 'It couldn’t be enabled. If the iPhone opens another app (Microsoft Authenticator, for example), that app doesn’t work for this: when saving the passkey choose “Passwords”. If it doesn’t let you choose, go to iPhone Settings → General → AutoFill & Passwords, turn on “Passwords” and try again.',
+    fr: 'Impossible de l’activer. Si l’iPhone ouvre une autre app (Microsoft Authenticator, par exemple), elle ne sert pas pour ceci : en enregistrant la clé, choisis « Mots de passe ». Si tu ne peux pas choisir, va dans Réglages de l’iPhone → Général → Remplissage automatique et mots de passe, active « Mots de passe » et réessaie.',
+    it: 'Impossibile attivarlo. Se l’iPhone apre un’altra app (Microsoft Authenticator, per esempio), quell’app non va bene: quando salvi la passkey scegli «Password». Se non ti lascia scegliere, vai in Impostazioni dell’iPhone → Generali → Riempimento automatico e password, attiva «Password» e riprova.',
   },
   'Para quitar el bloqueo hay que pasar Face ID. Si no te funciona, bloquea la app, entra con la contraseña y quítalo enseguida.': {
     en: 'To remove the lock you need to pass Face ID. If it doesn’t work, lock the app, unlock it with your password and remove it straight away.',
