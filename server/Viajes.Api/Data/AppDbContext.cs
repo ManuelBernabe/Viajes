@@ -18,6 +18,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<Place> Places => Set<Place>();
 
+    public DbSet<PlaceIdea> PlaceIdeas => Set<PlaceIdea>();
+
     public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<ChangeCounter> ChangeCounter => Set<ChangeCounter>();
@@ -91,6 +93,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             place.Property(p => p.Address).HasMaxLength(300);
             place.HasIndex(p => p.TripId);
             place.HasIndex(p => p.Version);
+        });
+
+        builder.Entity<PlaceIdea>(idea =>
+        {
+            idea.HasKey(i => i.Id);
+            idea.Property(i => i.Name).HasMaxLength(200);
+            idea.Property(i => i.Category).HasMaxLength(20);
+            idea.Property(i => i.Description).HasMaxLength(500);
+            idea.Property(i => i.Address).HasMaxLength(300);
+            idea.HasIndex(i => i.TripId);
         });
 
         builder.Entity<Booking>(booking =>
