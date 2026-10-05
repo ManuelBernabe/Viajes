@@ -7,6 +7,7 @@ import { useSyncStatus } from '../data/syncClient';
 import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBooking, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
+import { SyncButton } from '../components/SyncButton';
 import { t } from '../i18n';
 
 /** Resumen de las reservas de un viaje para su tarjeta: cuántas hay y cuál es la siguiente. */
@@ -113,6 +114,7 @@ export function HomePage() {
     <main className="page">
       <div className="topbar">
         <h1 className="two-words">{t('Viajes y reservas')}</h1>
+        <SyncButton />
         <Link className="btn primary add" to="/trips/new" aria-label={t('Nuevo viaje')}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />

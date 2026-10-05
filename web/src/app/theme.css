@@ -386,3 +386,7 @@ html, body, #root { height: 100%; }
 body { overflow: hidden; touch-action: manipulation; }
 .shell { height: 100%; display: flex; flex-direction: column; }
 .shell > .scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+.btn.icon { width: 40px; height: 40px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.btn.icon svg { width: 20px; height: 20px; }
+.btn.sync.spinning svg { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
