@@ -16,6 +16,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<Booking> Bookings => Set<Booking>();
 
+    public DbSet<Place> Places => Set<Place>();
+
     public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<ChangeCounter> ChangeCounter => Set<ChangeCounter>();
@@ -77,6 +79,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             trip.Property(t => t.EndDate).HasMaxLength(10);
             trip.HasIndex(t => t.HouseholdId);
             trip.HasIndex(t => t.Version);
+        });
+
+        builder.Entity<Place>(place =>
+        {
+            place.HasKey(p => p.Id);
+            place.Property(p => p.Name).HasMaxLength(200);
+            place.Property(p => p.Category).HasMaxLength(20);
+            place.Property(p => p.Notes).HasMaxLength(2000);
+            place.Property(p => p.Url).HasMaxLength(1000);
+            place.Property(p => p.Address).HasMaxLength(300);
+            place.HasIndex(p => p.TripId);
+            place.HasIndex(p => p.Version);
         });
 
         builder.Entity<Booking>(booking =>

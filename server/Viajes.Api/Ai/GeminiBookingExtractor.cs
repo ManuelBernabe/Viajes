@@ -8,7 +8,7 @@ namespace Viajes.Api.Ai;
 /// imágenes tal cual y devuelve JSON validado contra un esquema. Se pide «store: false» para que Google no guarde
 /// la interacción en su servidor.
 /// </summary>
-public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookingExtractor> log, string? preferredModel = null) : IBookingExtractor
+public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookingExtractor> log, string? preferredModel = null) : IBookingExtractor, IJsonAsker
 {
     public const string ModelId = "gemini-3.8-flash";
 
@@ -115,6 +115,62 @@ public sealed class GeminiBookingExtractor(HttpClient http, ILogger<GeminiBookin
             }
 
             log.LogWarning("Gemini: todos los modelos saturados ({Modelos}).", string.Join(", ", models));
+            return null;
+        }
+        catch (HttpRequestException e)
+        {
+            log.LogWarning(e, "Gemini: error de red.");
+            return null;
+        }
+        catch (TaskCanceledException e) when (!ct.IsCancellationRequested)
+        {
+            log.LogWarning(e, "Gemini: tiempo de espera agotado.");
+            return null;
+        }
+        catch (JsonException e)
+        {
+            log.LogWarning(e, "Gemini: la respuesta no era el JSON esperado.");
+            return null;
+        }
+    }
+
+    public async Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct)
+    {
+        var models = FallbackModels.Prepend(preferredModel ?? ModelId).Distinct().ToList();
+        try
+        {
+            foreach (var model in models)
+            {
+                var body = new
+                {
+                    model,
+                    system_instruction = system,
+                    input = new object[] { new { type = "text", text = user } },
+                    generation_config = new { temperature = 0.4, max_output_tokens = maxTokens },
+                    response_format = new { type = "text", mime_type = "application/json", schema },
+                    store = false,
+                };
+                using var request = new HttpRequestMessage(HttpMethod.Post, "v1beta/interactions")
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
+                };
+                using var response = await http.SendAsync(request, ct);
+                var payload = await response.Content.ReadAsStringAsync(ct);
+                if ((int)response.StatusCode is 503 or 429)
+                {
+                    log.LogWarning("Gemini ({Modelo}) saturado ({Codigo}); se prueba el siguiente modelo.", model, (int)response.StatusCode);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    log.LogWarning("Gemini ({Modelo}) respondió {Codigo}: {Cuerpo}", model, (int)response.StatusCode, payload.Length > 400 ? payload[..400] : payload);
+                    return null;
+                }
+
+                return OutputText(payload);
+            }
+
             return null;
         }
         catch (HttpRequestException e)

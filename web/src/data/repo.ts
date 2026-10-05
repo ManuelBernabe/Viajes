@@ -2,7 +2,7 @@ import { emitChange } from './bus';
 import { openDb } from './db';
 import { toUtcMs } from './localTime';
 import { enqueue } from './outbox';
-import type { Attachment, AttachmentBody, Booking, BookingBody, InboxItem, StoredBlob, Trip, TripBody } from './types';
+import type { Attachment, AttachmentBody, Booking, BookingBody, InboxItem, Place, PlaceBody, StoredBlob, Trip, TripBody } from './types';
 
 /**
  * Escrituras: se aplican en local al instante, se encolan para el servidor y se avisa a las pantallas.
@@ -47,8 +47,39 @@ export async function deleteTrip(id: string): Promise<void> {
   for (const booking of await database.getAllFromIndex('bookings', 'tripId', id)) {
     await removeBookingLocally(booking.id);
   }
+  for (const place of await database.getAllFromIndex('places', 'tripId', id)) {
+    await database.delete('places', place.id);
+  }
   await database.delete('trips', id);
   await enqueue({ kind: 'delete-trip', id });
+  emitChange();
+}
+
+// ---- Lugares recomendados ----
+
+export async function listPlaces(tripId: string): Promise<Place[]> {
+  return (await openDb()).getAllFromIndex('places', 'tripId', tripId);
+}
+
+export async function savePlace(body: PlaceBody, createdBy: string, id = newId()): Promise<Place> {
+  const database = await openDb();
+  const existing = await database.get('places', id);
+  const place: Place = {
+    id,
+    ...body,
+    createdBy: existing?.createdBy ?? createdBy,
+    version: existing?.version ?? 0,
+    deletedAtMs: null,
+  };
+  await database.put('places', place);
+  await enqueue({ kind: 'put-place', id, body });
+  emitChange();
+  return place;
+}
+
+export async function deletePlace(id: string): Promise<void> {
+  await (await openDb()).delete('places', id);
+  await enqueue({ kind: 'delete-place', id });
   emitChange();
 }
 
@@ -200,7 +231,7 @@ export async function removeInboxItem(id: string): Promise<void> {
 /** Borra todo lo local (al cerrar sesión). */
 export async function clearAll(): Promise<void> {
   const database = await openDb();
-  const tx = database.transaction(['trips', 'bookings', 'attachments', 'blobs', 'outbox', 'meta', 'inbox'], 'readwrite');
+  const tx = database.transaction(['trips', 'bookings', 'attachments', 'blobs', 'outbox', 'meta', 'inbox', 'places'], 'readwrite');
   await Promise.all([
     tx.objectStore('trips').clear(),
     tx.objectStore('bookings').clear(),
@@ -209,6 +240,7 @@ export async function clearAll(): Promise<void> {
     tx.objectStore('outbox').clear(),
     tx.objectStore('meta').clear(),
     tx.objectStore('inbox').clear(),
+    tx.objectStore('places').clear(),
   ]);
   await tx.done;
   emitChange();

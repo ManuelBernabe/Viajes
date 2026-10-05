@@ -101,6 +101,35 @@ export interface InboxItem {
   deletedAtMs: number | null;
 }
 
+export type PlaceCategory = 'see' | 'eat' | 'drink' | 'shop' | 'nature' | 'other';
+
+export const PLACE_CATEGORIES: readonly PlaceCategory[] = ['see', 'eat', 'drink', 'shop', 'nature', 'other'];
+
+/** Un sitio que merece la pena en un viaje. Lo ve todo el hogar. */
+export interface Place {
+  id: string;
+  tripId: string;
+  name: string;
+  category: PlaceCategory;
+  notes: string | null;
+  url: string | null;
+  address: string | null;
+  visited: boolean;
+  createdBy: string;
+  version: number;
+  deletedAtMs: number | null;
+}
+
+export interface PlaceBody {
+  tripId: string;
+  name: string;
+  category: PlaceCategory;
+  notes: string | null;
+  url: string | null;
+  address: string | null;
+  visited: boolean;
+}
+
 export interface SyncResponse {
   version: number;
   tripIds: string[];
@@ -110,6 +139,7 @@ export interface SyncResponse {
   bookings: Booking[];
   attachments: Attachment[];
   inbox?: InboxItem[];
+  places?: Place[];
 }
 
 export interface TripBody {
@@ -151,4 +181,6 @@ export type Op =
   | { kind: 'put-booking'; id: string; body: BookingBody }
   | { kind: 'delete-booking'; id: string }
   | { kind: 'put-attachment'; id: string; body: AttachmentBody }
-  | { kind: 'delete-attachment'; id: string };
+  | { kind: 'delete-attachment'; id: string }
+  | { kind: 'put-place'; id: string; body: PlaceBody }
+  | { kind: 'delete-place'; id: string };

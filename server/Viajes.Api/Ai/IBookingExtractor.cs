@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Viajes.Api.Ai;
 
 /// <summary>Un fichero que acompaña a la petición de extracción: PDF o imagen de un billete o confirmación.</summary>
@@ -28,10 +30,25 @@ public interface IBookingExtractor
     Task<Extraction?> ExtractAsync(ExtractionInput input, CancellationToken ct);
 }
 
+/// <summary>
+/// Una pregunta de texto con respuesta JSON según un esquema, con el proveedor que haya configurado (Gemini, DeepSeek o
+/// Claude). La usan las sugerencias de lugares; la lectura de reservas sigue con <see cref="IBookingExtractor"/>.
+/// </summary>
+public interface IJsonAsker
+{
+    bool IsAvailable { get; }
+
+    /// <summary>El JSON de la respuesta, o null si no hay respuesta útil (el motivo queda en el log).</summary>
+    Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct);
+}
+
 /// <summary>Sin clave de API: no extrae nada.</summary>
-public sealed class NoBookingExtractor : IBookingExtractor
+public sealed class NoBookingExtractor : IBookingExtractor, IJsonAsker
 {
     public bool IsAvailable => false;
 
     public Task<Extraction?> ExtractAsync(ExtractionInput input, CancellationToken ct) => Task.FromResult<Extraction?>(null);
+
+    public Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct) =>
+        Task.FromResult<string?>(null);
 }

@@ -53,6 +53,12 @@ public sealed class AccessService(AppDbContext db)
         where member.UserId == userId && member.DeletedAtMs == null
         select trip;
 
+    /// <summary>Los lugares los ve quien ve el viaje.</summary>
+    public IQueryable<Place> VisiblePlaces(string userId) =>
+        from place in db.Places
+        join trip in VisibleTrips(userId) on place.TripId equals trip.Id
+        select place;
+
     public Task<Trip?> VisibleTrip(string userId, Guid tripId) =>
         VisibleTrips(userId).FirstOrDefaultAsync(t => t.Id == tripId);
 
