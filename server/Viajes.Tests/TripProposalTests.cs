@@ -36,6 +36,19 @@ public sealed class TripProposalTests(PlaceAiApp app) : IClassFixture<PlaceAiApp
             Assert.Equal("Lisboa", body.GetProperty("title").GetString());
             Assert.Equal("Lisboa", body.GetProperty("destination").GetString());
             Assert.Contains("VY 8460", app.Fake.Prompts.Last());
+            Assert.Equal(JsonValueKind.Null, body.GetProperty("tripId").ValueKind);
+
+            // Con un viaje del hogar que encaja, la IA lo elige; un id que no es del hogar se ignora.
+            var tripId = Guid.NewGuid();
+            (await ana.PutTrip(tripId, "Portugal", "Lisboa", "2026-12-10", "2026-12-15")).EnsureSuccessStatusCode();
+            app.Fake.Answer = $$"""{"tripId": "{{tripId}}", "title": "Portugal", "destination": "Lisboa"}""";
+            var chosen = await (await ana.Client.PostAsJsonAsync($"/api/inbox/{itemId}/trip-proposal", new { lang = "es" })).Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(tripId, chosen.GetProperty("tripId").GetGuid());
+            Assert.Contains($"{tripId} | Portugal | destino: Lisboa | fechas: 2026-12-10 a 2026-12-15", app.Fake.Prompts.Last());
+
+            app.Fake.Answer = $$"""{"tripId": "{{Guid.NewGuid()}}", "title": "Lisboa", "destination": "Lisboa"}""";
+            var foreign = await (await ana.Client.PostAsJsonAsync($"/api/inbox/{itemId}/trip-proposal", new { lang = "es" })).Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(JsonValueKind.Null, foreign.GetProperty("tripId").ValueKind);
 
             var luis = await TripsApi.SignUp(app, "propuesta1-luis@example.com");
             Assert.Equal(HttpStatusCode.NotFound, (await luis.Client.PostAsJsonAsync($"/api/inbox/{itemId}/trip-proposal", new { lang = "es" })).StatusCode);

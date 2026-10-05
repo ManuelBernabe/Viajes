@@ -69,7 +69,14 @@ export function InboxItemPage() {
   /** Si se ha tocado a mano, el nombre que llega luego de la IA ya no lo pisa. */
   const draftEdited = useRef(false);
 
-  // Borrador del viaje nuevo: al momento con los datos del correo y, con conexión, el nombre que propone la IA.
+  /**
+   * Qué viaje propone la IA: undefined mientras pregunta (o sin IA), null = viaje nuevo, o el id de uno del hogar.
+   * Antes de preguntar se lee el billete si al llegar no se pudo (así la decisión usa las fechas y lugares del PDF).
+   */
+  const [aiTrip, setAiTrip] = useState<string | null | undefined>(undefined);
+  const [deciding, setDeciding] = useState(false);
+
+  // Borrador del viaje nuevo: al momento con los datos del correo y, con conexión, lo que propone la IA.
   const itemLoaded = item?.id;
   useEffect(() => {
     if (!item) {
@@ -77,19 +84,41 @@ export function InboxItemPage() {
     }
     setDraft(draftTrip(incomingOf(item), item.subject));
     draftEdited.current = false;
+    setAiTrip(undefined);
     let alive = true;
-    api<{ title: string; destination: string | null }>(`/api/inbox/${item.id}/trip-proposal`, {
-      method: 'POST',
-      body: JSON.stringify({ lang: lang() }),
-    })
-      .then((proposal) => {
-        if (alive && !draftEdited.current) {
-          setDraft((current) => (current ? { ...current, title: proposal.title, destination: proposal.destination ?? current.destination } : current));
+    setDeciding(true);
+    void (async () => {
+      try {
+        let source = item;
+        if (source.suggestedNotes === null || source.suggestedNotes === undefined) {
+          source = (await reExtractInbox(source.id)) ?? source;
+          if (alive && !draftEdited.current) {
+            setDraft(draftTrip(incomingOf(source), source.subject));
+          }
         }
-      })
-      .catch(() => {
-        // Sin IA o sin conexión: se queda el borrador con los datos del correo.
-      });
+        // Como mucho 15 s: si la IA tarda más, se sigue con lo que digan las fechas y el destino.
+        const proposal = await Promise.race([
+          api<{ tripId: string | null; title: string; destination: string | null }>(`/api/inbox/${source.id}/trip-proposal`, {
+            method: 'POST',
+            body: JSON.stringify({ lang: lang() }),
+          }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 15_000)),
+        ]);
+        if (!alive) {
+          return;
+        }
+        setAiTrip(proposal.tripId ?? null);
+        if (!draftEdited.current) {
+          setDraft((current) => (current ? { ...current, title: proposal.tripId ? current.title : proposal.title, destination: proposal.destination ?? current.destination } : current));
+        }
+      } catch {
+        // Sin IA o sin conexión: se decide con las fechas y el destino, y el borrador queda con los datos del correo.
+      } finally {
+        if (alive) {
+          setDeciding(false);
+        }
+      }
+    })();
     return () => {
       alive = false;
     };
@@ -115,7 +144,11 @@ export function InboxItemPage() {
   const incoming = incomingOf(item);
   const matched = matchTrip(trips, incoming);
   // Encaja en un viaje: ese. Si no, viaje nuevo cuando la reserva trae fecha (si no la trae, no se sabe: el primero).
-  const chosen = tripId || matched?.id || (incoming.startLocal || options.length === 0 ? NEW_TRIP : options[0].id);
+  // La IA sabe que «IGR» está en Argentina: si contesta, manda ella (un viaje del hogar o uno nuevo). Si no, fechas y destino.
+  const aiChoice = aiTrip === undefined ? undefined : aiTrip !== null && options.some((o) => o.id === aiTrip) ? aiTrip : null;
+  const suggested = aiChoice !== undefined ? aiChoice : (matched?.id ?? null);
+  const chosen =
+    tripId || (aiChoice !== undefined ? (aiChoice ?? NEW_TRIP) : matched?.id || (incoming.startLocal || options.length === 0 ? NEW_TRIP : options[0].id));
 
   /** El viaje donde va la reserva; si es uno nuevo, se crea ahora (también sin conexión). */
   async function tripForBooking(): Promise<string> {
@@ -318,18 +351,21 @@ export function InboxItemPage() {
           {options.map((trip) => (
             <option key={trip.id} value={trip.id}>
               {trip.title}
-              {trip.id === matched?.id ? ` · ${t('encaja por fechas')}` : ''}
+              {!deciding && trip.id === suggested ? ` · ${t('encaja con la reserva')}` : ''}
             </option>
           ))}
         </select>
-        {chosen !== NEW_TRIP && chosen === matched?.id && <div className="small muted">{t('Es el viaje que coincide con la fecha o el destino de la reserva.')}</div>}
+        {deciding && <div className="small muted">{t('Mirando a qué viaje pertenece…')}</div>}
+        {!deciding && chosen !== NEW_TRIP && chosen === suggested && (
+          <div className="small muted">{t('Es el viaje que coincide con la fecha o el destino de la reserva.')}</div>
+        )}
       </div>
 
       {chosen === NEW_TRIP && (
         <section className="card">
           <h3>➕ {t('Viaje nuevo')}</h3>
           <p className="small muted" style={{ marginTop: 0 }}>
-            {matched === null && incoming.startLocal
+            {suggested === null && incoming.startLocal
               ? t('Esta reserva no encaja en ningún viaje: se creará este al crear la reserva. Puedes cambiar el nombre y las fechas.')
               : t('Se creará al crear la reserva. Puedes cambiar el nombre y las fechas.')}
           </p>
@@ -404,7 +440,7 @@ export function InboxItemPage() {
         </section>
       ) : (
         <div className="actions">
-          <button className="btn primary" disabled={preparing} onClick={() => void createBooking()}>
+          <button className="btn primary" disabled={preparing || deciding} onClick={() => void createBooking()}>
             {preparing ? t('Leyendo el correo…') : t('Crear reserva')}
           </button>
           <button className="btn danger" onClick={() => void discard()}>
