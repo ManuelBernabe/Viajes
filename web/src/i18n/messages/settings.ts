@@ -32,6 +32,35 @@ export const settings: Messages = {
   Sincronización: { en: 'Sync', fr: 'Synchronisation', it: 'Sincronizzazione' },
   'Última: {when} · Pendientes: {n}': { en: 'Last: {when} · Pending: {n}', fr: 'Dernière : {when} · En attente : {n}', it: 'Ultima: {when} · In attesa: {n}' },
   'incompleta (¿sin conexión?)': { en: 'incomplete (offline?)', fr: 'incomplète (hors ligne ?)', it: 'incompleta (offline?)' },
+  'Calendario': { en: 'Calendar', fr: 'Calendrier', it: 'Calendario' },
+  'Tus viajes y reservas en el calendario del móvil, con su hora. Se actualiza solo cuando cambia algo en la app; cada persona ve sus reservas.': {
+    en: 'Your trips and bookings in your phone’s calendar, with their times. It updates by itself when something changes in the app; each person sees their own bookings.',
+    fr: 'Tes voyages et réservations dans le calendrier du téléphone, avec leurs horaires. Il se met à jour tout seul quand quelque chose change dans l’app ; chacun voit ses réservations.',
+    it: 'I tuoi viaggi e prenotazioni nel calendario del telefono, con gli orari. Si aggiorna da solo quando cambia qualcosa nell’app; ognuno vede le proprie prenotazioni.',
+  },
+  'Añadir al calendario del iPhone': { en: 'Add to iPhone calendar', fr: 'Ajouter au calendrier de l’iPhone', it: 'Aggiungi al calendario dell’iPhone' },
+  'Ya lo tienes añadido desde otro móvil. Si lo añades aquí, el enlace anterior dejará de actualizarse.': {
+    en: 'You already added it from another phone. If you add it here, the previous link will stop updating.',
+    fr: 'Tu l’as déjà ajouté depuis un autre téléphone. Si tu l’ajoutes ici, l’ancien lien ne se mettra plus à jour.',
+    it: 'L’hai già aggiunto da un altro telefono. Se lo aggiungi qui, il link precedente smetterà di aggiornarsi.',
+  },
+  'Activo · el calendario lo consultó por última vez el {when}.': {
+    en: 'Active · the calendar last checked it on {when}.',
+    fr: 'Actif · le calendrier l’a consulté pour la dernière fois le {when}.',
+    it: 'Attivo · il calendario l’ha consultato l’ultima volta il {when}.',
+  },
+  'Activo · el calendario aún no lo ha consultado.': {
+    en: 'Active · the calendar hasn’t checked it yet.',
+    fr: 'Actif · le calendrier ne l’a pas encore consulté.',
+    it: 'Attivo · il calendario non l’ha ancora consultato.',
+  },
+  'Copiar el enlace (Google Calendar)': { en: 'Copy the link (Google Calendar)', fr: 'Copier le lien (Google Agenda)', it: 'Copia il link (Google Calendar)' },
+  'Quitar del calendario': { en: 'Remove from calendar', fr: 'Retirer du calendrier', it: 'Togli dal calendario' },
+  'El calendario dejará de actualizarse y sus eventos desaparecerán en la próxima actualización. ¿Seguir?': {
+    en: 'The calendar will stop updating and its events will disappear at the next refresh. Continue?',
+    fr: 'Le calendrier ne se mettra plus à jour et ses événements disparaîtront à la prochaine actualisation. Continuer ?',
+    it: 'Il calendario smetterà di aggiornarsi e i suoi eventi spariranno al prossimo aggiornamento. Continuare?',
+  },
   'Buscar actualizaciones': { en: 'Check for updates', fr: 'Rechercher des mises à jour', it: 'Cerca aggiornamenti' },
   'Buscando…': { en: 'Checking…', fr: 'Recherche…', it: 'Ricerca…' },
   'Hay una versión nueva: pulsa «Actualizar ahora».': {

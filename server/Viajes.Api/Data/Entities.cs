@@ -97,6 +97,48 @@ public sealed class Place : IVersioned
 }
 
 /// <summary>
+/// Un documento de viaje de alguien del hogar: pasaporte, DNI, visado, seguro, vacuna, carné… Con su foto o PDF como
+/// adjunto (el adjunto apunta al documento con <see cref="Attachment.BookingId"/>). Lo ve todo el hogar, salvo que quien lo
+/// apunta lo deje solo para sí.
+/// </summary>
+public sealed class TravelDocument : IVersioned
+{
+    public static readonly IReadOnlySet<string> Kinds =
+        new HashSet<string> { "passport", "id", "visa", "insurance", "vaccine", "license", "other" };
+
+    public static readonly IReadOnlySet<string> Visibilities = new HashSet<string> { Booking.VisibleToHousehold, Booking.VisibleToCreator };
+
+    public Guid Id { get; set; }
+
+    public Guid HouseholdId { get; set; }
+
+    /// <summary>De quién es («Paco», «Lucía»).</summary>
+    public required string Person { get; set; }
+
+    public required string Kind { get; set; }
+
+    public string? Number { get; set; }
+
+    /// <summary>País que lo expide o para el que vale (un visado, un seguro).</summary>
+    public string? Country { get; set; }
+
+    /// <summary>Fechas locales «2026-10-12».</summary>
+    public string? IssuedDate { get; set; }
+
+    public string? ExpiryDate { get; set; }
+
+    public string? Notes { get; set; }
+
+    public string Visibility { get; set; } = Booking.VisibleToHousehold;
+
+    public required string CreatedBy { get; set; }
+
+    public long Version { get; set; }
+
+    public long? DeletedAtMs { get; set; }
+}
+
+/// <summary>
 /// Una idea de sitio propuesta por la IA para un viaje. Se guarda para no tener que volver a pedirla: la lista de ideas se
 /// queda en el viaje hasta que alguien la añade a «Lugares» o la descarta. No se sincroniza; se lee con la API.
 /// </summary>
@@ -219,6 +261,12 @@ public sealed class ImportToken
 
     /// <summary>Clave personal del atajo de iPhone «Enviar a Viajes»: solo crea borradores, como reenviar un correo.</summary>
     public const string ShareScope = "share";
+
+    /// <summary>Suscripción al calendario (enlace .ics): personal, como la del atajo; solo lee las reservas que ve esa persona.</summary>
+    public const string CalendarScope = "calendar";
+
+    /// <summary>Las claves que cada persona crea y revoca para sí, sin ser administradora.</summary>
+    public static bool IsPersonal(string? scope) => scope is ShareScope or CalendarScope;
 
     public Guid Id { get; set; }
 

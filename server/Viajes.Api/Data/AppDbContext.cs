@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<PlaceIdea> PlaceIdeas => Set<PlaceIdea>();
 
+    public DbSet<TravelDocument> TravelDocuments => Set<TravelDocument>();
+
     public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<ChangeCounter> ChangeCounter => Set<ChangeCounter>();
@@ -93,6 +95,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             place.Property(p => p.Address).HasMaxLength(300);
             place.HasIndex(p => p.TripId);
             place.HasIndex(p => p.Version);
+        });
+
+        builder.Entity<TravelDocument>(document =>
+        {
+            document.HasKey(d => d.Id);
+            document.Property(d => d.Person).HasMaxLength(100);
+            document.Property(d => d.Kind).HasMaxLength(20);
+            document.Property(d => d.Number).HasMaxLength(100);
+            document.Property(d => d.Country).HasMaxLength(100);
+            document.Property(d => d.IssuedDate).HasMaxLength(10);
+            document.Property(d => d.ExpiryDate).HasMaxLength(10);
+            document.Property(d => d.Notes).HasMaxLength(2000);
+            document.Property(d => d.Visibility).HasMaxLength(20);
+            document.HasIndex(d => d.HouseholdId);
+            document.HasIndex(d => d.Version);
         });
 
         builder.Entity<PlaceIdea>(idea =>

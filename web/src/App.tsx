@@ -10,6 +10,8 @@ import { BookingFormPage } from './pages/BookingFormPage';
 import { BookingPage } from './pages/BookingPage';
 import { GuidePage } from './pages/GuidePage';
 import { HomePage } from './pages/HomePage';
+import { DocumentFormPage } from './pages/DocumentFormPage';
+import { DocumentsPage } from './pages/DocumentsPage';
 import { InboxItemPage } from './pages/InboxItemPage';
 import { InboxPage } from './pages/InboxPage';
 import { InvitationPage } from './pages/InvitationPage';
@@ -67,6 +69,9 @@ function Gate() {
         <Route path="/guia" element={<GuidePage />} />
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/inbox/:itemId" element={<InboxItemPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/documents/new" element={<DocumentFormPage />} />
+        <Route path="/documents/:documentId" element={<DocumentFormPage />} />
       </Route>
       <Route path="/bookings/:bookingId/qr" element={<QrPage />} />
       <Route path="/attachments/:attachmentId" element={<AttachmentViewerPage />} />

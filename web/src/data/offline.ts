@@ -82,10 +82,24 @@ export interface Downloader {
 
 /** Baja los ficheros que faltan de un viaje. Devuelve cuántos ha bajado; se para al primer fallo de red. */
 export async function downloadMissing(tripId: string, download: Downloader): Promise<{ downloaded: number; failed: boolean }> {
+  return downloadAll(await attachmentsOfTrip(tripId), download);
+}
+
+/** Las fotos de los documentos (pasaportes, visados…) se tienen siempre en el móvil: hacen falta justo sin cobertura. */
+export async function downloadDocumentFiles(download: Downloader): Promise<{ downloaded: number; failed: boolean }> {
+  const database = await openDb();
+  const attachments: Attachment[] = [];
+  for (const document of await database.getAll('documents')) {
+    attachments.push(...(await database.getAllFromIndex('attachments', 'bookingId', document.id)));
+  }
+  return downloadAll(attachments, download);
+}
+
+async function downloadAll(attachments: readonly Attachment[], download: Downloader): Promise<{ downloaded: number; failed: boolean }> {
   const database = await openDb();
   const stored = await storedBlobIds();
   let downloaded = 0;
-  for (const attachment of await attachmentsOfTrip(tripId)) {
+  for (const attachment of attachments) {
     if (stored.has(attachment.id) || !attachment.uploaded) {
       continue;
     }

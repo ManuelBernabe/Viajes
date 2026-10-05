@@ -381,26 +381,46 @@ public static partial class TripEndpoints
             return Problem("El fichero supera los 20 MB.", StatusCodes.Status413PayloadTooLarge);
         }
 
+        // El adjunto es de una reserva o de un documento de viaje (la foto del pasaporte).
+        Guid ownerId;
+        string folder;
         var booking = await access.VisibleBooking(userId, body.BookingId);
-        if (booking is null)
+        if (booking is not null)
         {
-            return NotFound();
-        }
+            if (booking.DeletedAtMs is not null)
+            {
+                return Gone("La reserva se ha borrado.");
+            }
 
-        if (booking.DeletedAtMs is not null)
+            var trip = await db.Trips.SingleAsync(t => t.Id == booking.TripId);
+            ownerId = booking.Id;
+            folder = $"households/{trip.HouseholdId}/trips/{trip.Id}/{booking.Id}";
+        }
+        else
         {
-            return Gone("La reserva se ha borrado.");
+            var document = await access.VisibleDocuments(userId).FirstOrDefaultAsync(d => d.Id == body.BookingId);
+            if (document is null)
+            {
+                return NotFound();
+            }
+
+            if (document.DeletedAtMs is not null)
+            {
+                return Gone("El documento se ha borrado.");
+            }
+
+            ownerId = document.Id;
+            folder = $"households/{document.HouseholdId}/documents/{document.Id}";
         }
 
         var attachment = await db.Attachments.FindAsync(id);
         if (attachment is null)
         {
-            var trip = await db.Trips.SingleAsync(t => t.Id == booking.TripId);
             db.Attachments.Add(new Attachment
             {
                 Id = id,
-                BookingId = booking.Id,
-                FileKey = $"households/{trip.HouseholdId}/trips/{trip.Id}/{booking.Id}/{id}",
+                BookingId = ownerId,
+                FileKey = $"{folder}/{id}",
                 Name = name,
                 Mime = mime,
                 Size = body.Size,
@@ -410,7 +430,7 @@ public static partial class TripEndpoints
         }
         else
         {
-            if (attachment.BookingId != booking.Id)
+            if (attachment.BookingId != ownerId)
             {
                 return NotFound();
             }
@@ -518,6 +538,8 @@ public static partial class TripEndpoints
         var inboxIds = inbox.Select(i => i.Id).ToList();
         var inboxAttachments = await db.InboxAttachments.Where(a => inboxIds.Contains(a.InboxItemId)).ToListAsync(ct);
         var places = await access.VisiblePlaces(userId).Where(p => p.Version > from).OrderBy(p => p.Version).ToListAsync(ct);
+        var documents = await access.VisibleDocuments(userId).Where(d => d.Version > from).OrderBy(d => d.Version).ToListAsync(ct);
+        var documentIds = await access.VisibleDocuments(userId).Where(d => d.DeletedAtMs == null).Select(d => d.Id).ToListAsync(ct);
         await transaction.CommitAsync(ct);
 
         return Results.Ok(new SyncResponse(
@@ -528,7 +550,9 @@ public static partial class TripEndpoints
             bookings.Select(b => BookingDto.From(b, shares.GetValueOrDefault(b.Id))).ToList(),
             attachments.Select(AttachmentDto.From).ToList(),
             inbox.Select(i => Inbox.InboxEndpoints.ToDto(i, inboxAttachments.Where(a => a.InboxItemId == i.Id))).ToList(),
-            places.Select(PlaceDto.From).ToList()));
+            places.Select(PlaceDto.From).ToList(),
+            documents.Select(DocumentDto.From).ToList(),
+            documentIds));
     }
 
     // ---- Auxiliares ----

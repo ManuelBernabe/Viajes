@@ -2,7 +2,7 @@ import { emitChange } from './bus';
 import { openDb } from './db';
 import { toUtcMs } from './localTime';
 import { enqueue } from './outbox';
-import type { Attachment, AttachmentBody, Booking, BookingBody, InboxItem, Place, PlaceBody, StoredBlob, Trip, TripBody } from './types';
+import type { Attachment, AttachmentBody, Booking, BookingBody, InboxItem, Place, PlaceBody, StoredBlob, TravelDocument, TravelDocumentBody, Trip, TripBody } from './types';
 
 /**
  * Escrituras: se aplican en local al instante, se encolan para el servidor y se avisa a las pantallas.
@@ -81,6 +81,44 @@ export async function savePlace(body: PlaceBody, createdBy: string, id = newId()
 export async function deletePlace(id: string): Promise<void> {
   await (await openDb()).delete('places', id);
   await enqueue({ kind: 'delete-place', id });
+  emitChange();
+}
+
+// ---- Documentos de viaje ----
+
+export async function listDocuments(): Promise<TravelDocument[]> {
+  return (await openDb()).getAll('documents');
+}
+
+export async function getDocument(id: string): Promise<TravelDocument | undefined> {
+  return (await openDb()).get('documents', id);
+}
+
+export async function saveDocument(body: TravelDocumentBody, createdBy: string, id = newId()): Promise<TravelDocument> {
+  const database = await openDb();
+  const existing = await database.get('documents', id);
+  const document: TravelDocument = {
+    id,
+    ...body,
+    createdBy: existing?.createdBy ?? createdBy,
+    version: existing?.version ?? 0,
+    deletedAtMs: null,
+  };
+  await database.put('documents', document);
+  await enqueue({ kind: 'put-document', id, body });
+  emitChange();
+  return document;
+}
+
+/** Borra el documento y, en el móvil, sus fotos; en el servidor se borran con él. */
+export async function deleteDocument(id: string): Promise<void> {
+  const database = await openDb();
+  for (const attachment of await database.getAllFromIndex('attachments', 'bookingId', id)) {
+    await database.delete('blobs', attachment.id);
+    await database.delete('attachments', attachment.id);
+  }
+  await database.delete('documents', id);
+  await enqueue({ kind: 'delete-document', id });
   emitChange();
 }
 

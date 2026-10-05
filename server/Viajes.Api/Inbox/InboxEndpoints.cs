@@ -56,14 +56,14 @@ public static class InboxEndpoints
     {
         var userId = users.GetUserId(principal)!;
         var scope = body.Scope ?? ImportToken.ImportScope;
-        if (scope != ImportToken.ImportScope && scope != ImportToken.BackupScope && scope != ImportToken.ShareScope)
+        if (scope != ImportToken.ImportScope && scope != ImportToken.BackupScope && !ImportToken.IsPersonal(scope))
         {
             return Results.Problem("Tipo de token desconocido.", statusCode: StatusCodes.Status400BadRequest);
         }
 
         // Un token da acceso desde fuera (correo o copia completa): solo quien administra el hogar los crea. La clave del atajo
         // de iPhone es personal y solo deja borradores para revisar, como reenviar un correo: la crea cualquiera para sí.
-        if (scope != ImportToken.ShareScope && !await access.IsAdmin(userId))
+        if (!ImportToken.IsPersonal(scope) && !await access.IsAdmin(userId))
         {
             return Results.Problem("Solo quien administra el hogar puede crear tokens.", statusCode: StatusCodes.Status403Forbidden);
         }
@@ -74,6 +74,7 @@ public static class InboxEndpoints
         {
             ImportToken.BackupScope => "Copia en Drive",
             ImportToken.ShareScope => "Atajo de iPhone",
+            ImportToken.CalendarScope => "Calendario",
             _ => "Gmail",
         };
         var entity = new ImportToken
@@ -97,7 +98,7 @@ public static class InboxEndpoints
         var token = await db.ImportTokens.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
         // La clave del atajo es de cada persona: la revoca quien la creó. Las demás, solo quien administra.
-        if (token?.Scope != ImportToken.ShareScope && !await access.IsAdmin(userId))
+        if (!ImportToken.IsPersonal(token?.Scope) && !await access.IsAdmin(userId))
         {
             return Results.Problem("Solo quien administra el hogar puede revocar tokens.", statusCode: StatusCodes.Status403Forbidden);
         }

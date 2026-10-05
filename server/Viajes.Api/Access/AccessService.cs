@@ -100,10 +100,26 @@ public sealed class AccessService(AppDbContext db)
     public Task<Booking?> VisibleBooking(string userId, Guid bookingId) =>
         VisibleBookings(userId).FirstOrDefaultAsync(b => b.Id == bookingId);
 
+    /// <summary>
+    /// Documentos de viaje del hogar: los ve todo el hogar, salvo los que quien los apuntó dejó solo para sí (estos ni
+    /// siquiera los ve quien administra: son papeles personales).
+    /// </summary>
+    public IQueryable<TravelDocument> VisibleDocuments(string userId) =>
+        from document in db.TravelDocuments
+        join member in db.HouseholdMembers on document.HouseholdId equals member.HouseholdId
+        where member.UserId == userId && member.DeletedAtMs == null
+        where document.Visibility == Booking.VisibleToHousehold || document.CreatedBy == userId
+        select document;
+
+    /// <summary>Los adjuntos de las reservas que ve y los de sus documentos (el adjunto apunta al documento en BookingId).</summary>
     public IQueryable<Attachment> VisibleAttachments(string userId) =>
-        from attachment in db.Attachments
-        join booking in VisibleBookings(userId) on attachment.BookingId equals booking.Id
-        select attachment;
+        (from attachment in db.Attachments
+         join booking in VisibleBookings(userId) on attachment.BookingId equals booking.Id
+         select attachment)
+        .Concat(
+            from attachment in db.Attachments
+            join document in VisibleDocuments(userId) on attachment.BookingId equals document.Id
+            select attachment);
 
     public Task<Attachment?> VisibleAttachment(string userId, Guid attachmentId) =>
         VisibleAttachments(userId).FirstOrDefaultAsync(a => a.Id == attachmentId);
