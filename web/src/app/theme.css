@@ -390,3 +390,6 @@ body { overflow: hidden; touch-action: manipulation; }
 .btn.icon svg { width: 20px; height: 20px; }
 .btn.sync.spinning svg { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* En el iPhone un campo de fecha tiene un ancho mínimo propio y, en dos columnas, se sale por la derecha. */
+input[type='date'] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; display: block; }
+input[type='date']::-webkit-date-and-time-value { text-align: left; }

@@ -78,6 +78,7 @@ app.MapPlaceSuggestions();
 app.MapTripProposals();
 app.MapCalendarFeed();
 app.MapDocumentEndpoints();
+app.MapDocumentReader();
 app.MapPushEndpoints();
 app.MapHouseholdEndpoints();
 app.MapBackupEndpoints();

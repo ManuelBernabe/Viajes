@@ -117,8 +117,26 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
         }
     }
 
-    public async Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct)
+    public Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct) =>
+        AskJsonWithFilesAsync(system, user, [], schema, maxTokens, ct);
+
+    public async Task<string?> AskJsonWithFilesAsync(
+        string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct)
     {
+        var content = new List<ContentBlockParam>();
+        foreach (var file in files.Take(MaxFiles))
+        {
+            if (file.Mime == "application/pdf")
+            {
+                content.Add(new DocumentBlockParam { Source = new Base64PdfSource { Data = Convert.ToBase64String(file.Bytes) } });
+            }
+            else if (file.Mime is "image/jpeg" or "image/png" or "image/gif" or "image/webp")
+            {
+                content.Add(new ImageBlockParam { Source = new Base64ImageSource { Data = Convert.ToBase64String(file.Bytes), MediaType = file.Mime } });
+            }
+        }
+
+        content.Add(new TextBlockParam { Text = user });
         try
         {
             var response = await client.Messages.Create(new MessageCreateParams
@@ -131,7 +149,7 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
                     Effort = Effort.Low,
                     Format = new JsonOutputFormat { Schema = schema.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.Clone()) },
                 },
-                Messages = [new() { Role = Role.User, Content = new List<ContentBlockParam> { new TextBlockParam { Text = user } } }],
+                Messages = [new() { Role = Role.User, Content = content }],
             }, ct);
 
             if (response.StopReason == "refusal")

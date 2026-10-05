@@ -144,8 +144,34 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
         }
     }
 
-    public async Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct)
+    public Task<string?> AskJsonAsync(string system, string user, JsonElement schema, int maxTokens, CancellationToken ct) =>
+        AskJsonWithFilesAsync(system, user, [], schema, maxTokens, ct);
+
+    public async Task<string?> AskJsonWithFilesAsync(
+        string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct)
     {
+        // Las imágenes van como partes del mensaje; de un PDF, su texto.
+        object userContent = user;
+        if (files.Count > 0)
+        {
+            var parts = new List<object>();
+            var text = new StringBuilder(user);
+            foreach (var file in files)
+            {
+                if (file.Mime == "application/pdf")
+                {
+                    text.AppendLine().AppendLine($"Texto del PDF «{file.Name}»:").AppendLine(PdfText(file.Bytes, file.Name));
+                }
+                else if (file.Mime is "image/jpeg" or "image/png" or "image/gif" or "image/webp" && parts.Count < MaxImages)
+                {
+                    parts.Add(new { type = "image_url", image_url = new { url = $"data:{file.Mime};base64,{Convert.ToBase64String(file.Bytes)}" } });
+                }
+            }
+
+            parts.Add(new { type = "text", text = text.ToString() });
+            userContent = parts;
+        }
+
         // DeepSeek no valida contra un esquema: se le enseña en el propio mensaje.
         var body = new
         {
@@ -153,7 +179,7 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
             messages = new object[]
             {
                 new { role = "system", content = $"{system}\n\nResponde únicamente con un objeto JSON que cumpla este esquema, sin explicaciones ni marcas de código:\n{schema.GetRawText()}" },
-                new { role = "user", content = user },
+                new { role = "user", content = userContent },
             },
             response_format = new { type = "json_object" },
             max_tokens = maxTokens,
