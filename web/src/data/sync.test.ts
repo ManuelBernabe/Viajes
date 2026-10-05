@@ -66,6 +66,19 @@ describe('pull', () => {
     expect((await listTrips()).map((t) => t.id)).toEqual(['mio']);
   });
 
+  it('no purga un viaje recién creado en el móvil que aún espera en la cola, ni sus reservas', async () => {
+    const nuevo = await saveTrip({ title: 'Lisboa', destination: 'Lisboa', startDate: '2026-12-12', endDate: '2026-12-12' }, 'yo');
+    const { id: _sinId, ...cuerpo } = booking('x', nuevo.id);
+    void _sinId;
+    await saveBooking(cuerpo, 'yo', 'b-lisboa');
+
+    // Una bajada que salió antes de crear el viaje: su lista no lo trae.
+    await pull({ fetchSync: async () => response({ tripIds: [], bookingIds: [] }) });
+
+    expect((await listTrips()).map((t) => t.id)).toEqual([nuevo.id]);
+    expect((await listBookings(nuevo.id)).map((b) => b.id)).toEqual(['b-lisboa']);
+  });
+
   it('una edición del servidor pisa la copia local', async () => {
     await saveTrip({ title: 'local', destination: null, startDate: null, endDate: null }, 'yo', 't1');
 

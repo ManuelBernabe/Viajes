@@ -77,9 +77,13 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     }
   }
 
+  // Lo que espera en la cola de salida aún no lo conoce el servidor: no se purga (un viaje recién creado en el móvil, por
+  // ejemplo desde «Por revisar», mientras otra sincronización ya en marcha trae una lista de antes de crearlo).
+  const waiting = new Set((await database.getAll('outbox')).map((op) => op.id));
+
   // Un viaje que ya no está en la lista (acceso retirado) se purga aunque no llegue ninguna fila suya.
   for (const trip of await database.getAll('trips')) {
-    if (!keep.has(trip.id)) {
+    if (!keep.has(trip.id) && !waiting.has(trip.id)) {
       await removeTrip(trip.id);
       applied++;
     }
@@ -89,7 +93,6 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
   // Las que aún esperan en la cola de salida no se tocan: el servidor todavía no las conoce.
   if (response.bookingIds) {
     const visible = new Set(response.bookingIds);
-    const waiting = new Set((await database.getAll('outbox')).map((op) => op.id));
     for (const booking of await database.getAll('bookings')) {
       if (!visible.has(booking.id) && !waiting.has(booking.id)) {
         await removeBooking(booking.id);

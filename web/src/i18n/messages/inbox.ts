@@ -3,7 +3,8 @@ import type { Messages } from './types';
 /** Traducciones: inbox. Clave = el texto en español tal y como aparece en el código. */
 export const inbox: Messages = {
   'Viaje nuevo': { en: 'New trip', fr: 'Nouveau voyage', it: 'Nuovo viaggio' },
-  'encaja por fechas': { en: 'matches the dates', fr: 'correspond aux dates', it: 'corrisponde alle date' },
+  'encaja con la reserva': { en: 'matches the booking', fr: 'correspond à la réservation', it: 'corrisponde alla prenotazione' },
+  'Mirando a qué viaje pertenece…': { en: 'Checking which trip it belongs to…', fr: 'Recherche du voyage correspondant…', it: 'Cerco a quale viaggio appartiene…' },
   'Es el viaje que coincide con la fecha o el destino de la reserva.': {
     en: 'This is the trip that matches the date or destination of the booking.',
     fr: 'C’est le voyage qui correspond à la date ou à la destination de la réservation.',
