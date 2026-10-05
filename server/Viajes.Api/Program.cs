@@ -73,6 +73,7 @@ app.MapTripEndpoints();
 app.MapInboxEndpoints();
 app.MapExtractionEndpoints();
 app.MapPlaceSuggestions();
+app.MapTripProposals();
 app.MapPushEndpoints();
 app.MapHouseholdEndpoints();
 app.MapBackupEndpoints();

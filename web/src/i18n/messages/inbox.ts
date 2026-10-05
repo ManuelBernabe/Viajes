@@ -2,6 +2,23 @@ import type { Messages } from './types';
 
 /** Traducciones: inbox. Clave = el texto en español tal y como aparece en el código. */
 export const inbox: Messages = {
+  'Viaje nuevo': { en: 'New trip', fr: 'Nouveau voyage', it: 'Nuovo viaggio' },
+  'encaja por fechas': { en: 'matches the dates', fr: 'correspond aux dates', it: 'corrisponde alle date' },
+  'Es el viaje que coincide con la fecha o el destino de la reserva.': {
+    en: 'This is the trip that matches the date or destination of the booking.',
+    fr: 'C’est le voyage qui correspond à la date ou à la destination de la réservation.',
+    it: 'È il viaggio che corrisponde alla data o alla destinazione della prenotazione.',
+  },
+  'Esta reserva no encaja en ningún viaje: se creará este al crear la reserva. Puedes cambiar el nombre y las fechas.': {
+    en: 'This booking doesn’t fit any trip: this one will be created along with the booking. You can change the name and dates.',
+    fr: 'Cette réservation ne correspond à aucun voyage : celui-ci sera créé avec la réservation. Tu peux changer le nom et les dates.',
+    it: 'Questa prenotazione non rientra in nessun viaggio: questo verrà creato insieme alla prenotazione. Puoi cambiare il nome e le date.',
+  },
+  'Se creará al crear la reserva. Puedes cambiar el nombre y las fechas.': {
+    en: 'It will be created along with the booking. You can change the name and dates.',
+    fr: 'Il sera créé avec la réservation. Tu peux changer le nom et les dates.',
+    it: 'Verrà creato insieme alla prenotazione. Puoi cambiare il nome e le date.',
+  },
   'Por revisar': { en: 'To review', fr: 'À vérifier', it: 'Da controllare' },
   'No hay correos por revisar.': { en: 'No emails to review.', fr: 'Aucun e-mail à vérifier.', it: 'Nessuna email da controllare.' },
   'Reenvía una reserva a tu Gmail con «+viajes» y aparecerá aquí en uno o dos minutos.': {

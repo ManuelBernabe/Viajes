@@ -1,19 +1,35 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { describeError } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { api, describeError } from '../api';
 import { BackLink } from '../app/Layout';
 import { applySuggestion, suggestFromText } from '../attachments/extract';
 import { formatSize, isPdf } from '../attachments/files';
 import { extractPdfText } from '../attachments/pdfText';
 import { useSession } from '../app/SessionContext';
 import { importInboxAttachments } from '../data/inboxImport';
-import { getInboxItem, listAllBookings, listTrips, saveBooking } from '../data/repo';
+import { getInboxItem, listAllBookings, listTrips, saveBooking, saveTrip } from '../data/repo';
 import { downloadInboxAttachment, reExtractInbox, setInboxStatus } from '../data/syncClient';
-import type { Booking } from '../data/types';
+import type { Booking, InboxItem, TripBody } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { applyChanges, diffBooking, findExistingBooking, type Change } from '../domain/changes';
-import { t } from '../i18n';
+import { draftTrip, matchTrip, type IncomingBooking } from '../domain/tripMatch';
+import { lang, t } from '../i18n';
+
+/** Valor del desplegable para «viaje nuevo». */
+const NEW_TRIP = '__new__';
+
+function incomingOf(item: InboxItem): IncomingBooking {
+  return {
+    type: item.suggestedType,
+    title: item.suggestedTitle ?? item.subject,
+    startLocal: item.suggestedStartLocal,
+    endLocal: item.suggestedEndLocal,
+    startPlace: item.suggestedStartPlace,
+    endPlace: item.suggestedEndPlace,
+    address: item.suggestedAddress,
+  };
+}
 
 export interface InboxPrefill {
   inboxItemId: string;
@@ -48,6 +64,36 @@ export function InboxItemPage() {
   /** El correo se refiere a una reserva ya cargada: se enseñan los cambios y se decide qué hacer. */
   const [match, setMatch] = useState<{ existing: Booking; prefill: InboxPrefill; changes: Change[] } | null>(null);
   const [working, setWorking] = useState('');
+  /** El viaje nuevo que se propone cuando la reserva no encaja en ninguno; se crea al crear la reserva. */
+  const [draft, setDraft] = useState<TripBody | null>(null);
+  /** Si se ha tocado a mano, el nombre que llega luego de la IA ya no lo pisa. */
+  const draftEdited = useRef(false);
+
+  // Borrador del viaje nuevo: al momento con los datos del correo y, con conexión, el nombre que propone la IA.
+  const itemLoaded = item?.id;
+  useEffect(() => {
+    if (!item) {
+      return;
+    }
+    setDraft(draftTrip(incomingOf(item), item.subject));
+    draftEdited.current = false;
+    let alive = true;
+    api<{ title: string; destination: string | null }>(`/api/inbox/${item.id}/trip-proposal`, {
+      method: 'POST',
+      body: JSON.stringify({ lang: lang() }),
+    })
+      .then((proposal) => {
+        if (alive && !draftEdited.current) {
+          setDraft((current) => (current ? { ...current, title: proposal.title, destination: proposal.destination ?? current.destination } : current));
+        }
+      })
+      .catch(() => {
+        // Sin IA o sin conexión: se queda el borrador con los datos del correo.
+      });
+    return () => {
+      alive = false;
+    };
+  }, [itemLoaded]);
 
   if (item === undefined || trips === undefined) {
     return <main className="page muted">{t('Cargando…')}</main>;
@@ -66,17 +112,37 @@ export function InboxItemPage() {
 
   const sorted = sortTrips(trips, todayLocal());
   const options = [...sorted.active, ...sorted.past];
-  const chosen = tripId || options[0]?.id || '';
+  const incoming = incomingOf(item);
+  const matched = matchTrip(trips, incoming);
+  // Encaja en un viaje: ese. Si no, viaje nuevo cuando la reserva trae fecha (si no la trae, no se sabe: el primero).
+  const chosen = tripId || matched?.id || (incoming.startLocal || options.length === 0 ? NEW_TRIP : options[0].id);
+
+  /** El viaje donde va la reserva; si es uno nuevo, se crea ahora (también sin conexión). */
+  async function tripForBooking(): Promise<string> {
+    if (chosen !== NEW_TRIP) {
+      return chosen;
+    }
+    const body: TripBody = {
+      title: draft?.title.trim() || item!.subject.slice(0, 60),
+      destination: draft?.destination?.trim() || null,
+      startDate: draft?.startDate || null,
+      endDate: draft?.endDate || draft?.startDate || null,
+    };
+    const trip = await saveTrip(body, session.email ?? '');
+    setTripId(trip.id);
+    return trip.id;
+  }
+
+  function editDraft(change: Partial<TripBody>) {
+    draftEdited.current = true;
+    setDraft((current) => ({ ...(current ?? { title: '', destination: null, startDate: null, endDate: null }), ...change }));
+  }
 
   /**
    * Los datos estructurados del servidor van primero. Lo que falte se completa leyendo el texto del correo y,
    * después, el texto de los PDF adjuntos (un reenvío pierde los datos estructurados, pero no el billete).
    */
   async function createBooking() {
-    if (!chosen) {
-      setMessage(t('Crea primero un viaje donde guardar la reserva.'));
-      return;
-    }
     setPreparing(true);
     setMessage('');
     // Si el correo entró sin IA (antes de configurarla o con el modelo saturado), se pide ahora una lectura.
@@ -154,7 +220,7 @@ export function InboxItemPage() {
       setMatch({ existing, prefill, changes: diffBooking(existing, prefill) });
       return;
     }
-    navigate(`/trips/${chosen}/bookings/new`, { state: { prefill } });
+    navigate(`/trips/${await tripForBooking()}/bookings/new`, { state: { prefill } });
   }
 
   /** Aplica los cambios del correo a la reserva existente, le añade los adjuntos y marca el aviso. */
@@ -191,9 +257,9 @@ export function InboxItemPage() {
     }
   }
 
-  function createAnyway() {
+  async function createAnyway() {
     if (match) {
-      navigate(`/trips/${chosen}/bookings/new`, { state: { prefill: match.prefill } });
+      navigate(`/trips/${await tripForBooking()}/bookings/new`, { state: { prefill: match.prefill } });
     }
   }
 
@@ -247,20 +313,46 @@ export function InboxItemPage() {
 
       <div className="field">
         <label htmlFor="trip">{t('Viaje')}</label>
-        {options.length > 0 ? (
-          <select id="trip" value={chosen} onChange={(e) => setTripId(e.target.value)}>
-            {options.map((trip) => (
-              <option key={trip.id} value={trip.id}>
-                {trip.title}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <Link className="btn" to="/trips/new">
-            {t('Crear un viaje')}
-          </Link>
-        )}
+        <select id="trip" value={chosen} onChange={(e) => setTripId(e.target.value)}>
+          <option value={NEW_TRIP}>➕ {t('Viaje nuevo')}{draft?.title ? `: ${draft.title}` : ''}</option>
+          {options.map((trip) => (
+            <option key={trip.id} value={trip.id}>
+              {trip.title}
+              {trip.id === matched?.id ? ` · ${t('encaja por fechas')}` : ''}
+            </option>
+          ))}
+        </select>
+        {chosen !== NEW_TRIP && chosen === matched?.id && <div className="small muted">{t('Es el viaje que coincide con la fecha o el destino de la reserva.')}</div>}
       </div>
+
+      {chosen === NEW_TRIP && (
+        <section className="card">
+          <h3>➕ {t('Viaje nuevo')}</h3>
+          <p className="small muted" style={{ marginTop: 0 }}>
+            {matched === null && incoming.startLocal
+              ? t('Esta reserva no encaja en ningún viaje: se creará este al crear la reserva. Puedes cambiar el nombre y las fechas.')
+              : t('Se creará al crear la reserva. Puedes cambiar el nombre y las fechas.')}
+          </p>
+          <div className="field">
+            <label htmlFor="new-title">{t('Título')}</label>
+            <input id="new-title" value={draft?.title ?? ''} onChange={(e) => editDraft({ title: e.target.value })} placeholder={t('Japón 2026')} />
+          </div>
+          <div className="field">
+            <label htmlFor="new-destination">{t('Destino')}</label>
+            <input id="new-destination" value={draft?.destination ?? ''} onChange={(e) => editDraft({ destination: e.target.value })} placeholder={t('Tokio')} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+            <div className="field">
+              <label htmlFor="new-start">{t('Ida')}</label>
+              <input id="new-start" type="date" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }} value={draft?.startDate ?? ''} onChange={(e) => editDraft({ startDate: e.target.value || null })} />
+            </div>
+            <div className="field">
+              <label htmlFor="new-end">{t('Vuelta')}</label>
+              <input id="new-end" type="date" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }} value={draft?.endDate ?? ''} min={draft?.startDate ?? undefined} onChange={(e) => editDraft({ endDate: e.target.value || null })} />
+            </div>
+          </div>
+        </section>
+      )}
 
       {message && <p className="error">{message}</p>}
 
@@ -302,7 +394,7 @@ export function InboxItemPage() {
             </>
           )}
           <div className="actions">
-            <button className="btn" disabled={!!working} onClick={createAnyway}>
+            <button className="btn" disabled={!!working} onClick={() => void createAnyway()}>
               {t('Crear como reserva nueva')}
             </button>
             <button className="btn danger" disabled={!!working} onClick={() => void discard()}>
