@@ -28,6 +28,10 @@ public static partial class TripEndpoints
         attachments.MapGet("/{id:guid}/content", GetAttachmentContent);
         attachments.MapDelete("/{id:guid}", DeleteAttachment);
 
+        var places = app.MapGroup("/api/places").RequireAuthorization();
+        places.MapPut("/{id:guid}", PutPlace);
+        places.MapDelete("/{id:guid}", DeletePlace);
+
         app.MapGet("/api/sync", Sync).RequireAuthorization();
     }
 
@@ -108,9 +112,99 @@ public static partial class TripEndpoints
             booking.DeletedAtMs = now;
         }
 
+        foreach (var place in await db.Places.Where(p => p.TripId == id && p.DeletedAtMs == null).ToListAsync(ct))
+        {
+            place.DeletedAtMs = now;
+        }
+
         trip.DeletedAtMs ??= now;
         await db.SaveChangesAsync(ct);
         await DeleteFiles(store, attachments, ct);
+        return Results.NoContent();
+    }
+
+    // ---- Lugares recomendados ----
+
+    private static async Task<IResult> PutPlace(
+        Guid id, PlaceBody body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db)
+    {
+        var userId = users.GetUserId(principal)!;
+        var name = body.Name?.Trim();
+        if (string.IsNullOrEmpty(name) || name.Length > 200)
+        {
+            return Problem("El lugar necesita un nombre (hasta 200 caracteres).", StatusCodes.Status400BadRequest);
+        }
+
+        var category = body.Category ?? "see";
+        if (!Place.Categories.Contains(category))
+        {
+            return Problem("Categoría de lugar desconocida.", StatusCodes.Status400BadRequest);
+        }
+
+        var url = Clean(body.Url, 1000);
+        if (url is not null && !(Uri.TryCreate(url, UriKind.Absolute, out var parsed) && parsed.Scheme is "http" or "https"))
+        {
+            return Problem("El enlace tiene que empezar por http:// o https://.", StatusCodes.Status400BadRequest);
+        }
+
+        var trip = await access.VisibleTrip(userId, body.TripId);
+        if (trip is null || trip.DeletedAtMs is not null)
+        {
+            return NotFound();
+        }
+
+        var place = await db.Places.FindAsync(id);
+        if (place is null)
+        {
+            db.Places.Add(new Place
+            {
+                Id = id,
+                TripId = trip.Id,
+                Name = name,
+                Category = category,
+                Notes = Clean(body.Notes, 2000),
+                Url = url,
+                Address = Clean(body.Address, 300),
+                Visited = body.Visited,
+                CreatedBy = userId,
+            });
+        }
+        else
+        {
+            if (place.TripId != trip.Id)
+            {
+                return NotFound();
+            }
+
+            if (place.DeletedAtMs is not null)
+            {
+                return Gone("El lugar se ha borrado.");
+            }
+
+            place.Name = name;
+            place.Category = category;
+            place.Notes = Clean(body.Notes, 2000);
+            place.Url = url;
+            place.Address = Clean(body.Address, 300);
+            place.Visited = body.Visited;
+        }
+
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> DeletePlace(
+        Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db)
+    {
+        var userId = users.GetUserId(principal)!;
+        var place = await access.VisiblePlaces(userId).FirstOrDefaultAsync(p => p.Id == id);
+        if (place is null)
+        {
+            return NotFound();
+        }
+
+        place.DeletedAtMs ??= Now();
+        await db.SaveChangesAsync();
         return Results.NoContent();
     }
 
@@ -422,6 +516,7 @@ public static partial class TripEndpoints
         var inbox = await access.VisibleInboxItems(userId).Where(i => i.Version > from).OrderBy(i => i.Version).ToListAsync(ct);
         var inboxIds = inbox.Select(i => i.Id).ToList();
         var inboxAttachments = await db.InboxAttachments.Where(a => inboxIds.Contains(a.InboxItemId)).ToListAsync(ct);
+        var places = await access.VisiblePlaces(userId).Where(p => p.Version > from).OrderBy(p => p.Version).ToListAsync(ct);
         await transaction.CommitAsync(ct);
 
         return Results.Ok(new SyncResponse(
@@ -431,7 +526,8 @@ public static partial class TripEndpoints
             trips.Select(TripDto.From).ToList(),
             bookings.Select(b => BookingDto.From(b, shares.GetValueOrDefault(b.Id))).ToList(),
             attachments.Select(AttachmentDto.From).ToList(),
-            inbox.Select(i => Inbox.InboxEndpoints.ToDto(i, inboxAttachments.Where(a => a.InboxItemId == i.Id))).ToList()));
+            inbox.Select(i => Inbox.InboxEndpoints.ToDto(i, inboxAttachments.Where(a => a.InboxItemId == i.Id))).ToList(),
+            places.Select(PlaceDto.From).ToList()));
     }
 
     // ---- Auxiliares ----

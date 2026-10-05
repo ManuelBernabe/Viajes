@@ -62,6 +62,37 @@ public sealed class Trip : IVersioned
     public long? DeletedAtMs { get; set; }
 }
 
+/// <summary>Un sitio que merece la pena en un viaje (para ver, comer, comprar…). Lo ve todo el hogar, como el viaje.</summary>
+public sealed class Place : IVersioned
+{
+    public static readonly IReadOnlySet<string> Categories =
+        new HashSet<string> { "see", "eat", "drink", "shop", "nature", "other" };
+
+    public Guid Id { get; set; }
+
+    public Guid TripId { get; set; }
+
+    public required string Name { get; set; }
+
+    /// <summary>see (ver), eat (comer), drink (tomar algo), shop (compras), nature (naturaleza), other.</summary>
+    public required string Category { get; set; }
+
+    public string? Notes { get; set; }
+
+    /// <summary>Enlace opcional: Google Maps, web del sitio, reseña…</summary>
+    public string? Url { get; set; }
+
+    public string? Address { get; set; }
+
+    public bool Visited { get; set; }
+
+    public required string CreatedBy { get; set; }
+
+    public long Version { get; set; }
+
+    public long? DeletedAtMs { get; set; }
+}
+
 public sealed class Booking : IVersioned
 {
     public static readonly IReadOnlySet<string> Types =

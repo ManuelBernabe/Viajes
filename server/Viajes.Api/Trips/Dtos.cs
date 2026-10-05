@@ -21,6 +21,8 @@ public sealed record BookingBody(
     string? Visibility = null,
     List<string>? SharedWith = null);
 
+public sealed record PlaceBody(Guid TripId, string? Name, string? Category, string? Notes, string? Url, string? Address, bool Visited);
+
 public sealed record AttachmentBody(Guid BookingId, string? Name, string? Mime, long Size, string? QrText);
 
 public sealed record TripDto(
@@ -105,6 +107,23 @@ public sealed record InboxItemDto(
     long Version,
     long? DeletedAtMs);
 
+public sealed record PlaceDto(
+    Guid Id,
+    Guid TripId,
+    string Name,
+    string Category,
+    string? Notes,
+    string? Url,
+    string? Address,
+    bool Visited,
+    string CreatedBy,
+    long Version,
+    long? DeletedAtMs)
+{
+    public static PlaceDto From(Place p) =>
+        new(p.Id, p.TripId, p.Name, p.Category, p.Notes, p.Url, p.Address, p.Visited, p.CreatedBy, p.Version, p.DeletedAtMs);
+}
+
 public sealed record SyncResponse(
     long Version,
     IReadOnlyList<Guid> TripIds,
@@ -113,4 +132,6 @@ public sealed record SyncResponse(
     IReadOnlyList<TripDto> Trips,
     IReadOnlyList<BookingDto> Bookings,
     IReadOnlyList<AttachmentDto> Attachments,
-    IReadOnlyList<InboxItemDto> Inbox);
+    IReadOnlyList<InboxItemDto> Inbox,
+    /// <summary>Lugares recomendados de los viajes visibles (con los borrados, para quitarlos del móvil).</summary>
+    IReadOnlyList<PlaceDto> Places);
