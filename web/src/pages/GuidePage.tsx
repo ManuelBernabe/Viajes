@@ -49,25 +49,18 @@ export function GuidePage() {
         <h3>2. Inicio</h3>
         <ul className="small">
           <li>
-            Arriba, el <strong>viaje en curso</strong> (o el próximo): tocando su tarjeta se abre el viaje para editarlo, añadir reservas o
-            guardarlo en el móvil.
+            Inicio es la <strong>lista de viajes</strong>: arriba los que están <strong>en curso</strong>, luego los{' '}
+            <strong>próximos</strong>. Cada tarjeta dice cuántas reservas tiene y cuál es la siguiente. Con <strong>Nuevo viaje</strong>{' '}
+            creas uno (título, destino y fechas).
           </li>
           <li>
-            Debajo, <strong>Lo siguiente</strong>: la próxima reserva de ese viaje con sus botones <strong>Ver QR</strong> y{' '}
-            <strong>Ver reserva</strong>, y las dos siguientes. Con <strong>Ver las N reservas del viaje por días</strong> se despliegan
-            todas sin salir de Inicio; <strong>Mostrar menos</strong> las vuelve a plegar.
+            Tocando un viaje entras en él: arriba <strong>Lo siguiente</strong> con sus botones <strong>Ver QR</strong> y{' '}
+            <strong>Ver reserva</strong>; debajo todas las reservas por días y, al final, el <strong>Histórico</strong> con las que ya han
+            pasado (atenuadas y marcadas como «Realizada»).
           </li>
           <li>
-            <strong>Histórico de este viaje</strong>, justo debajo: las reservas que ya han pasado (el tren en el que llegaste, el hotel
-            que dejaste), atenuadas y marcadas como «Realizada», de la más reciente a la más antigua. En la página del viaje salen igual,
-            en su apartado <strong>Histórico</strong> al final.
-          </li>
-          <li>
-            <strong>Más adelante</strong>: los demás viajes por venir. Con <strong>Nuevo viaje</strong> creas uno (título, destino y fechas).
-          </li>
-          <li>
-            <strong>Histórico</strong>, al final: los viajes ya realizados, plegados y agrupados por año, marcados en naranja como
-            «Realizado». Se abren igual para consultar sus reservas y billetes.
+            <strong>Histórico</strong>, al final de Inicio: los viajes ya realizados, plegados y agrupados por año, marcados en naranja
+            como «Realizado». Se abren igual para consultar sus reservas y billetes.
           </li>
           <li>
             Si aparece <strong>«N correos por revisar»</strong>, han llegado correos de reservas que esperan que alguien los confirme

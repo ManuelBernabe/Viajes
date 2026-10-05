@@ -1,30 +1,48 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
-import { TypeChips } from '../components/TypeChips';
-import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
-import { listAttachments, listBookings, listInbox, listTrips } from '../data/repo';
+import { formatDay, formatRange, timeOf } from '../data/localTime';
+import { listAllBookings, listInbox, listTrips } from '../data/repo';
 import { useSyncStatus } from '../data/syncClient';
-import type { BookingType, Trip } from '../data/types';
+import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, isInProgress, isPast, pastBookings, sortTrips, todayLocal, TYPE_INFO, upcomingBookings } from '../domain/agenda';
+import { isInProgress, nextBooking, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
 
-function TripCard({ trip, done = false }: { trip: Trip; done?: boolean }) {
+/** Resumen de las reservas de un viaje para su tarjeta: cuántas hay y cuál es la siguiente. */
+interface TripSummary {
+  count: number;
+  next?: Booking;
+  inProgress: boolean;
+}
+
+function TripCard({ trip, summary, done = false, current = false }: { trip: Trip; summary?: TripSummary; done?: boolean; current?: boolean }) {
   const offline = useTripOffline(trip);
+  const next = summary?.next;
   return (
-    <Link className={`card${done ? ' done' : ''}`} to={`/trips/${trip.id}`}>
+    <Link className={`card${done ? ' done' : ''}${current ? ' highlight' : ''}`} to={`/trips/${trip.id}`}>
       <div className="row between">
         <div className="grow">
           <h3>
             {trip.title}
             {done && <span className="badge done">Realizado</span>}
+            {current && <span className="badge">En curso</span>}
           </h3>
           <div className="muted small">
             {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
           </div>
+          {!done && next && (
+            <div className="small" style={{ marginTop: 4 }}>
+              {summary?.inProgress ? 'En curso' : 'Lo siguiente'}: {TYPE_INFO[next.type].icon} {next.title} · {formatDay(next.startLocal)} {timeOf(next.startLocal)}
+            </div>
+          )}
+          {summary && (
+            <div className="muted small">
+              {summary.count === 0 ? 'Sin reservas todavía' : summary.count === 1 ? '1 reserva' : `${summary.count} reservas`}
+            </div>
+          )}
         </div>
         {!done && <OfflineBadge state={offline} />}
+        <span className="muted">›</span>
       </div>
     </Link>
   );
@@ -67,133 +85,28 @@ function History({ trips }: { trips: Trip[] }) {
   );
 }
 
-const PREVIEW = 3;
-
-/**
- * El viaje que toca, entero en Inicio: cabecera (enlace al viaje para editarlo o guardarlo en el móvil), la próxima
- * reserva destacada con su QR, las dos siguientes y, plegadas, todas las reservas del viaje por días.
- */
-function CurrentTrip({ trip, inProgress }: { trip: Trip; inProgress: boolean }) {
-  const offline = useTripOffline(trip);
-  const [expanded, setExpanded] = useState(false);
-  const [filter, setFilter] = useState<BookingType | null>(null);
-  const data = useLiveQuery(async () => {
-    const all = await listBookings(trip.id);
-    const bookings = filter ? all.filter((b) => b.type === filter) : all;
-    const now = Date.now();
-    const upcoming = upcomingBookings(bookings, now, PREVIEW);
-    const past = pastBookings(bookings, now);
-    const next = upcoming[0];
-    const qr = next ? (await listAttachments(next.id)).some((a) => a.qrText) : false;
-    return { all, bookings, upcoming, past, now, qr };
-  }, [trip.id, filter]);
-
-  if (!data) {
-    return null;
-  }
-  const { all, bookings, upcoming, past, now, qr } = data;
-  const typesPresent = new Set(all.map((b) => b.type));
-  const [next, ...after] = upcoming;
-  const info = next ? TYPE_INFO[next.type] : null;
-  // Lo que no se ve ni arriba ni en el histórico: las reservas más lejanas del viaje.
-  const hidden = bookings.length - upcoming.length - past.length;
-
-  return (
-    <section className="trip-group" aria-label={trip.title}>
-      <Link className="trip-head" to={`/trips/${trip.id}`}>
-        <div className="row between">
-          <div className="grow">
-            <div className="eyebrow">{inProgress ? 'Viaje en curso' : 'Próximo viaje'}</div>
-            <h3>{trip.title}</h3>
-            <div className="muted small">
-              {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
-            </div>
-          </div>
-          <OfflineBadge state={offline} />
-          <span className="muted">›</span>
-        </div>
-      </Link>
-
-      <TypeChips types={typesPresent} value={filter} onChange={setFilter} />
-
-      {next && info && (
-        <section className={`card highlight type-${next.type}`}>
-          <div className="small eyebrow-type">{isInProgress(next, Date.now()) ? 'En curso' : 'Lo siguiente'} · {info.label}</div>
-          <h3>
-            {info.icon} {next.title}
-          </h3>
-          {next.changeNote && <div className="error small" style={{ whiteSpace: 'pre-line' }}>⚠️ {next.changeNote}</div>}
-          <div>
-            {formatDay(next.startLocal)} · {timeOf(next.startLocal)} hora de {zoneLabel(next.startTz)}
-            {next.startPlace && ` · ${next.startPlace}`}
-          </div>
-          <div className="actions">
-            {qr && (
-              <Link className="btn primary" to={`/bookings/${next.id}/qr`}>
-                Ver QR
-              </Link>
-            )}
-            <Link className="btn" to={`/bookings/${next.id}`}>
-              Ver reserva
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {all.length === 0 && (
-        <p className="muted small">
-          Este viaje no tiene reservas todavía.{' '}
-          <Link to={`/trips/${trip.id}/bookings/new`}>Añadir la primera</Link>
-        </p>
-      )}
-      {all.length > 0 && bookings.length === 0 && <p className="muted small">No hay reservas de ese tipo en este viaje.</p>}
-
-      {!expanded && after.length > 0 && (
-        <>
-          <div className="muted small after">Después, en este viaje</div>
-          {after.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} showDay={formatDay(booking.startLocal)} />
-          ))}
-        </>
-      )}
-
-      {expanded &&
-        groupByDay(bookings).map((day) => (
-          <section key={day.date}>
-            <div className="day">{formatLongDay(day.date)}</div>
-            {day.bookings.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} past={isPast(booking, now)} />
-            ))}
-          </section>
-        ))}
-
-      {!expanded && past.length > 0 && (
-        <>
-          <div className="muted small after">Histórico de este viaje</div>
-          {past.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} showDay={formatDay(booking.startLocal)} past />
-          ))}
-        </>
-      )}
-
-      {bookings.length > 0 && (hidden > 0 || expanded) && (
-        <button className="btn block" type="button" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Mostrar menos' : `Ver las ${bookings.length} reservas${filter ? " de este tipo" : ""} por días`}
-        </button>
-      )}
-    </section>
-  );
-}
-
 export function HomePage() {
   const trips = useLiveQuery(listTrips, []);
+  const summaries = useLiveQuery(async () => {
+    const now = Date.now();
+    const byTrip = new Map<string, Booking[]>();
+    for (const booking of await listAllBookings()) {
+      byTrip.set(booking.tripId, [...(byTrip.get(booking.tripId) ?? []), booking]);
+    }
+    const result = new Map<string, TripSummary>();
+    for (const [tripId, bookings] of byTrip) {
+      const next = nextBooking(bookings, now);
+      result.set(tripId, { count: bookings.length, next, inProgress: !!next && isInProgress(next, now) });
+    }
+    return result;
+  }, []);
   const inboxCount = useLiveQuery(async () => (await listInbox()).length, []) ?? 0;
   const sync = useSyncStatus();
   const today = todayLocal();
   const sorted = trips ? sortTrips(trips, today) : null;
-  // El viaje que toca (en curso, o el más cercano) va arriba con sus reservas; los demás, debajo.
-  const [current, ...others] = sorted?.active ?? [];
-  const inProgress = !!current && !!current.startDate && current.startDate <= today && (!current.endDate || current.endDate >= today);
+  const current = sorted?.active.filter((t) => tripStatus(t, today) === 'current') ?? [];
+  const upcoming = sorted?.active.filter((t) => tripStatus(t, today) !== 'current') ?? [];
+  const summaryOf = (trip: Trip): TripSummary => summaries?.get(trip.id) ?? { count: 0, inProgress: false };
 
   return (
     <main className="page">
@@ -223,7 +136,6 @@ export function HomePage() {
           </div>
         </Link>
       )}
-      {current && <CurrentTrip trip={current} inProgress={inProgress} />}
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (
         <div className="empty">
           <p>Todavía no hay viajes.</p>
@@ -232,11 +144,19 @@ export function HomePage() {
           </Link>
         </div>
       )}
-      {others.length > 0 && (
+      {current.length > 0 && (
         <>
-          <h2>Más adelante</h2>
-          {others.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
+          <h2>En curso</h2>
+          {current.map((trip) => (
+            <TripCard key={trip.id} trip={trip} summary={summaryOf(trip)} current />
+          ))}
+        </>
+      )}
+      {upcoming.length > 0 && (
+        <>
+          <h2>Próximos viajes</h2>
+          {upcoming.map((trip) => (
+            <TripCard key={trip.id} trip={trip} summary={summaryOf(trip)} />
           ))}
         </>
       )}
