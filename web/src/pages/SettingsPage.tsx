@@ -158,7 +158,10 @@ export function SettingsPage() {
       <section className="card">
         <h3>{t('Ayuda')}</h3>
         <p className="small muted">{t('Cómo instalar la app, añadir reservas, usar los QR sin conexión, los correos y los avisos.')}</p>
-        <Link to="/guia" className="btn block">
+        <Link to="/ayuda" className="btn primary block">
+          💬 {t('Pregunta a la guía')}
+        </Link>
+        <Link to="/guia" className="btn block" style={{ marginTop: 8 }}>
           {t('Guía de uso')}
         </Link>
       </section>
