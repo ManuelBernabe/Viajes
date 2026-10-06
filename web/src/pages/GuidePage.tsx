@@ -18,6 +18,11 @@ export function GuidePage() {
     <main className={`page${session.status === 'in' ? '' : ' no-tabs'}`}>
       <div className="topbar">
         <h1>{t('Guía de uso')}</h1>
+        {session.status === 'in' && (
+          <Link className="btn small primary" to="/ayuda">
+            💬 {t('Preguntar')}
+          </Link>
+        )}
       </div>
 
       <Body />

@@ -10,6 +10,7 @@ import { BookingFormPage } from './pages/BookingFormPage';
 import { BookingPage } from './pages/BookingPage';
 import { GuidePage } from './pages/GuidePage';
 import { HomePage } from './pages/HomePage';
+import { HelpChatPage } from './pages/HelpChatPage';
 import { DocumentFormPage } from './pages/DocumentFormPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { InboxItemPage } from './pages/InboxItemPage';
@@ -75,6 +76,7 @@ function Gate() {
           <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/guia" element={<GuidePage />} />
+          <Route path="/ayuda" element={<HelpChatPage />} />
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/inbox/:itemId" element={<InboxItemPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
