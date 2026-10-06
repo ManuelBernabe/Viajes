@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { api, describeError } from '../api';
 import { BackLink } from '../app/Layout';
+import { MicButton } from '../components/MicButton';
 import { lang, t } from '../i18n';
 
 interface Message {
@@ -42,9 +43,10 @@ function routeLabel(route: string): string {
 
 /**
  * «Pregunta a la guía»: chat con un asistente que conoce la app (sus pantallas y botones) y responde dudas de uso.
- * No ve los viajes ni las reservas. La conversación dura lo que la sesión de la app.
+ * No ve los viajes ni las reservas. La conversación dura lo que la sesión de la app y es la misma en la pantalla /ayuda
+ * y en la burbuja flotante. `onNavigate`: al pulsar «Ir a…» (la burbuja se cierra).
  */
-export function HelpChatPage() {
+export function HelpChat({ onNavigate }: { onNavigate?: () => void }) {
   const [messages, setMessages] = useState<Message[]>(load);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -97,16 +99,7 @@ export function HelpChatPage() {
   ];
 
   return (
-    <main className="page">
-      <div className="topbar">
-        <BackLink to="/settings" />
-        <h1>💬 {t('Pregunta a la guía')}</h1>
-        {messages.length > 0 && (
-          <button className="btn small" type="button" onClick={() => setMessages([])}>
-            {t('Empezar de nuevo')}
-          </button>
-        )}
-      </div>
+    <>
       <p className="small muted">
         {t('Pregúntame cómo hacer cualquier cosa en la app. Respondo con la guía de uso, con ayuda de la IA: no escribas datos personales.')}
       </p>
@@ -126,7 +119,7 @@ export function HelpChatPage() {
           <div key={index} className={`bubble ${message.role}`}>
             <div style={{ whiteSpace: 'pre-line' }}>{message.text}</div>
             {message.route && (
-              <Link className="btn small" to={message.route} style={{ marginTop: 8 }}>
+              <Link className="btn small" to={message.route} style={{ marginTop: 8 }} onClick={onNavigate}>
                 {t('Ir a {screen}', { screen: routeLabel(message.route) })} ›
               </Link>
             )}
@@ -138,14 +131,36 @@ export function HelpChatPage() {
       {error && <p className="error small">{error}</p>}
 
       <form className="chat-input" onSubmit={submit}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('Escribe tu pregunta…')} maxLength={1000} enterKeyHint="send" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('Escribe o dicta tu pregunta…')} maxLength={1000} enterKeyHint="send" />
+        {/* Al dejar de hablar, se envía sola. */}
+        <MicButton onText={setText} onDone={(spoken) => void ask(spoken)} onError={setError} />
         <button className="btn primary" type="submit" disabled={busy || !text.trim()} aria-label={t('Enviar')}>
           ↑
         </button>
       </form>
-      <p className="small">
-        <Link to="/guia">{t('Ver la guía completa')}</Link>
-      </p>
+      <div className="row between small" style={{ marginTop: 8 }}>
+        <Link to="/guia" onClick={onNavigate}>
+          {t('Ver la guía completa')}
+        </Link>
+        {messages.length > 0 && (
+          <button className="btn small" type="button" onClick={() => setMessages([])}>
+            {t('Empezar de nuevo')}
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** La misma conversación a pantalla completa (desde Ajustes → Ayuda y la guía). */
+export function HelpChatPage() {
+  return (
+    <main className="page">
+      <div className="topbar">
+        <BackLink to="/settings" />
+        <h1>💬 {t('Pregunta a la guía')}</h1>
+      </div>
+      <HelpChat />
     </main>
   );
 }
