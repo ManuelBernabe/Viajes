@@ -87,6 +87,38 @@ export const documents: Messages = {
   'Leer los datos de la foto': { en: 'Read the details from the photo', fr: 'Lire les données de la photo', it: 'Leggi i dati dalla foto' },
   'Envía una foto o un PDF.': { en: 'Send a photo or a PDF.', fr: 'Envoie une photo ou un PDF.', it: 'Invia una foto o un PDF.' },
   'El fichero supera los 15 MB.': { en: 'The file is over 15 MB.', fr: 'Le fichier dépasse 15 Mo.', it: 'Il file supera i 15 MB.' },
+  'Leyendo la foto en el móvil (no sale de aquí)…': {
+    en: 'Reading the photo on your phone (it doesn’t leave it)…',
+    fr: 'Lecture de la photo sur le téléphone (elle n’en sort pas)…',
+    it: 'Lettura della foto sul telefono (non esce da qui)…',
+  },
+  'No se ha podido leer la banda de abajo (las líneas con «<<<»). Haz otra foto de cerca, de frente y con buena luz, o rellena los datos a mano.': {
+    en: 'The strip at the bottom (the lines with “<<<”) couldn’t be read. Take another photo up close, straight on and in good light, or fill in the details by hand.',
+    fr: 'Impossible de lire la bande du bas (les lignes avec « <<< »). Prends une autre photo de près, de face et avec une bonne lumière, ou remplis les données à la main.',
+    it: 'Impossibile leggere la banda in basso (le righe con «<<<»). Fai un’altra foto da vicino, di fronte e con buona luce, o compila i dati a mano.',
+  },
+  'No se ha podido leer la foto en el móvil (¿sin conexión la primera vez?). Rellena los datos a mano.': {
+    en: 'The photo couldn’t be read on the phone (offline the first time?). Fill in the details by hand.',
+    fr: 'Impossible de lire la photo sur le téléphone (hors ligne la première fois ?). Remplis les données à la main.',
+    it: 'Impossibile leggere la foto sul telefono (offline la prima volta?). Compila i dati a mano.',
+  },
+  'Para leer este documento, la foto se envía al servicio de IA del servidor. Los pasaportes, DNI y carnés nunca se envían: se leen en el móvil.': {
+    en: 'To read this document, the photo is sent to the server’s AI service. Passports, ID cards and licences are never sent: they’re read on the phone.',
+    fr: 'Pour lire ce document, la photo est envoyée au service d’IA du serveur. Passeports, cartes d’identité et permis ne sont jamais envoyés : ils sont lus sur le téléphone.',
+    it: 'Per leggere questo documento, la foto viene inviata al servizio di IA del server. Passaporti, carte d’identità e patenti non vengono mai inviati: si leggono sul telefono.',
+  },
+  'El número no se ha podido leer con seguridad: escríbelo a mano.': {
+    en: 'The number couldn’t be read reliably: type it in by hand.',
+    fr: 'Le numéro n’a pas pu être lu de façon sûre : saisis-le à la main.',
+    it: 'Il numero non è stato letto con certezza: scrivilo a mano.',
+  },
+  'Leer con IA': { en: 'Read with AI', fr: 'Lire avec l’IA', it: 'Leggi con l’IA' },
+  'No, lo relleno yo': { en: 'No, I’ll fill it in', fr: 'Non, je le remplis', it: 'No, lo compilo io' },
+  'Haz una foto de la página de los datos, con las líneas de abajo («<<<») bien visibles: la app rellena el resto. La foto de un pasaporte o DNI se lee en el propio móvil.': {
+    en: 'Take a photo of the details page with the bottom lines (“<<<”) clearly visible: the app fills in the rest. A passport or ID photo is read on the phone itself.',
+    fr: 'Prends en photo la page des données avec les lignes du bas (« <<< ») bien visibles : l’app remplit le reste. La photo d’un passeport ou d’une carte d’identité est lue sur le téléphone.',
+    it: 'Fai una foto della pagina dei dati con le righe in basso («<<<») ben visibili: l’app compila il resto. La foto di un passaporto o di una carta d’identità si legge sul telefono.',
+  },
   // Mensajes del servidor de esta función.
   'Tipo de documento desconocido.': { en: 'Unknown document type.', fr: 'Type de document inconnu.', it: 'Tipo di documento sconosciuto.' },
   'Visibilidad no válida.': { en: 'Invalid visibility.', fr: 'Visibilité non valide.', it: 'Visibilità non valida.' },

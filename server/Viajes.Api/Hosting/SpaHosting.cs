@@ -21,7 +21,8 @@ public static class SpaHosting
         FileProvider = provider,
         ContentTypeProvider = new FileExtensionContentTypeProvider
         {
-            Mappings = { [".webmanifest"] = "application/manifest+json" },
+            // .gz: el idioma del lector de pasaportes (tesseract), que se descomprime en el móvil.
+            Mappings = { [".webmanifest"] = "application/manifest+json", [".gz"] = "application/gzip" },
         },
         OnPrepareResponse = context =>
         {

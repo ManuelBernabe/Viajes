@@ -8,7 +8,8 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 {
     private const string ContentSecurityPolicy =
         "default-src 'self'; " +
-        "script-src 'self'; " +
+        // wasm-unsafe-eval: el lector de pasaportes del móvil (tesseract) es WebAssembly; no permite eval de JavaScript.
+        "script-src 'self' 'wasm-unsafe-eval'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
         "font-src 'self' data:; " +
