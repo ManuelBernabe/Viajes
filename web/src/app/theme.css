@@ -247,8 +247,14 @@ input[type='file'] { padding: 8px; }
 .viewer .topbar { padding: calc(env(safe-area-inset-top) + 8px) 12px 8px; margin: 0; background: rgba(0, 0, 0, 0.8); position: sticky; top: 0; z-index: 2; }
 .viewer .topbar h1 { font-size: 1rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .viewer .topbar .back { color: #fff; }
-.viewer img { display: block; max-width: 100%; margin: 0 auto; }
-.viewer canvas { display: block; max-width: 100%; height: auto; margin: 8px auto; background: #fff; }
+.viewer { display: flex; flex-direction: column; height: 100dvh; min-height: 0; }
+.viewer img { display: block; width: 100%; height: auto; margin: 0 auto; }
+.viewer canvas { display: block; width: 100%; height: auto; margin: 8px auto; background: #fff; }
+/* Zoom a mano (ver ZoomStage): la zona se desplaza en las dos direcciones; el pellizco lo gestiona la app. */
+.zoom-stage { flex: 1 1 auto; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; overscroll-behavior: contain; }
+.zoom-content { width: 100%; }
+.zoom-buttons { position: fixed; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); display: flex; gap: 8px; z-index: 3; }
+.zoom-buttons .btn { width: 44px; height: 44px; padding: 0; font-size: 1.3rem; border-radius: 50%; background: rgba(40, 40, 40, 0.85); color: #fff; }
 
 button.secondary { background: transparent; border: 1px solid var(--border); }
 .update-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 30; }
