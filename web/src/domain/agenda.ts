@@ -44,7 +44,11 @@ export const SAME_TIME_MS = 60 * 60_000;
  * vuelo, uno por pasajero, por ejemplo). Vacío si no queda nada.
  */
 export function nextBookings(bookings: readonly Booking[], nowMs: number): Booking[] {
-  const upcoming = upcomingBookings(bookings, nowMs, Number.MAX_SAFE_INTEGER);
+  const all = upcomingBookings(bookings, nowMs, Number.MAX_SAFE_INTEGER);
+  // Un hotel o un coche en el que ya se está es el fondo de esos días, no «lo siguiente»: si no, taparía el vuelo de
+  // esta tarde durante toda la estancia. Solo cuenta si no queda nada más.
+  const foreground = all.filter((b) => !((b.type === 'hotel' || b.type === 'car') && b.startUtcMs <= nowMs));
+  const upcoming = foreground.length > 0 ? foreground : all;
   const first = upcoming[0];
   return first ? upcoming.filter((b) => b.startUtcMs - first.startUtcMs <= SAME_TIME_MS) : [];
 }

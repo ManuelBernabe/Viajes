@@ -405,3 +405,10 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .app-lock-card h2 { margin: 8px 0 20px; }
 /* Botón de ocultar/mostrar en la tarjeta de una reserva (dentro del enlace: no abre la reserva). */
 .card.booking .hide-toggle { align-self: center; flex: none; margin-left: 4px; padding: 4px 8px; min-height: 0; font-size: 1rem; background: transparent; border-color: transparent; opacity: 0.7; }
+/* «Hoy» en Inicio. */
+.card.today { border-color: var(--primary); }
+.today-item { padding: 10px 0; border-top: 1px solid var(--border); }
+.today-item:first-of-type { border-top: none; padding-top: 4px; }
+.today-item h3 { margin: 2px 0; }
+.today-row { display: block; padding: 6px 0; color: inherit; text-decoration: none; }
+.today-time { font-variant-numeric: tabular-nums; font-weight: 600; margin-right: 4px; }
