@@ -8,6 +8,7 @@ import { useLiveQuery } from '../data/useLive';
 import { mapsUrl, parsePasted, PLACE_INFO, sortPlaces } from '../domain/places';
 import { t } from '../i18n';
 import { PlaceSuggestions } from '../components/PlaceSuggestions';
+import { MicButton } from '../components/MicButton';
 
 const EMPTY: Omit<PlaceBody, 'tripId'> = { name: '', category: 'see', notes: null, url: null, address: null, visited: false };
 
@@ -92,7 +93,7 @@ function PlaceForm({
   return (
     <form onSubmit={submit} className={place ? '' : 'card'}>
       {!place && <h3>{t('Añadir un sitio')}</h3>}
-      <div className="field">
+      <div className="field" style={{ flexDirection: 'row', gap: 8 }}>
         <input
           value={form.name}
           onChange={(e) => onName(e.target.value)}
@@ -100,6 +101,7 @@ function PlaceForm({
           aria-label={t('Nombre del sitio')}
           maxLength={1200}
         />
+        <MicButton onText={(text) => onName(text.replace(/[.。]$/, ''))} onError={setMessage} />
       </div>
       <CategoryChips value={form.category} onChange={(category) => set('category', category)} />
       {details ? (

@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { HelpBubble } from '../components/HelpBubble';
 import { t } from '../i18n';
 
 export function Layout() {
   return (
     <>
       <Outlet />
+      <HelpBubble />
       <nav className="tabs">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
           <span className="icon">🧳</span>

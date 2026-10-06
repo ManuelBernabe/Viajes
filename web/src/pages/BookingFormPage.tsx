@@ -6,6 +6,7 @@ import { useSession } from '../app/SessionContext';
 import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp';
 import { splitQrCodes } from '../attachments/qrCodes';
 import { extractWithAi, toSuggestion } from '../attachments/aiExtract';
+import { dictationSupported, MicButton } from '../components/MicButton';
 import { suggestFromText, type TextSuggestion } from '../attachments/extract';
 import { isPdf } from '../attachments/files';
 import { extractPdfText } from '../attachments/pdfText';
@@ -17,7 +18,7 @@ import { loadHousehold, type Household } from '../household/household';
 import type { Booking, BookingVisibility } from '../data/types';
 import { applyChanges, diffBooking, findExistingBooking, type Change, type Proposal } from '../domain/changes';
 import { BOOKING_TYPES, type BookingType } from '../data/types';
-import { TYPE_INFO } from '../domain/agenda';
+import { todayLocal, TYPE_INFO } from '../domain/agenda';
 import type { InboxPrefill } from './InboxItemPage';
 import { t } from '../i18n';
 
@@ -47,6 +48,9 @@ export function BookingFormPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<ReadFile[]>([]);
   const [readMessage, setReadMessage] = useState('');
+  /** Lo que se va dictando, para verlo mientras se habla. */
+  const [spoken, setSpoken] = useState('');
+  const [dictationMessage, setDictationMessage] = useState('');
   /** Texto tal cual lo lee pdf.js: para comprobar por qué una regla no encuentra algo. */
   const [rawText, setRawText] = useState<string | null>(null);
 
@@ -157,6 +161,51 @@ export function BookingFormPage() {
     }
   }
 
+  /** Rellena los campos vacíos con lo leído (de un billete o de lo dictado) y dice de dónde sale. */
+  function fillFromSuggestion(s: TextSuggestion, source: string, name: string, report: (message: string) => void = setReadMessage) {
+    let filled = 0;
+    const fill = (current: string, value: string | null, set: (v: string) => void) => {
+      if (!current.trim() && value) {
+        set(value);
+        filled++;
+      }
+    };
+    if (s.type) setType(s.type);
+    if (s.startTz) setStartTz(s.startTz);
+    if (s.endTz) setEndTz(s.endTz);
+    fill(title, s.title, setTitle);
+    fill(reference, s.reference, setReference);
+    fill(startDate, s.startDate, setStartDate);
+    fill(startTime, s.startTime, setStartTime);
+    fill(startPlace, s.startPlace, setStartPlace);
+    fill(address, s.address, setAddress);
+    fill(notes, s.notes, setNotes);
+    if (s.endDate || s.endTime || s.endPlace) {
+      setWithEnd(true);
+      fill(endDate, s.endDate ?? s.startDate, setEndDate);
+      fill(endTime, s.endTime, setEndTime);
+      fill(endPlace, s.endPlace, setEndPlace);
+    }
+    report(
+      filled > 0
+        ? t('Datos propuestos a partir de {source}: revísalos antes de guardar.', { source })
+        : t('No se ha encontrado nada nuevo en {name}.', { name }),
+    );
+  }
+
+  /** «🎤 Dictar la reserva»: lo dicho se lee con la IA como si fuera el texto de un correo y rellena el formulario. */
+  async function readDictation(text: string) {
+    setDictationMessage(t('Leyendo lo que has dictado…'));
+    const ai = await extractWithAi(new TextEncoder().encode(text).buffer as ArrayBuffer, 'text/plain; charset=utf-8', 'dictado');
+    const s = ai.status === 'ok' ? toSuggestion(ai.extraction) : suggestFromText(text, '');
+    if (!s.type && !s.reference && !s.startDate && !s.title) {
+      setDictationMessage(t('No he entendido una reserva en lo dictado. Prueba diciendo el tipo, el lugar, la fecha y la hora.'));
+      return;
+    }
+    // Sin título, lo dictado sirve de título provisional.
+    fillFromSuggestion({ ...s, title: s.title ?? text.replace(/^[^.]*\.\s*/, '').slice(0, 80) }, t('lo que has dictado'), t('lo dictado'), setDictationMessage);
+  }
+
   /**
    * Sin tarjeta de embarque: primero se pide al servidor que lea el fichero con IA (PDF o imagen); si no hay red o
    * el servidor no tiene clave, el texto del primer PDF legible propone los campos con las reglas locales.
@@ -192,34 +241,7 @@ export function BookingFormPage() {
         setReadMessage(t('No se ha encontrado nada nuevo en {name}.', { name: item.file.name }));
         continue;
       }
-      let filled = 0;
-      const fill = (current: string, value: string | null, set: (v: string) => void) => {
-        if (!current.trim() && value) {
-          set(value);
-          filled++;
-        }
-      };
-      if (s.type) setType(s.type);
-      if (s.startTz) setStartTz(s.startTz);
-      if (s.endTz) setEndTz(s.endTz);
-      fill(title, s.title, setTitle);
-      fill(reference, s.reference, setReference);
-      fill(startDate, s.startDate, setStartDate);
-      fill(startTime, s.startTime, setStartTime);
-      fill(startPlace, s.startPlace, setStartPlace);
-      fill(address, s.address, setAddress);
-      fill(notes, s.notes, setNotes);
-      if (s.endDate || s.endTime || s.endPlace) {
-        setWithEnd(true);
-        fill(endDate, s.endDate ?? s.startDate, setEndDate);
-        fill(endTime, s.endTime, setEndTime);
-        fill(endPlace, s.endPlace, setEndPlace);
-      }
-      setReadMessage(
-        filled > 0
-          ? t('Datos propuestos a partir de {source}: revísalos antes de guardar.', { source })
-          : t('No se ha encontrado nada nuevo en {name}.', { name: item.file.name }),
-      );
+      fillFromSuggestion(s, source, item.file.name);
       return;
     }
   }
@@ -371,6 +393,25 @@ export function BookingFormPage() {
           })}
           {prefill.warnings?.length ? <span className="error"> {prefill.warnings.join(' ')}</span> : null}
         </p>
+      )}
+      {!bookingId && dictationSupported() && (
+        <section className="card">
+          <div className="row between" style={{ gap: 12 }}>
+            <div className="grow">
+              <strong>🎤 {t('Dictar la reserva')}</strong>
+              <div className="small muted">
+                {spoken ||
+                  t('Pulsa el micrófono y di, por ejemplo: «Vuelo Iberia 3170 de Madrid a Londres el 12 de octubre a las 10:05, localizador ABC123».')}
+              </div>
+            </div>
+            <MicButton
+              onText={setSpoken}
+              onError={setDictationMessage}
+              onDone={(text) => void readDictation(`${t('Hoy es {date}.', { date: todayLocal() })} ${text}`)}
+            />
+          </div>
+          {dictationMessage && <p className="muted small" style={{ marginBottom: 0 }}>{dictationMessage}</p>}
+        </section>
       )}
       <form onSubmit={submit}>
         <div className="field">

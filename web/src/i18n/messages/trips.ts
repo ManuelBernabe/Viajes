@@ -2,6 +2,36 @@ import type { Messages } from './types';
 
 /** Traducciones: trips. Clave = el texto en español tal y como aparece en el código. */
 export const trips: Messages = {
+  'Permite el micrófono a Viajes para dictar (Ajustes del iPhone → Viajes o Safari → Micrófono).': {
+    en: 'Allow Viajes to use the microphone to dictate (iPhone Settings → Viajes or Safari → Microphone).',
+    fr: 'Autorise le micro pour Viajes afin de dicter (Réglages de l’iPhone → Viajes ou Safari → Micro).',
+    it: 'Consenti il microfono a Viajes per dettare (Impostazioni dell’iPhone → Viajes o Safari → Microfono).',
+  },
+  'No te he oído. Vuelve a pulsar 🎤 y habla.': { en: 'I didn’t hear you. Tap 🎤 again and speak.', fr: 'Je ne t’ai pas entendu. Appuie à nouveau sur 🎤 et parle.', it: 'Non ti ho sentito. Tocca di nuovo 🎤 e parla.' },
+  'No se ha podido dictar. Prueba con el micrófono del teclado.': {
+    en: 'Dictation didn’t work. Try the keyboard’s microphone.',
+    fr: 'La dictée n’a pas fonctionné. Essaie le micro du clavier.',
+    it: 'La dettatura non ha funzionato. Prova il microfono della tastiera.',
+  },
+  'Dejar de escuchar': { en: 'Stop listening', fr: 'Arrêter d’écouter', it: 'Smetti di ascoltare' },
+  'Dictar con la voz': { en: 'Dictate', fr: 'Dicter', it: 'Detta a voce' },
+  'Leyendo lo que has dictado…': { en: 'Reading what you dictated…', fr: 'Lecture de ce que tu as dicté…', it: 'Leggo quello che hai dettato…' },
+  'No he entendido una reserva en lo dictado. Prueba diciendo el tipo, el lugar, la fecha y la hora.': {
+    en: 'I couldn’t make out a booking. Try saying the type, place, date and time.',
+    fr: 'Je n’ai pas compris de réservation. Essaie de dire le type, le lieu, la date et l’heure.',
+    it: 'Non ho capito una prenotazione. Prova a dire il tipo, il luogo, la data e l’ora.',
+  },
+  'lo que has dictado': { en: 'what you dictated', fr: 'ce que tu as dicté', it: 'quello che hai dettato' },
+  'lo dictado': { en: 'the dictation', fr: 'la dictée', it: 'la dettatura' },
+  'Dictar la reserva': { en: 'Dictate the booking', fr: 'Dicter la réservation', it: 'Detta la prenotazione' },
+  'Pulsa el micrófono y di, por ejemplo: «Vuelo Iberia 3170 de Madrid a Londres el 12 de octubre a las 10:05, localizador ABC123».': {
+    en: 'Tap the microphone and say, for example: “Iberia flight 3170 from Madrid to London on 12 October at 10:05, booking reference ABC123”.',
+    fr: 'Appuie sur le micro et dis, par exemple : « Vol Iberia 3170 de Madrid à Londres le 12 octobre à 10 h 05, référence ABC123 ».',
+    it: 'Tocca il microfono e di’, per esempio: «Volo Iberia 3170 da Madrid a Londra il 12 ottobre alle 10:05, codice ABC123».',
+  },
+  'Hoy es {date}.': { en: 'Today is {date}.', fr: 'Nous sommes le {date}.', it: 'Oggi è {date}.' },
+  'Escribe o dicta tu pregunta…': { en: 'Type or dictate your question…', fr: 'Écris ou dicte ta question…', it: 'Scrivi o detta la tua domanda…' },
+
   'Cómo llegar': { en: 'Directions', fr: 'Itinéraire', it: 'Come arrivare' },
   'Empieza en {d} d {h} h': { en: 'Starts in {d} d {h} h', fr: 'Commence dans {d} j {h} h', it: 'Inizia tra {d} g {h} h' },
   'Empieza en {h} h {m} min': { en: 'Starts in {h} h {m} min', fr: 'Commence dans {h} h {m} min', it: 'Inizia tra {h} h {m} min' },
