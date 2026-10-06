@@ -36,6 +36,19 @@ export function nextBooking(bookings: readonly Booking[], nowMs: number): Bookin
   return upcomingBookings(bookings, nowMs, 1)[0];
 }
 
+/** Margen para tratar como «a la vez» dos reservas: el mismo vuelo en dos reservas, o dos trenes casi seguidos. */
+export const SAME_TIME_MS = 60 * 60_000;
+
+/**
+ * Lo siguiente: la próxima reserva vigente y las que empiezan con ella, en la hora siguiente (dos reservas del mismo
+ * vuelo, uno por pasajero, por ejemplo). Vacío si no queda nada.
+ */
+export function nextBookings(bookings: readonly Booking[], nowMs: number): Booking[] {
+  const upcoming = upcomingBookings(bookings, nowMs, Number.MAX_SAFE_INTEGER);
+  const first = upcoming[0];
+  return first ? upcoming.filter((b) => b.startUtcMs - first.startUtcMs <= SAME_TIME_MS) : [];
+}
+
 /** Las próximas `limit` reservas vigentes por instante real, la más cercana primero. */
 export function upcomingBookings(bookings: readonly Booking[], nowMs: number, limit: number): Booking[] {
   return [...bookings]

@@ -83,6 +83,12 @@ async function send(op: Op): Promise<SendResult> {
       case 'delete-document':
         await api(`/api/documents/${op.id}`, { method: 'DELETE' });
         break;
+      case 'hide-booking':
+        await api(`/api/bookings/${op.id}/hidden`, { method: 'PUT' });
+        break;
+      case 'show-booking':
+        await api(`/api/bookings/${op.id}/hidden`, { method: 'DELETE' });
+        break;
     }
     return 'ok';
   } catch (error) {

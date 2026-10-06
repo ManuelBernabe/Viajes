@@ -46,6 +46,9 @@ public static class CalendarFeed
             .ToListAsync(ct))
             .Where(b => tripIds.Contains(b.TripId))
             .ToList();
+        // Las que la persona ha ocultado de sus listas tampoco van a su calendario.
+        var hidden = (await db.BookingHides.Where(h => h.UserId == userId).Select(h => h.BookingId).ToListAsync(ct)).ToHashSet();
+        bookings.RemoveAll(b => hidden.Contains(b.Id));
 
         // Último uso, como mucho una vez por hora (el calendario pregunta a menudo).
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

@@ -145,6 +145,8 @@ export interface SyncResponse {
   documents?: TravelDocument[];
   /** Todos los documentos visibles ahora; los locales que no estén aquí se purgan (pasados a privados). */
   documentIds?: string[];
+  /** Reservas que esta persona ha ocultado de sus listas. */
+  hiddenBookingIds?: string[];
 }
 
 export type DocumentKind = 'passport' | 'id' | 'visa' | 'insurance' | 'vaccine' | 'license' | 'other';
@@ -213,4 +215,6 @@ export type Op =
   | { kind: 'put-place'; id: string; body: PlaceBody }
   | { kind: 'delete-place'; id: string }
   | { kind: 'put-document'; id: string; body: TravelDocumentBody }
-  | { kind: 'delete-document'; id: string };
+  | { kind: 'delete-document'; id: string }
+  | { kind: 'hide-booking'; id: string }
+  | { kind: 'show-booking'; id: string };

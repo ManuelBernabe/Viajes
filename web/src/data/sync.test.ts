@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getMeta, openDb, resetDb } from './db';
 import { pending } from './outbox';
-import { addAttachment, getBlob, listAttachments, listBookings, listDocuments, listTrips, saveBooking, saveDocument, saveTrip } from './repo';
+import { addAttachment, getBlob, hiddenBookings, setBookingHidden, listAttachments, listBookings, listDocuments, listTrips, saveBooking, saveDocument, saveTrip } from './repo';
 import { pull, syncAll, uploads, VERSION_KEY } from './sync';
 import type { Attachment, Booking, Op, SyncResponse, TravelDocument, Trip } from './types';
 
@@ -240,5 +240,18 @@ describe('documentos de viaje', () => {
 
     expect((await listDocuments()).map((d) => d.id).sort()).toEqual([local.id, 'pasaporte'].sort());
     expect((await listAttachments('pasaporte')).map((a) => a.id)).toEqual(['foto']);
+  });
+});
+
+describe('reservas ocultas', () => {
+  it('toma la lista del servidor, con lo que aún espera en la cola encima', async () => {
+    await pull({ fetchSync: async () => response({ hiddenBookingIds: ['a', 'b'] }) });
+    expect([...(await hiddenBookings())].sort()).toEqual(['a', 'b']);
+
+    await setBookingHidden('b', false);
+    await setBookingHidden('c', true);
+    // El servidor aún no se ha enterado: lo del móvil manda.
+    await pull({ fetchSync: async () => response({ hiddenBookingIds: ['a', 'b'] }) });
+    expect([...(await hiddenBookings())].sort()).toEqual(['a', 'c']);
   });
 });

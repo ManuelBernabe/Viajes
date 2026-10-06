@@ -1,5 +1,5 @@
 import { emitChange } from './bus';
-import { openDb } from './db';
+import { getMeta, openDb, setMeta } from './db';
 import { toUtcMs } from './localTime';
 import { enqueue } from './outbox';
 import type { Attachment, AttachmentBody, Booking, BookingBody, InboxItem, Place, PlaceBody, StoredBlob, TravelDocument, TravelDocumentBody, Trip, TripBody } from './types';
@@ -81,6 +81,28 @@ export async function savePlace(body: PlaceBody, createdBy: string, id = newId()
 export async function deletePlace(id: string): Promise<void> {
   await (await openDb()).delete('places', id);
   await enqueue({ kind: 'delete-place', id });
+  emitChange();
+}
+
+// ---- Reservas ocultas de mis listas ----
+
+export const HIDDEN_KEY = 'hiddenBookings';
+
+/** Las reservas que esta persona ha ocultado (quien administra ve las de todos y puede no querer verlas). */
+export async function hiddenBookings(): Promise<Set<string>> {
+  return new Set((await getMeta<string[]>(HIDDEN_KEY)) ?? []);
+}
+
+/** Oculta o vuelve a mostrar una reserva en mis listas; se guarda ya en el móvil y la cola lo manda al servidor. */
+export async function setBookingHidden(id: string, hidden: boolean): Promise<void> {
+  const current = await hiddenBookings();
+  if (hidden) {
+    current.add(id);
+  } else {
+    current.delete(id);
+  }
+  await setMeta(HIDDEN_KEY, [...current]);
+  await enqueue({ kind: hidden ? 'hide-booking' : 'show-booking', id });
   emitChange();
 }
 

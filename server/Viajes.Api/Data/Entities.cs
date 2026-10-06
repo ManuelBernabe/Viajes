@@ -360,6 +360,19 @@ public sealed class InboxAttachment
 }
 
 /// <summary>Persona concreta con la que se comparte una reserva de visibilidad «some».</summary>
+/// <summary>
+/// Una reserva que alguien ha ocultado de sus listas (quien administra ve las de todo el hogar y puede no querer verlas).
+/// Es de cada persona: a los demás no les cambia nada. Tampoco le llegan avisos de ella ni sale en su calendario.
+/// </summary>
+public sealed class BookingHide
+{
+    public Guid BookingId { get; set; }
+
+    public required string UserId { get; set; }
+
+    public long CreatedMs { get; set; }
+}
+
 public sealed class BookingShare
 {
     public Guid BookingId { get; set; }

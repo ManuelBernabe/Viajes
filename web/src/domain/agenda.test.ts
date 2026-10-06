@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking, Trip } from '../data/types';
-import { activeUntilMs, groupByDay, isInProgress, nextBooking, pastBookings, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
+import { activeUntilMs, groupByDay, isInProgress, nextBooking, nextBookings, pastBookings, sortTrips, todayLocal, tripStatus, upcomingBookings } from './agenda';
 import { toUtcMs } from '../data/localTime';
 
 const booking = (id: string, startLocal: string, startUtcMs: number): Booking => ({
@@ -9,6 +9,16 @@ const booking = (id: string, startLocal: string, startUtcMs: number): Booking =>
 });
 const trip = (id: string, startDate: string | null, endDate: string | null): Trip => ({
   id, title: id, destination: null, startDate, endDate, createdBy: 'yo', version: 1, deletedAtMs: null,
+});
+
+describe('nextBookings', () => {
+  it('las que empiezan a la vez (o en la hora siguiente) salen juntas', () => {
+    const b = (id: string, startUtcMs: number) => ({ id, tripId: 't', type: 'flight', title: id, startLocal: '2026-10-06T13:33', startTz: 'UTC', startPlace: null, endLocal: null, endTz: null, endPlace: null, startUtcMs, reference: null, address: null, notes: null, changeNote: null, visibility: 'household', sharedWith: [], createdBy: 'yo', version: 1, deletedAtMs: null }) as Booking;
+    const h = 3_600_000;
+    const list = [b('paco', 10 * h), b('manuel', 10 * h), b('tren', 10.5 * h), b('hotel', 14 * h)];
+    expect(nextBookings(list, 9 * h).map((x) => x.id)).toEqual(['paco', 'manuel', 'tren']);
+    expect(nextBookings([], 0)).toEqual([]);
+  });
 });
 
 describe('nextBooking', () => {

@@ -7,7 +7,7 @@ import { Alternatives } from '../components/Alternatives';
 import { AttachmentThumbs } from '../components/AttachmentThumbs';
 import { SeatCheckIn } from '../components/SeatCheckIn';
 import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
-import { deleteBooking, getBooking, listAttachments, saveBooking } from '../data/repo';
+import { deleteBooking, getBooking, hiddenBookings, listAttachments, saveBooking, setBookingHidden } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
@@ -20,6 +20,7 @@ export function BookingPage() {
   const attachments = useLiveQuery(() => listAttachments(bookingId), [bookingId]);
   const { attach, progress } = useAttachFiles(session.email ?? '');
   const fileInput = useRef<HTMLInputElement>(null);
+  const isHidden = useLiveQuery(async () => (await hiddenBookings()).has(bookingId), [bookingId]);
 
   if (booking === undefined || attachments === undefined) {
     return <main className="page muted">{t('Cargando…')}</main>;
@@ -160,6 +161,14 @@ export function BookingPage() {
       {!progress.busy && progress.message && <p className="error small">{progress.message}</p>}
 
       <div className="spacer" />
+      <button className="btn block" type="button" onClick={() => void setBookingHidden(bookingId, !isHidden)}>
+        {isHidden ? `👁 ${t('Mostrar en mis listas')}` : `🙈 ${t('Ocultar de mis listas')}`}
+      </button>
+      <p className="small muted" style={{ marginTop: 4 }}>
+        {isHidden
+          ? t('Está oculta para ti: no sale en Inicio, en «Lo siguiente» ni en tu calendario, y no te llegan sus avisos. Los demás la siguen viendo.')
+          : t('Ocultarla solo cambia lo que ves tú; los demás la siguen viendo.')}
+      </p>
       <button className="btn danger block" onClick={() => void remove()}>
         {t('Borrar reserva')}
       </button>

@@ -2,24 +2,25 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { formatDay, formatRange, timeOf } from '../data/localTime';
-import { listAllBookings, listInbox, listTrips } from '../data/repo';
+import { hiddenBookings, listAllBookings, listInbox, listTrips } from '../data/repo';
 import { useSyncStatus } from '../data/syncClient';
 import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { isInProgress, nextBooking, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
+import { isInProgress, nextBookings, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
 import { SyncButton } from '../components/SyncButton';
 import { t } from '../i18n';
 
 /** Resumen de las reservas de un viaje para su tarjeta: cuántas hay y cuál es la siguiente. */
 interface TripSummary {
   count: number;
-  next?: Booking;
+  /** La próxima reserva y las que empiezan con ella (en la misma hora). */
+  next: Booking[];
   inProgress: boolean;
 }
 
 function TripCard({ trip, summary, done = false, current = false }: { trip: Trip; summary?: TripSummary; done?: boolean; current?: boolean }) {
   const offline = useTripOffline(trip);
-  const next = summary?.next;
+  const next = summary?.next ?? [];
   return (
     <Link className={`card${done ? ' done' : ''}${current ? ' highlight' : ''}`} to={`/trips/${trip.id}`}>
       <div className="row between">
@@ -32,11 +33,13 @@ function TripCard({ trip, summary, done = false, current = false }: { trip: Trip
           <div className="muted small">
             {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
           </div>
-          {!done && next && (
-            <div className="small" style={{ marginTop: 4 }}>
-              {summary?.inProgress ? t('En curso') : t('Lo siguiente')}: {TYPE_INFO[next.type].icon} {next.title} · {formatDay(next.startLocal)} {timeOf(next.startLocal)}
-            </div>
-          )}
+          {!done &&
+            next.map((booking, index) => (
+              <div key={booking.id} className="small" style={{ marginTop: index === 0 ? 4 : 0 }}>
+                {index === 0 ? `${summary?.inProgress ? t('En curso') : t('Lo siguiente')}: ` : '+ '}
+                {TYPE_INFO[booking.type].icon} {booking.title} · {formatDay(booking.startLocal)} {timeOf(booking.startLocal)}
+              </div>
+            ))}
           {summary && (
             <div className="muted small">
               {summary.count === 0 ? t('Sin reservas todavía') : summary.count === 1 ? t('1 reserva') : t('{n} reservas', { n: summary.count })}
@@ -92,13 +95,14 @@ export function HomePage() {
   const summaries = useLiveQuery(async () => {
     const now = Date.now();
     const byTrip = new Map<string, Booking[]>();
-    for (const booking of await listAllBookings()) {
+    const hiddenIds = await hiddenBookings();
+    for (const booking of (await listAllBookings()).filter((b) => !hiddenIds.has(b.id))) {
       byTrip.set(booking.tripId, [...(byTrip.get(booking.tripId) ?? []), booking]);
     }
     const result = new Map<string, TripSummary>();
     for (const [tripId, bookings] of byTrip) {
-      const next = nextBooking(bookings, now);
-      result.set(tripId, { count: bookings.length, next, inProgress: !!next && isInProgress(next, now) });
+      const next = nextBookings(bookings, now);
+      result.set(tripId, { count: bookings.length, next, inProgress: next.some((b) => isInProgress(b, now)) });
     }
     return result;
   }, []);
@@ -108,7 +112,7 @@ export function HomePage() {
   const sorted = trips ? sortTrips(trips, today) : null;
   const current = sorted?.active.filter((t) => tripStatus(t, today) === 'current') ?? [];
   const upcoming = sorted?.active.filter((t) => tripStatus(t, today) !== 'current') ?? [];
-  const summaryOf = (trip: Trip): TripSummary => summaries?.get(trip.id) ?? { count: 0, inProgress: false };
+  const summaryOf = (trip: Trip): TripSummary => summaries?.get(trip.id) ?? { count: 0, next: [], inProgress: false };
 
   return (
     <main className="page">

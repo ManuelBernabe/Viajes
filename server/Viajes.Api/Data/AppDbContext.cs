@@ -36,6 +36,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<BookingShare> BookingShares => Set<BookingShare>();
 
+    public DbSet<BookingHide> BookingHides => Set<BookingHide>();
+
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
@@ -147,6 +149,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         {
             share.HasKey(s => new { s.BookingId, s.UserId });
             share.HasIndex(s => s.UserId);
+        });
+
+        builder.Entity<BookingHide>(hide =>
+        {
+            hide.HasKey(h => new { h.BookingId, h.UserId });
+            hide.HasIndex(h => h.UserId);
         });
 
         builder.Entity<Invitation>(invitation =>

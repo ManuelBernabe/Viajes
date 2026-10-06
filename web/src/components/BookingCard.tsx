@@ -5,11 +5,27 @@ import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
 
 /** `past`: reserva ya terminada, en el histórico (atenuada y marcada como realizada). */
-export function BookingCard({ booking, showDay, past = false }: { booking: Booking; showDay?: string; past?: boolean }) {
+/**
+ * `onHide`: botón para ocultar la reserva de mis listas (o volver a mostrarla, si `hidden`). Quien administra ve las
+ * reservas de todo el hogar y así quita de la vista las que no le tocan.
+ */
+export function BookingCard({
+  booking,
+  showDay,
+  past = false,
+  hidden = false,
+  onHide,
+}: {
+  booking: Booking;
+  showDay?: string;
+  past?: boolean;
+  hidden?: boolean;
+  onHide?: (hidden: boolean) => void;
+}) {
   const info = TYPE_INFO[booking.type];
   const route = [booking.startPlace, booking.endPlace].filter(Boolean).join(' → ');
   return (
-    <Link className={`card booking type-${booking.type}${past ? ' past' : ''}`} to={`/bookings/${booking.id}`}>
+    <Link className={`card booking type-${booking.type}${past || hidden ? ' past' : ''}`} to={`/bookings/${booking.id}`}>
       <div className="time">
         {timeOf(booking.startLocal)}
         <span className="tz">{zoneLabel(booking.startTz)}</span>
@@ -29,6 +45,21 @@ export function BookingCard({ booking, showDay, past = false }: { booking: Booki
         {route && <div className="sub">{route}</div>}
         {booking.reference && <div className="sub">{t('Localizador')} {booking.reference}</div>}
       </div>
+      {onHide && (
+        <button
+          type="button"
+          className="btn small hide-toggle"
+          aria-label={hidden ? t('Mostrar «{name}» en mis listas', { name: booking.title }) : t('Ocultar «{name}» de mis listas', { name: booking.title })}
+          title={hidden ? t('Mostrar') : t('Ocultar')}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onHide(!hidden);
+          }}
+        >
+          {hidden ? '👁' : '🙈'}
+        </button>
+      )}
     </Link>
   );
 }

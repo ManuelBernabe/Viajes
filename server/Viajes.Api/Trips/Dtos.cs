@@ -160,4 +160,6 @@ public sealed record SyncResponse(
     /// <summary>Documentos de viaje cambiados (con los borrados).</summary>
     IReadOnlyList<DocumentDto> Documents,
     /// <summary>Todos los documentos que la persona ve ahora: el móvil purga los que ya no estén (pasados a privados).</summary>
-    IReadOnlyList<Guid> DocumentIds);
+    IReadOnlyList<Guid> DocumentIds,
+    /// <summary>Reservas que esta persona ha ocultado de sus listas (siempre la lista entera; es pequeña).</summary>
+    IReadOnlyList<Guid> HiddenBookingIds);
