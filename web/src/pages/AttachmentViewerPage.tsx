@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { isImage, isPdf } from '../attachments/files';
 import { renderPdf } from '../attachments/pdf';
+import { ZoomStage } from '../components/ZoomStage';
 import { useWakeLock } from '../attachments/useWakeLock';
 import { deleteAttachment, getAttachment, getBlob, putBlob } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
@@ -66,7 +67,8 @@ export function AttachmentViewerPage() {
     if (isPdf(blob.mime)) {
       let alive = true;
       setMessage(t('Preparando el PDF…'));
-      renderPdf(blob.bytes).then(
+      // Más resolución que la pantalla, para que al ampliar se siga leyendo nítido.
+      renderPdf(blob.bytes, { width: Math.min(window.innerWidth * (window.devicePixelRatio || 1) * 2.5, 3200), maxPages: 20 }).then(
         (canvases) => {
           if (!alive || !pages.current) {
             return;
@@ -106,8 +108,10 @@ export function AttachmentViewerPage() {
       </div>
       {attachment === null && <p className="empty">{t('Este adjunto ya no existe.')}</p>}
       {message && <p className="center muted" style={{ padding: 16 }}>{message}</p>}
-      {imageUrl && <img src={imageUrl} alt={attachment?.name ?? ''} />}
-      <div ref={pages} />
+      <ZoomStage>
+        {imageUrl && <img src={imageUrl} alt={attachment?.name ?? ''} />}
+        <div ref={pages} />
+      </ZoomStage>
     </div>
   );
 }

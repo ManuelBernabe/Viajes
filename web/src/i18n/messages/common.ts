@@ -2,6 +2,8 @@ import type { Messages } from './types';
 
 /** Traducciones: common. Clave = el texto en español tal y como aparece en el código. */
 export const common: Messages = {
+  Acercar: { en: 'Zoom in', fr: 'Zoomer', it: 'Ingrandisci' },
+  Alejar: { en: 'Zoom out', fr: 'Dézoomer', it: 'Rimpicciolisci' },
   'No se ha podido completar. Inténtalo de nuevo.': {
     en: 'It could not be completed. Please try again.',
     fr: 'Impossible de terminer. Réessaie.',
