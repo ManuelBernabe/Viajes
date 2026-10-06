@@ -10,7 +10,7 @@ import { deleteTrip, getTrip, listAttachments, listBookings, listDocuments, list
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, isInProgress, isPast, nextBooking, todayLocal, TYPE_INFO } from '../domain/agenda';
+import { groupByDay, isInProgress, isPast, nextBookings, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { documentAlerts } from '../domain/documents';
 import { t } from '../i18n';
 
@@ -20,11 +20,10 @@ export function TripPage() {
   const trip = useLiveQuery(() => getTrip(tripId), [tripId]);
   const bookings = useLiveQuery(() => listBookings(tripId), [tripId]);
   const placeCount = useLiveQuery(async () => (await listPlaces(tripId)).filter((p) => !p.visited).length, [tripId]);
-  // La próxima reserva vigente del viaje, destacada arriba con su QR (lo que antes iba en Inicio).
-  const highlight = useLiveQuery(async () => {
-    const next = nextBooking(await listBookings(tripId), Date.now());
-    const qr = next ? (await listAttachments(next.id)).some((a) => a.qrText) : false;
-    return { next, qr };
+  // Lo siguiente del viaje, destacado arriba con su QR: la próxima reserva y las que empiezan con ella (en la misma hora).
+  const highlights = useLiveQuery(async () => {
+    const next = nextBookings(await listBookings(tripId), Date.now());
+    return Promise.all(next.map(async (booking) => ({ next: booking, qr: (await listAttachments(booking.id)).some((a) => a.qrText) })));
   }, [tripId]);
   // Documentos que caducan antes o durante este viaje (pasaportes con menos de 6 meses, etc.).
   const docAlerts = useLiveQuery(async () => {
@@ -97,8 +96,8 @@ export function TripPage() {
       </div>
       <div className="muted">{[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}</div>
 
-      {highlight?.next && (
-        <section className={`card highlight type-${highlight.next.type}`}>
+      {highlights?.map((highlight) => (
+        <section key={highlight.next.id} className={`card highlight type-${highlight.next.type}`}>
           <div className="small eyebrow-type">
             {isInProgress(highlight.next, Date.now()) ? t('En curso') : t('Lo siguiente')} · {TYPE_INFO[highlight.next.type].label}
           </div>
@@ -121,7 +120,7 @@ export function TripPage() {
             </Link>
           </div>
         </section>
-      )}
+      ))}
 
       {docAlerts && docAlerts.length > 0 && (
         <Link className="card highlight" to="/documents" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
