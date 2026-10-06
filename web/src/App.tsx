@@ -23,6 +23,7 @@ import { TripFormPage } from './pages/TripFormPage';
 import { TripPage } from './pages/TripPage';
 import { UpdatePrompt } from './UpdatePrompt';
 import { AppLock } from './lock/AppLock';
+import { ScrollButtons } from './components/ScrollButtons';
 import './app/theme.css';
 import { t } from './i18n';
 
@@ -99,6 +100,7 @@ export default function App() {
               <ScrollToTop />
               <Gate />
             </div>
+            <ScrollButtons />
           </div>
         </ErrorBoundary>
         <UpdatePrompt />
