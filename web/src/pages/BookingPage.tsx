@@ -5,6 +5,7 @@ import { useSession } from '../app/SessionContext';
 import { useAttachFiles } from '../attachments/useAttachFiles';
 import { Alternatives } from '../components/Alternatives';
 import { AttachmentThumbs } from '../components/AttachmentThumbs';
+import { Directions } from '../components/Directions';
 import { SeatCheckIn } from '../components/SeatCheckIn';
 import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
 import { deleteBooking, getBooking, hiddenBookings, listAttachments, saveBooking, setBookingHidden } from '../data/repo';
@@ -132,6 +133,10 @@ export function BookingPage() {
           </>
         )}
       </dl>
+
+      <div className="actions" style={{ marginTop: 12 }}>
+        <Directions booking={booking} />
+      </div>
 
       <SeatCheckIn booking={booking} />
 

@@ -8,6 +8,7 @@ import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBookings, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
 import { SyncButton } from '../components/SyncButton';
+import { TodayPanel } from '../components/TodayPanel';
 import { t } from '../i18n';
 
 /** Resumen de las reservas de un viaje para su tarjeta: cuántas hay y cuál es la siguiente. */
@@ -143,6 +144,7 @@ export function HomePage() {
           </div>
         </Link>
       )}
+      <TodayPanel />
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (
         <div className="empty">
           <p>{t('Todavía no hay viajes.')}</p>

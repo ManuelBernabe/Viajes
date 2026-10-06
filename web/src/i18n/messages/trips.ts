@@ -2,6 +2,16 @@ import type { Messages } from './types';
 
 /** Traducciones: trips. Clave = el texto en español tal y como aparece en el código. */
 export const trips: Messages = {
+  'Cómo llegar': { en: 'Directions', fr: 'Itinéraire', it: 'Come arrivare' },
+  'Empieza en {d} d {h} h': { en: 'Starts in {d} d {h} h', fr: 'Commence dans {d} j {h} h', it: 'Inizia tra {d} g {h} h' },
+  'Empieza en {h} h {m} min': { en: 'Starts in {h} h {m} min', fr: 'Commence dans {h} h {m} min', it: 'Inizia tra {h} h {m} min' },
+  'Empieza en {m} min': { en: 'Starts in {m} min', fr: 'Commence dans {m} min', it: 'Inizia tra {m} min' },
+  'Empieza ahora': { en: 'Starting now', fr: 'Commence maintenant', it: 'Inizia adesso' },
+  'hasta las {time}': { en: 'until {time}', fr: 'jusqu’à {time}', it: 'fino alle {time}' },
+  Hoy: { en: 'Today', fr: 'Aujourd’hui', it: 'Oggi' },
+  'Esta noche': { en: 'Tonight', fr: 'Ce soir', it: 'Stanotte' },
+  'Más tarde, hoy': { en: 'Later today', fr: 'Plus tard aujourd’hui', it: 'Più tardi, oggi' },
+
   'Mostrar «{name}» en mis listas': { en: 'Show “{name}” in my lists', fr: 'Afficher « {name} » dans mes listes', it: 'Mostra «{name}» nei miei elenchi' },
   'Ocultar «{name}» de mis listas': { en: 'Hide “{name}” from my lists', fr: 'Masquer « {name} » de mes listes', it: 'Nascondi «{name}» dai miei elenchi' },
   Mostrar: { en: 'Show', fr: 'Afficher', it: 'Mostra' },
