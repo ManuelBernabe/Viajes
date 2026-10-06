@@ -2,6 +2,24 @@ import type { Messages } from './types';
 
 /** Traducciones: trips. Clave = el texto en español tal y como aparece en el código. */
 export const trips: Messages = {
+  'Mostrar «{name}» en mis listas': { en: 'Show “{name}” in my lists', fr: 'Afficher « {name} » dans mes listes', it: 'Mostra «{name}» nei miei elenchi' },
+  'Ocultar «{name}» de mis listas': { en: 'Hide “{name}” from my lists', fr: 'Masquer « {name} » de mes listes', it: 'Nascondi «{name}» dai miei elenchi' },
+  Mostrar: { en: 'Show', fr: 'Afficher', it: 'Mostra' },
+  'Mostrar en mis listas': { en: 'Show in my lists', fr: 'Afficher dans mes listes', it: 'Mostra nei miei elenchi' },
+  'Ocultar de mis listas': { en: 'Hide from my lists', fr: 'Masquer de mes listes', it: 'Nascondi dai miei elenchi' },
+  'Está oculta para ti: no sale en Inicio, en «Lo siguiente» ni en tu calendario, y no te llegan sus avisos. Los demás la siguen viendo.': {
+    en: 'It’s hidden for you: it doesn’t appear on Home, in “Next” or in your calendar, and you don’t get its alerts. Everyone else still sees it.',
+    fr: 'Elle est masquée pour toi : elle n’apparaît ni dans l’Accueil, ni dans « À suivre », ni dans ton calendrier, et tu ne reçois pas ses alertes. Les autres la voient toujours.',
+    it: 'È nascosta per te: non compare nella Home, in «Prossimo» né nel tuo calendario, e non ricevi i suoi avvisi. Gli altri la vedono ancora.',
+  },
+  'Ocultarla solo cambia lo que ves tú; los demás la siguen viendo.': {
+    en: 'Hiding it only changes what you see; everyone else still sees it.',
+    fr: 'La masquer ne change que ce que tu vois ; les autres la voient toujours.',
+    it: 'Nasconderla cambia solo ciò che vedi tu; gli altri la vedono ancora.',
+  },
+  'Ocultar las reservas ocultas': { en: 'Collapse hidden bookings', fr: 'Replier les réservations masquées', it: 'Chiudi le prenotazioni nascoste' },
+  'Ver las ocultas ({n})': { en: 'Show hidden ({n})', fr: 'Voir les masquées ({n})', it: 'Vedi le nascoste ({n})' },
+
   // Navegación
   Inicio: { en: 'Home', fr: 'Accueil', it: 'Home' },
   Ajustes: { en: 'Settings', fr: 'Réglages', it: 'Impostazioni' },

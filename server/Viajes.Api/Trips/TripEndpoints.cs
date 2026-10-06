@@ -21,6 +21,8 @@ public static partial class TripEndpoints
         var bookings = app.MapGroup("/api/bookings").RequireAuthorization();
         bookings.MapPut("/{id:guid}", PutBooking);
         bookings.MapDelete("/{id:guid}", DeleteBooking);
+        bookings.MapPut("/{id:guid}/hidden", HideBooking);
+        bookings.MapDelete("/{id:guid}/hidden", ShowBooking);
 
         var attachments = app.MapGroup("/api/attachments").RequireAuthorization();
         attachments.MapPut("/{id:guid}", PutAttachment);
@@ -363,6 +365,32 @@ public static partial class TripEndpoints
         return Results.NoContent();
     }
 
+    // ---- Ocultar reservas de mis listas ----
+
+    private static async Task<IResult> HideBooking(Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db)
+    {
+        var userId = users.GetUserId(principal)!;
+        if (await access.VisibleBooking(userId, id) is null)
+        {
+            return NotFound();
+        }
+
+        if (!await db.BookingHides.AnyAsync(h => h.BookingId == id && h.UserId == userId))
+        {
+            db.BookingHides.Add(new BookingHide { BookingId = id, UserId = userId, CreatedMs = Now() });
+            await db.SaveChangesAsync();
+        }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> ShowBooking(Guid id, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db)
+    {
+        var userId = users.GetUserId(principal)!;
+        await db.BookingHides.Where(h => h.BookingId == id && h.UserId == userId).ExecuteDeleteAsync();
+        return Results.NoContent();
+    }
+
     // ---- Adjuntos ----
 
     private static async Task<IResult> PutAttachment(
@@ -540,6 +568,7 @@ public static partial class TripEndpoints
         var places = await access.VisiblePlaces(userId).Where(p => p.Version > from).OrderBy(p => p.Version).ToListAsync(ct);
         var documents = await access.VisibleDocuments(userId).Where(d => d.Version > from).OrderBy(d => d.Version).ToListAsync(ct);
         var documentIds = await access.VisibleDocuments(userId).Where(d => d.DeletedAtMs == null).Select(d => d.Id).ToListAsync(ct);
+        var hiddenBookingIds = await db.BookingHides.Where(h => h.UserId == userId).Select(h => h.BookingId).ToListAsync(ct);
         await transaction.CommitAsync(ct);
 
         return Results.Ok(new SyncResponse(
@@ -552,7 +581,8 @@ public static partial class TripEndpoints
             inbox.Select(i => Inbox.InboxEndpoints.ToDto(i, inboxAttachments.Where(a => a.InboxItemId == i.Id))).ToList(),
             places.Select(PlaceDto.From).ToList(),
             documents.Select(DocumentDto.From).ToList(),
-            documentIds));
+            documentIds,
+            hiddenBookingIds));
     }
 
     // ---- Auxiliares ----

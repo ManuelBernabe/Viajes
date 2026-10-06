@@ -90,8 +90,11 @@ public sealed class AccessService(AppDbContext db)
         var sharedWith = booking.Visibility == Booking.VisibleToSome
             ? await db.BookingShares.Where(s => s.BookingId == booking.Id).Select(s => s.UserId).ToListAsync()
             : [];
+        // Quien la ha ocultado de sus listas no quiere avisos de ella.
+        var hiddenBy = await db.BookingHides.Where(h => h.BookingId == booking.Id).Select(h => h.UserId).ToListAsync();
         return members
             .Where(m => booking.Visibility == Booking.VisibleToHousehold || m.Role == HouseholdMember.Admin || m.UserId == booking.CreatedBy || sharedWith.Contains(m.UserId))
+            .Where(m => !hiddenBy.Contains(m.UserId))
             .Select(m => m.UserId)
             .Distinct()
             .ToList();

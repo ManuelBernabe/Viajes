@@ -1,7 +1,7 @@
 import { emitChange } from './bus';
 import { getMeta, openDb, setMeta } from './db';
 import { flush, pendingCount, type SendResult } from './outbox';
-import { markUploaded } from './repo';
+import { HIDDEN_KEY, markUploaded } from './repo';
 import type { Attachment, Op, StoredBlob, SyncResponse } from './types';
 
 export const VERSION_KEY = 'sync.version';
@@ -119,6 +119,23 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
         await removeDocument(document.id);
         applied++;
       }
+    }
+  }
+
+  // Ocultas: la lista del servidor, con lo que aún espera en la cola encima (lo último que se tocó en el móvil manda).
+  if (response.hiddenBookingIds) {
+    const hidden = new Set(response.hiddenBookingIds);
+    for (const op of await database.getAll('outbox')) {
+      if (op.kind === 'hide-booking') {
+        hidden.add(op.id);
+      } else if (op.kind === 'show-booking') {
+        hidden.delete(op.id);
+      }
+    }
+    const before = new Set((await getMeta<string[]>(HIDDEN_KEY)) ?? []);
+    if (before.size !== hidden.size || [...hidden].some((id) => !before.has(id))) {
+      await setMeta(HIDDEN_KEY, [...hidden]);
+      applied++;
     }
   }
 

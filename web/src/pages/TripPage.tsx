@@ -6,7 +6,7 @@ import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TypeChips } from '../components/TypeChips';
 import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
-import { deleteTrip, getTrip, listAttachments, listBookings, listDocuments, listPlaces } from '../data/repo';
+import { deleteTrip, getTrip, hiddenBookings, listAttachments, listBookings, listDocuments, listPlaces, setBookingHidden } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
@@ -22,7 +22,8 @@ export function TripPage() {
   const placeCount = useLiveQuery(async () => (await listPlaces(tripId)).filter((p) => !p.visited).length, [tripId]);
   // Lo siguiente del viaje, destacado arriba con su QR: la próxima reserva y las que empiezan con ella (en la misma hora).
   const highlights = useLiveQuery(async () => {
-    const next = nextBookings(await listBookings(tripId), Date.now());
+    const hiddenIds = await hiddenBookings();
+    const next = nextBookings((await listBookings(tripId)).filter((b) => !hiddenIds.has(b.id)), Date.now());
     return Promise.all(next.map(async (booking) => ({ next: booking, qr: (await listAttachments(booking.id)).some((a) => a.qrText) })));
   }, [tripId]);
   // Documentos que caducan antes o durante este viaje (pasaportes con menos de 6 meses, etc.).
@@ -33,6 +34,8 @@ export function TripPage() {
   const offline = useTripOffline(trip);
   const [filter, setFilter] = useState<BookingType | null>(null);
   const [busy, setBusy] = useState('');
+  const hidden = useLiveQuery(hiddenBookings, []);
+  const [showHidden, setShowHidden] = useState(false);
 
   if (trip === undefined || bookings === undefined) {
     return <main className="page muted">{t('Cargando…')}</main>;
@@ -49,8 +52,13 @@ export function TripPage() {
     );
   }
 
-  const typesPresent = new Set(bookings.map((b) => b.type));
-  const visible = filter ? bookings.filter((b) => b.type === filter) : bookings;
+  // Las que esta persona ha ocultado van aparte, plegadas, al final.
+  const hiddenIds = hidden ?? new Set<string>();
+  const hiddenList = bookings.filter((b) => hiddenIds.has(b.id));
+  const shown = bookings.filter((b) => !hiddenIds.has(b.id));
+  const typesPresent = new Set(shown.map((b) => b.type));
+  const visible = filter ? shown.filter((b) => b.type === filter) : shown;
+  const hide = (id: string) => (value: boolean) => void setBookingHidden(id, value);
   // Lo que queda, por días; debajo, el histórico con lo ya terminado, del día más reciente al más antiguo.
   const now = Date.now();
   const days = groupByDay(visible.filter((b) => !isPast(b, now)));
@@ -179,7 +187,7 @@ export function TripPage() {
         <section key={day.date}>
           <div className="day">{formatLongDay(day.date)}</div>
           {day.bookings.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
+            <BookingCard key={booking.id} booking={booking} onHide={hide(booking.id)} />
           ))}
         </section>
       ))}
@@ -191,10 +199,22 @@ export function TripPage() {
             <section key={day.date}>
               <div className="day">{formatLongDay(day.date)}</div>
               {[...day.bookings].reverse().map((booking) => (
-                <BookingCard key={booking.id} booking={booking} past />
+                <BookingCard key={booking.id} booking={booking} past onHide={hide(booking.id)} />
               ))}
             </section>
           ))}
+        </>
+      )}
+
+      {hiddenList.length > 0 && (
+        <>
+          <button className="btn block" type="button" style={{ marginTop: 16 }} onClick={() => setShowHidden(!showHidden)}>
+            🙈 {showHidden ? t('Ocultar las reservas ocultas') : t('Ver las ocultas ({n})', { n: hiddenList.length })}
+          </button>
+          {showHidden &&
+            hiddenList.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} showDay={formatLongDay(booking.startLocal.slice(0, 10))} hidden onHide={hide(booking.id)} />
+            ))}
         </>
       )}
 

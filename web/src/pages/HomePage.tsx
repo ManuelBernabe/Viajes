@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { formatDay, formatRange, timeOf } from '../data/localTime';
-import { listAllBookings, listInbox, listTrips } from '../data/repo';
+import { hiddenBookings, listAllBookings, listInbox, listTrips } from '../data/repo';
 import { useSyncStatus } from '../data/syncClient';
 import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
@@ -95,7 +95,8 @@ export function HomePage() {
   const summaries = useLiveQuery(async () => {
     const now = Date.now();
     const byTrip = new Map<string, Booking[]>();
-    for (const booking of await listAllBookings()) {
+    const hiddenIds = await hiddenBookings();
+    for (const booking of (await listAllBookings()).filter((b) => !hiddenIds.has(b.id))) {
       byTrip.set(booking.tripId, [...(byTrip.get(booking.tripId) ?? []), booking]);
     }
     const result = new Map<string, TripSummary>();
