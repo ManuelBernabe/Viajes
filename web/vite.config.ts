@@ -1,10 +1,38 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+/**
+ * Lector de pasaportes en el móvil (tesseract.js): su worker, el motor (WebAssembly) y el idioma se sirven desde /ocr/,
+ * sin CDN (la CSP solo deja cargar de aquí). No van en la precarga del service worker: se bajan la primera vez que se usan.
+ */
+function ocrAssets() {
+  const files: [string, string][] = [
+    ['node_modules/tesseract.js/dist/worker.min.js', 'worker.min.js'],
+    ['node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js', 'tesseract-core-lstm.wasm.js'],
+    ['node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js', 'tesseract-core-simd-lstm.wasm.js'],
+    ['node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js', 'tesseract-core-relaxedsimd-lstm.wasm.js'],
+    ['node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz', 'eng.traineddata.gz'],
+  ];
+  return {
+    name: 'ocr-assets',
+    apply: 'build' as const,
+    writeBundle(options: { dir?: string }) {
+      const target = resolve(options.dir ?? 'dist', 'ocr');
+      mkdirSync(target, { recursive: true });
+      for (const [from, to] of files) {
+        copyFileSync(resolve(from), resolve(target, to));
+      }
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    ocrAssets(),
     VitePWA({
       registerType: 'prompt',
       // Service worker propio (src/sw.ts): la misma precarga de antes más los avisos push.
@@ -27,7 +55,7 @@ export default defineConfig({
         // revisión y Workbox aborta el worker al arrancar («conflicting entries»): sin popup de versión ni avisos.
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,woff2}'],
         // Las capturas de la guía se ven con red; no merece la pena guardarlas en todos los móviles.
-        globIgnores: ['**/guia/**'],
+        globIgnores: ['**/guia/**', '**/ocr/**'],
         maximumFileSizeToCacheInBytes: 5_000_000,
       },
     }),
