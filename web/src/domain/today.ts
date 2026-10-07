@@ -2,11 +2,8 @@ import type { Booking } from '../data/types';
 import { shiftDate } from './alternatives';
 import { isInProgress, nextBookings } from './agenda';
 
-/** «Hoy» solo enseña lo siguiente si empieza en menos de esto (o ya ha empezado). */
-export const NEXT_WINDOW_MS = 36 * 3_600_000;
-
 export interface TodayView {
-  /** Lo siguiente (y lo que empieza con ello), si es pronto. */
+  /** Lo siguiente (y lo que empieza con ello), solo si es hoy o ya está en marcha. */
   next: Booking[];
   /** Hoteles en los que se duerme esta noche. */
   tonight: Booking[];
@@ -19,7 +16,8 @@ export function todayView(bookings: readonly Booking[], nowMs: number, today: st
   const alive = bookings.filter((b) => b.deletedAtMs === null);
   // Lo siguiente sin las estancias en curso (el hotel va en «Esta noche»).
   const candidates = nextBookings(alive, nowMs).filter((b) => !(b.type === 'hotel' && b.startUtcMs <= nowMs));
-  const next = candidates.length > 0 && (isInProgress(candidates[0], nowMs) || candidates[0].startUtcMs - nowMs <= NEXT_WINDOW_MS) ? candidates : [];
+  // Lo de mañana no es de «Hoy», aunque falten pocas horas (el vuelo del jueves no sale el miércoles).
+  const next = candidates.filter((b) => isInProgress(b, nowMs) || b.startLocal.slice(0, 10) === today);
   const shown = new Set(next.map((b) => b.id));
   const tonight = alive.filter((b) => {
     if (b.type !== 'hotel' || shown.has(b.id)) {

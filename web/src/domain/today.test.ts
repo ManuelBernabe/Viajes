@@ -33,6 +33,14 @@ describe('todayView', () => {
     expect(todayView([b('lejos', { startLocal: '2026-10-20T09:00', startUtcMs: now + 14 * 24 * h })], now, '2026-10-06')).toBeNull();
   });
 
+  it('el vuelo de mañana no sale en «Hoy», aunque falten menos de 24 h', () => {
+    const tarde = Date.UTC(2026, 9, 7, 19, 57);
+    const vuelo = b('JA3157', { startLocal: '2026-10-08T08:49', startTz: 'America/Argentina/Buenos_Aires', startUtcMs: Date.UTC(2026, 9, 8, 11, 49) });
+    expect(todayView([vuelo], tarde, '2026-10-07')).toBeNull();
+    // Al día siguiente, sí.
+    expect(todayView([vuelo], Date.UTC(2026, 9, 8, 9, 0), '2026-10-08')?.next.map((x) => x.id)).toEqual(['JA3157']);
+  });
+
   it('el día de salida del hotel ya no se duerme allí', () => {
     const view = todayView([b('hotel', { type: 'hotel', startLocal: '2026-10-03T15:00', endLocal: '2026-10-06T11:00', startUtcMs: now - 3 * 24 * h })], now, '2026-10-06');
     expect(view?.tonight ?? []).toEqual([]);
