@@ -89,4 +89,13 @@ export const travel: Messages = {
   'La llegada es anterior a la salida: corrígela con «Editar».': { en: 'The arrival is before the departure: fix it with “Edit”.', fr: 'L’arrivée est avant le départ : corrigez-la avec « Modifier ».', it: 'L’arrivo è prima della partenza: correggilo con «Modifica».' },
   'Hay datos de esta reserva que no cuadran:': { en: 'Some details of this booking don’t add up:', fr: 'Certaines données de cette réservation ne collent pas :', it: 'Alcuni dati di questa prenotazione non tornano:' },
   Corregir: { en: 'Fix', fr: 'Corriger', it: 'Correggi' },
+  'Tamaño del QR': { en: 'QR size', fr: 'Taille du QR', it: 'Dimensione del QR' },
+  Pequeño: { en: 'Small', fr: 'Petit', it: 'Piccolo' },
+  Normal: { en: 'Normal', fr: 'Normal', it: 'Normale' },
+  Grande: { en: 'Large', fr: 'Grand', it: 'Grande' },
+  'Si el lector no lo coge, prueba otro tamaño y sube el brillo.': {
+    en: 'If the scanner doesn’t read it, try another size and turn up the brightness.',
+    fr: 'Si le lecteur ne le lit pas, essayez une autre taille et augmentez la luminosité.',
+    it: 'Se il lettore non lo legge, prova un’altra dimensione e alza la luminosità.',
+  },
 };
