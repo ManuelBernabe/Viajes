@@ -48,4 +48,23 @@ describe('reviewTrip', () => {
     );
     expect(issues).toEqual([]);
   });
+
+  it('noches: hotel sin fecha de salida, apartamento como «Otro», vuelta a casa antes del fin del viaje y noches dadas por buenas', () => {
+    const bookings = [
+      b('ida', { startLocal: '2026-10-09T22:00', startTz: 'Europe/Madrid', startPlace: 'MAD', endLocal: '2026-10-10T07:00', endPlace: 'EZE' }),
+      // Sin salida: dura hasta el siguiente vuelo (12).
+      b('hotel', { type: 'hotel', startLocal: '2026-10-10T15:00', endLocal: null, startPlace: 'Hotel', endPlace: null }),
+      b('a', { startLocal: '2026-10-12T09:00', startPlace: 'AEP', endPlace: 'IGR', endLocal: '2026-10-12T11:00' }),
+      b('piso', { type: 'other', title: 'Apartamento en Foz', startLocal: '2026-10-12T14:00', endLocal: '2026-10-15T10:00', startPlace: 'Foz' }),
+      // Vuelta a casa el 15; el viaje dice hasta el 20.
+      b('vuelta', { startLocal: '2026-10-15T20:00', startPlace: 'IGR', endPlace: 'MAD', endLocal: '2026-10-16T12:00', endTz: 'Europe/Madrid' }),
+    ];
+    const longTrip = { ...trip, endDate: '2026-10-20' };
+    expect(reviewTrip(longTrip, bookings, now, '2026-10-09').filter((i) => i.nights)).toEqual([]);
+
+    // Sin el apartamento faltan las noches del 12, 13 y 14; dando por buena la del 12 quedan dos.
+    const without = bookings.filter((x) => x.id !== 'piso');
+    expect(reviewTrip(longTrip, without, now, '2026-10-09').find((i) => i.nights)?.nights).toEqual(['2026-10-12', '2026-10-13', '2026-10-14']);
+    expect(reviewTrip(longTrip, without, now, '2026-10-09', new Set(['2026-10-12'])).find((i) => i.nights)?.nights).toEqual(['2026-10-13', '2026-10-14']);
+  });
 });

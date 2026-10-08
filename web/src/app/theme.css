@@ -620,3 +620,4 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .share-points { padding-left: 1.2em; margin: 8px 0 14px; }
 .share-points li { margin: 3px 0; }
 .share-url { width: 100%; font-size: 0.9rem; }
+.linklike { background: none; border: 0; padding: 0; color: var(--primary); font: inherit; cursor: pointer; text-decoration: underline; }
