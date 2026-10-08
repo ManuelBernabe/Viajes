@@ -156,7 +156,7 @@ public static class FlightSettingsEndpoints
     {
         var group = app.MapGroup("/api/settings/flight-status").RequireAuthorization();
 
-        group.MapGet("/", async (ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, DynamicFlightSource source) =>
+        group.MapGet("", async (ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, DynamicFlightSource source) =>
         {
             if (!await access.IsAdmin(users.GetUserId(principal)!))
             {
@@ -166,7 +166,7 @@ public static class FlightSettingsEndpoints
             return Results.Ok(new { configured = source.IsConfigured, origin = source.Origin, provider = source.Name, hint = source.Hint, lastError = source.LastError, lastOkMs = source.LastOkMs });
         });
 
-        group.MapPut("/", async (KeyRequest body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, DynamicFlightSource source, CancellationToken ct) =>
+        group.MapPut("", async (KeyRequest body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, DynamicFlightSource source, CancellationToken ct) =>
         {
             var userId = users.GetUserId(principal)!;
             if (!await access.IsAdmin(userId))
@@ -184,7 +184,7 @@ public static class FlightSettingsEndpoints
             return Results.NoContent();
         });
 
-        group.MapDelete("/", async (ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, DynamicFlightSource source, CancellationToken ct) =>
+        group.MapDelete("", async (ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, DynamicFlightSource source, CancellationToken ct) =>
         {
             var userId = users.GetUserId(principal)!;
             if (!await access.IsAdmin(userId))
