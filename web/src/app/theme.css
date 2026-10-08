@@ -616,3 +616,7 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .dest-row dd { margin: 0; }
 .dest-tips { margin: 8px 0 0; padding-left: 1.2em; }
 .dest-tips li { margin: 4px 0; }
+/* Compartir itinerario */
+.share-points { padding-left: 1.2em; margin: 8px 0 14px; }
+.share-points li { margin: 3px 0; }
+.share-url { width: 100%; font-size: 0.9rem; }

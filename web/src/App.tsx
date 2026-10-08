@@ -19,6 +19,7 @@ import { InboxPage } from './pages/InboxPage';
 import { InvitationPage } from './pages/InvitationPage';
 import { DestinationPage } from './pages/DestinationPage';
 import { PackingPage } from './pages/PackingPage';
+import { SharePage } from './pages/SharePage';
 import { PlacesPage } from './pages/PlacesPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { QrPage } from './pages/QrPage';
@@ -77,6 +78,7 @@ function Gate() {
           <Route path="/trips/:tripId/places" element={<PlacesPage />} />
           <Route path="/trips/:tripId/packing" element={<PackingPage />} />
           <Route path="/trips/:tripId/info" element={<DestinationPage />} />
+          <Route path="/trips/:tripId/share" element={<SharePage />} />
           <Route path="/trips/:tripId/bookings/new" element={<BookingFormPage />} />
           <Route path="/bookings/:bookingId" element={<BookingPage />} />
           <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />

@@ -51,6 +51,9 @@ public static class AppGuide
           voltaje, emergencias, propinas, idioma, si hace falta visado con los pasaportes del hogar y consejos. Lo prepara la
           IA una vez y se guarda (también sin conexión); «↻ Actualizar» lo rehace. Los requisitos de entrada, confirmarlos
           en la web oficial.
+        - «🔗 Compartir»: crea un enlace de solo lectura del itinerario para quien no usa la app (se manda por WhatsApp,
+          correo…). Muestra día a día las reservas que ve todo el hogar, con horas y lugares, sin localizadores, notas ni
+          billetes; desde esa página se imprime o se guarda en PDF. Se actualiza solo y «Anular enlace» lo desactiva.
         - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
           aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.

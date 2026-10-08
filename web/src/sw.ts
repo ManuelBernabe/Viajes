@@ -19,7 +19,7 @@ precacheAndRoute(manifest);
 /** Identifica esta versión del worker: la revisión de index.html cambia en cada compilación. */
 const BUILD = (manifest.find((entry) => typeof entry !== 'string' && entry.url === 'index.html') as { revision?: string | null } | undefined)?.revision ?? '?';
 cleanupOutdatedCaches();
-registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api\//] }));
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api\//, /^\/i\//] }));
 
 /** Bitácora de pushes recibidos (caché «push-log»), para diagnosticar desde Ajustes si llegan al móvil. */
 const LOG_CACHE = 'push-log';
