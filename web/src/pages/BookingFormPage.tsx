@@ -12,7 +12,7 @@ import { isPdf } from '../attachments/files';
 import { extractPdfText } from '../attachments/pdfText';
 import { readFiles, useAttachFiles, type ReadFile } from '../attachments/useAttachFiles';
 import { importInboxAttachments } from '../data/inboxImport';
-import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, timeOf, zoneLabel } from '../data/localTime';
+import { allTimeZones, dateOf, deviceTimeZone, isValidLocal, isValidZone, localMinutesBetween, shiftLocal, timeOf, zoneLabel } from '../data/localTime';
 import { getBooking, listAllBookings, saveBooking } from '../data/repo';
 import { loadHousehold, type Household } from '../household/household';
 import type { Booking, BookingVisibility } from '../data/types';
@@ -68,6 +68,8 @@ export function BookingFormPage() {
   const [withEnd, setWithEnd] = useState(!!prefill?.endLocal);
   const [endDate, setEndDate] = useState(prefill?.endLocal ? dateOf(prefill.endLocal) : '');
   const [endTime, setEndTime] = useState(prefill?.endLocal ? timeOf(prefill.endLocal) : '');
+  // Mientras no se toque la llegada a mano, cambiar la salida la mueve lo mismo (el viaje dura lo mismo).
+  const [endTouched, setEndTouched] = useState(false);
   const [endTz, setEndTz] = useState(zoneOr(prefill?.endTz ?? prefill?.startTz ?? null));
   const [endPlace, setEndPlace] = useState(prefill?.endPlace ?? '');
   const [reference, setReference] = useState(prefill?.reference ?? '');
@@ -135,6 +137,17 @@ export function BookingFormPage() {
   const info = TYPE_INFO[type];
 
   /** Al elegir ficheros se leen ya: si alguno es una tarjeta de embarque, rellena lo que esté vacío. */
+  /** Cambia la salida y, si la llegada no se ha tocado a mano, la mueve lo mismo para que el trayecto dure igual. */
+  function moveStart(nextDate: string, nextTime: string) {
+    if (withEnd && !endTouched && startDate && startTime && endDate && endTime && nextDate && nextTime) {
+      const moved = shiftLocal(`${endDate}T${endTime}`, localMinutesBetween(`${startDate}T${startTime}`, `${nextDate}T${nextTime}`));
+      setEndDate(moved.slice(0, 10));
+      setEndTime(moved.slice(11, 16));
+    }
+    setStartDate(nextDate);
+    setStartTime(nextTime);
+  }
+
   async function onFilesChosen(files: FileList) {
     setReadMessage(t('Leyendo…'));
     const read = await readFiles(files, setReadMessage);
@@ -432,8 +445,8 @@ export function BookingFormPage() {
         <h2>{info.startLabel}</h2>
         <div className="field">
           <div className="inline">
-            <input type="date" aria-label={t('Fecha')} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <input type="time" aria-label={t('Hora')} value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            <input type="date" aria-label={t('Fecha')} value={startDate} onChange={(e) => moveStart(e.target.value, startTime)} />
+            <input type="time" aria-label={t('Hora')} value={startTime} onChange={(e) => moveStart(startDate, e.target.value)} />
           </div>
         </div>
         <div className="field">
@@ -459,8 +472,8 @@ export function BookingFormPage() {
             </div>
             <div className="field">
               <div className="inline">
-                <input type="date" aria-label={t('Fecha')} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                <input type="time" aria-label={t('Hora')} value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                <input type="date" aria-label={t('Fecha')} value={endDate} onChange={(e) => { setEndTouched(true); setEndDate(e.target.value); }} />
+                <input type="time" aria-label={t('Hora')} value={endTime} onChange={(e) => { setEndTouched(true); setEndTime(e.target.value); }} />
               </div>
             </div>
             <div className="field">

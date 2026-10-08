@@ -1,4 +1,4 @@
-import { formatDay, timeOf, zoneLabel } from '../data/localTime';
+import { formatDay, fromUtcMs, timeOf, toUtcMs, zoneLabel } from '../data/localTime';
 import type { Booking, BookingBody } from '../data/types';
 import { t } from '../i18n';
 
@@ -69,6 +69,31 @@ export interface Change {
   label: string;
   before: string;
   after: string;
+  /** Valor nuevo cuando no viene del correo sino que se calcula (la llegada movida con la salida). */
+  value?: string;
+}
+
+/**
+ * Si el correo solo cambia la salida (y no trae llegada, o trae la de antes), la llegada se mueve lo mismo: el vuelo o el
+ * tren dura lo mismo. Null si no hace falta o no se puede calcular.
+ */
+export function shiftedArrival(existing: Booking, proposal: Proposal): string | null {
+  if (!proposal.startLocal || proposal.startLocal === existing.startLocal || !existing.endLocal) {
+    return null;
+  }
+  if (proposal.endLocal && proposal.endLocal !== existing.endLocal) {
+    return null;
+  }
+  try {
+    const endTz = existing.endTz ?? existing.startTz;
+    const duration = toUtcMs(existing.endLocal, endTz) - toUtcMs(existing.startLocal, existing.startTz);
+    if (duration < 0) {
+      return null;
+    }
+    return fromUtcMs(toUtcMs(proposal.startLocal, proposal.startTz ?? existing.startTz) + duration, endTz);
+  } catch {
+    return null;
+  }
 }
 
 function describeMoment(local: string | null, tz: string | null): string {
@@ -94,7 +119,15 @@ export function diffBooking(existing: Booking, proposal: Proposal): Change[] {
   if (proposal.startLocal && proposal.startLocal !== existing.startLocal) {
     changes.push({ field: 'startLocal', label: t('Salida'), ...momentChange(existing.startLocal, existing.startTz, proposal.startLocal, proposal.startTz) });
   }
-  if (proposal.endLocal && proposal.endLocal !== existing.endLocal) {
+  const moved = shiftedArrival(existing, proposal);
+  if (moved) {
+    changes.push({
+      field: 'endLocal',
+      label: t('Llegada'),
+      ...momentChange(existing.endLocal, existing.endTz ?? existing.startTz, moved, existing.endTz),
+      value: moved,
+    });
+  } else if (proposal.endLocal && proposal.endLocal !== existing.endLocal) {
     changes.push({ field: 'endLocal', label: t('Llegada'), ...momentChange(existing.endLocal, existing.endTz ?? existing.startTz, proposal.endLocal, proposal.endTz) });
   }
   if (proposal.startPlace && norm(proposal.startPlace) !== norm(existing.startPlace)) {
@@ -148,8 +181,8 @@ export function applyChanges(existing: Booking, proposal: Proposal, changes: rea
         body.startTz = proposal.startTz ?? existing.startTz;
         break;
       case 'endLocal':
-        body.endLocal = proposal.endLocal;
-        body.endTz = proposal.endTz ?? existing.endTz ?? existing.startTz;
+        body.endLocal = change.value ?? proposal.endLocal;
+        body.endTz = change.value ? (existing.endTz ?? existing.startTz) : (proposal.endTz ?? existing.endTz ?? existing.startTz);
         break;
       case 'startPlace':
         body.startPlace = proposal.startPlace;
@@ -169,4 +202,36 @@ export function applyChanges(existing: Booking, proposal: Proposal, changes: rea
     }
   }
   return body;
+}
+
+/**
+ * Arreglo para reservas guardadas antes de mover la llegada con la salida: si la llegada ha quedado antes que la salida y
+ * el aviso de cambio dice a qué hora salía antes (el mismo día), la llegada correcta es la salida nueva más lo que duraba.
+ * Null si la reserva está bien o no se puede saber.
+ */
+export function repairedArrival(booking: Booking): string | null {
+  if (!booking.endLocal || !booking.changeNote) {
+    return null;
+  }
+  try {
+    const endTz = booking.endTz ?? booking.startTz;
+    const start = toUtcMs(booking.startLocal, booking.startTz);
+    const end = toUtcMs(booking.endLocal, endTz);
+    if (end >= start) {
+      return null;
+    }
+    // «• Salida: jue, 8 oct 08:49 → 13:04»: solo cambió la hora, el mismo día.
+    const match = /Salida[^:\n]*:[^\n]*?(\d{2}:\d{2})(?:\s*\([^)]*\))?\s*→\s*(\d{2}:\d{2})\s*$/m.exec(booking.changeNote);
+    if (!match || match[2] !== timeOf(booking.startLocal)) {
+      return null;
+    }
+    const before = toUtcMs(`${booking.startLocal.slice(0, 10)}T${match[1]}`, booking.startTz);
+    const duration = end - before;
+    if (duration <= 0 || duration > 24 * 3_600_000) {
+      return null;
+    }
+    return fromUtcMs(start + duration, endTz);
+  } catch {
+    return null;
+  }
 }

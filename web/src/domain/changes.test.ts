@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking } from '../data/types';
-import { applyChanges, describeChanges, diffBooking, findExistingBooking, type Proposal } from './changes';
+import { applyChanges, describeChanges, diffBooking, findExistingBooking, repairedArrival, type Proposal } from './changes';
 
 const booking = (overrides: Partial<Booking> = {}): Booking => ({
   id: 'b1', tripId: 't1', type: 'train', title: 'AVE 05143 Alicante → Chamartín', startLocal: '2026-10-01T14:35', startTz: 'Europe/Madrid',
@@ -75,11 +75,13 @@ describe('otros cambios', () => {
 
     expect(changes.map((c) => `${c.label}: ${c.before} → ${c.after}`)).toEqual([
       'Salida: jue, 1 oct 14:35 (Madrid) → vie, 2 oct 09:00 (Lisbon)',
+      // El correo traía la llegada de antes: se mueve con la salida (el tren dura 2 h 33 min).
+      'Llegada: jue, 1 oct 17:08 (Madrid) → vie, 2 oct 12:33 (Madrid)',
       'Localizador: C3BMDV → NUEVO1',
       'Notas: Coche 8 · Plazas 6B, 6A → Coche 3 · Plazas 1A, 1B',
     ]);
     const body = applyChanges(booking(), proposal({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', endLocal: '2026-10-01T17:08', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' }), changes, new Date(2026, 8, 27));
-    expect(body).toMatchObject({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' });
+    expect(body).toMatchObject({ startLocal: '2026-10-02T09:00', startTz: 'Europe/Lisbon', endLocal: '2026-10-02T12:33', reference: 'NUEVO1', notes: 'Coche 3 · Plazas 1A, 1B' });
   });
 });
 
@@ -98,5 +100,38 @@ describe('segundo cambio con localizador nuevo y fecha movida', () => {
     const far = booking({ id: 'far', reference: 'B', startLocal: '2026-10-08T08:00' });
 
     expect(findExistingBooking([far, near], proposal({ reference: 'X', startLocal: '2026-10-04T16:10' }))?.id).toBe('near');
+  });
+});
+
+describe('la llegada se mueve con la salida', () => {
+  it('si el correo solo cambia la salida, la llegada se mueve lo mismo (el vuelo dura lo mismo)', () => {
+    const vuelo = booking({
+      type: 'flight', title: 'JA3157 IGR → AEP', startLocal: '2026-10-08T08:49', startTz: 'America/Argentina/Buenos_Aires', startPlace: 'IGR',
+      endLocal: '2026-10-08T10:40', endTz: 'America/Argentina/Buenos_Aires', endPlace: 'AEP', reference: 'OEGC6H',
+    });
+    const cambio = proposal({ type: 'flight', startLocal: '2026-10-08T13:04', startPlace: 'IGR', endLocal: null, endPlace: 'AEP', reference: 'OEGC6H' });
+    const changes = diffBooking(vuelo, cambio);
+    expect(changes.map((c) => c.field)).toEqual(['startLocal', 'endLocal']);
+    expect(changes[1].after).toBe('14:55');
+    const body = applyChanges(vuelo, cambio, changes, new Date(2026, 9, 8));
+    expect(body.startLocal).toBe('2026-10-08T13:04');
+    expect(body.endLocal).toBe('2026-10-08T14:55');
+
+    // Si el correo trae la llegada de antes (copiada), también se mueve.
+    expect(diffBooking(vuelo, { ...cambio, endLocal: '2026-10-08T10:40' })[1].value).toBe('2026-10-08T14:55');
+    // Si trae una llegada nueva, manda la del correo.
+    expect(applyChanges(vuelo, { ...cambio, endLocal: '2026-10-08T15:10' }, diffBooking(vuelo, { ...cambio, endLocal: '2026-10-08T15:10' }), new Date()).endLocal).toBe('2026-10-08T15:10');
+  });
+});
+
+describe('reservas ya guardadas con la llegada antes de la salida', () => {
+  it('propone la llegada movida según la hora de salida anterior del aviso', () => {
+    const roto = booking({
+      type: 'flight', startLocal: '2026-10-08T13:04', startTz: 'America/Argentina/Buenos_Aires', endLocal: '2026-10-08T10:40',
+      endTz: 'America/Argentina/Buenos_Aires', changeNote: 'Modificada el 08/10 según correo:\n• Salida: jue, 8 oct 08:49 → 13:04',
+    });
+    expect(repairedArrival(roto)).toBe('2026-10-08T14:55');
+    expect(repairedArrival(booking())).toBeNull();
+    expect(repairedArrival({ ...roto, changeNote: null })).toBeNull();
   });
 });

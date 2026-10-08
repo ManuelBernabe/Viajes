@@ -518,7 +518,7 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .agenda-go { color: var(--muted); }
 .teaser { box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 14px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; color: var(--text); font: inherit; text-align: left; text-decoration: none; }
 .teaser.link { margin-top: 22px; }
-.notice { box-sizing: border-box; display: flex; justify-content: space-between; padding: 12px 16px; margin-bottom: 14px; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); border-radius: 14px; color: var(--text); text-decoration: none; }
+.inbox-notice { box-sizing: border-box; display: flex; justify-content: space-between; padding: 12px 16px; margin-bottom: 14px; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); border-radius: 14px; color: var(--text); text-decoration: none; }
 .calm { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
 
 /* «Viajes» */

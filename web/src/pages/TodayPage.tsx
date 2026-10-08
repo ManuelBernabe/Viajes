@@ -131,7 +131,7 @@ export function TodayPage() {
         </p>
       )}
       {(data?.inbox ?? 0) > 0 && (
-        <Link className="notice" to="/inbox">
+        <Link className="inbox-notice" to="/inbox">
           <span>✉️ {data!.inbox === 1 ? t('1 correo por revisar') : t('{n} correos por revisar', { n: data!.inbox })}</span>
           <span className="muted">›</span>
         </Link>
