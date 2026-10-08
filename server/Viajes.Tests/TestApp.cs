@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Viajes.Api.Ai;
+using Viajes.Api.Weather;
 
 namespace Viajes.Tests;
 
@@ -22,6 +23,9 @@ public class TestApp : WebApplicationFactory<Program>
 
     /// <summary>Extractor de reservas con IA a usar en vez del real (que necesita clave). Null = no configurado.</summary>
     protected virtual IBookingExtractor? Extractor => null;
+
+    /// <summary>El tiempo, sin salir a internet: lo que se le diga en cada prueba.</summary>
+    public FakeWeather Weather { get; } = new();
 
     public HttpClient CreateHttpsClient(bool handleCookies = true) =>
         CreateClient(new WebApplicationFactoryClientOptions
@@ -42,14 +46,16 @@ public class TestApp : WebApplicationFactory<Program>
         builder.UseSetting("FILE_STORE", "local");
 
         var extractor = Extractor;
-        if (extractor is not null)
+        builder.ConfigureTestServices(services =>
         {
-            builder.ConfigureTestServices(services =>
+            services.RemoveAll<IWeatherSource>();
+            services.AddSingleton<IWeatherSource>(Weather);
+            if (extractor is not null)
             {
                 services.RemoveAll<IBookingExtractor>();
                 services.AddSingleton(extractor);
-            });
-        }
+            }
+        });
     }
 
     protected override void Dispose(bool disposing)
