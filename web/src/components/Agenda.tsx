@@ -77,7 +77,7 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
       {route ? (
         <div className="pass-route">
           <div>
-            <Place text={booking.startPlace} />
+            <Place text={info?.origin ?? booking.startPlace} />
             <div className="pass-time">
               {expected && expected !== planned ? (
                 <>
@@ -93,7 +93,7 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
             <div className="pass-line" />
           </div>
           <div className="right">
-            <Place text={booking.endPlace} />
+            <Place text={info?.destination ?? booking.endPlace} />
             <div className="pass-time">{arrival ?? (booking.endLocal ? timeOf(booking.endLocal) : '')}</div>
           </div>
         </div>
@@ -174,7 +174,7 @@ export function AgendaRow({ booking, group, kind = 'start', now }: { booking: Bo
               : (booking.startPlace ?? booking.address ?? '');
   const past = now !== undefined && kind === 'start' && booking.startUtcMs < now;
   return (
-    <Link className={`agenda-row${past ? ' past' : ''}`} to={`/bookings/${booking.id}`}>
+    <Link className={`agenda-row type-${kind === 'start' ? booking.type : 'hotel'}${past ? ' past' : ''}`} to={`/bookings/${booking.id}`}>
       <span className="agenda-time">{time || (kind === 'night' ? '🌙' : '')}</span>
       <span className="agenda-icon">{kind === 'checkout' ? '🧳' : info.icon}</span>
       <span className="agenda-text">

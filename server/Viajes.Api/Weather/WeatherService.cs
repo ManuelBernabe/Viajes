@@ -17,6 +17,9 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
     /// <summary>Open-Meteo da 16 días por delante.</summary>
     public const int ForecastDays = 16;
 
+    /// <summary>Marca de una consulta que es un código de aeropuerto: se resuelve con la tabla, sin buscador.</summary>
+    public const string AirportPrefix = "iata:";
+
     private static readonly TimeSpan ForecastTtl = TimeSpan.FromHours(1);
     private static readonly TimeSpan MissTtl = TimeSpan.FromHours(6);
 
@@ -44,22 +47,23 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
             var night = hotels.LastOrDefault(h => string.CompareOrdinal(h.StartLocal[..10], date) <= 0 && string.CompareOrdinal(date, CheckOut(h)) < 0)
                 ?? hotels.LastOrDefault(h => CheckOut(h) == date);
             var queries = new List<string>();
-            if (night is not null)
+            List<string> hotel = night is null ? [] : HotelQueries(night).ToList();
+            // Primero la dirección del hotel (lo más preciso); su nombre solo, después del aeropuerto: un nombre suelto
+            // puede coincidir con otro hotel en otro país.
+            queries.AddRange(hotel.Take(Math.Max(0, hotel.Count - 1)));
+
+            // Sin hotel (o si no se encuentra): el aeropuerto o la estación de la última llegada hasta ese día. Ni la zona
+            // horaria (Iguazú lleva la de Córdoba) ni el nombre del viaje («Argentina Brasil» llevaba a Criciúma) sirven.
+            var arrival = alive.Where(b => (b.Type == "flight" || b.Type == "train") && string.CompareOrdinal(b.StartLocal[..10], date) <= 0)
+                .OrderBy(b => b.StartUtcMs).LastOrDefault();
+            if (arrival is not null && Airports.Find(arrival.EndPlace) is not null)
             {
-                queries.AddRange(HotelQueries(night));
-                if (CityOfZone(night.StartTz) is { } hotelCity)
-                {
-                    queries.Add(hotelCity);
-                }
+                queries.Add(AirportPrefix + arrival.EndPlace!.ToUpperInvariant());
             }
 
-            // Sin hotel: la ciudad de llegada del último vuelo o tren del día (por su zona horaria), antes que el nombre
-            // del viaje, que puede ser ambiguo («Argentina Brasil» llevaba a una calle de Criciúma).
-            var arrival = alive.Where(b => (b.Type == "flight" || b.Type == "train") && b.StartLocal[..10] == date && b.EndTz is not null)
-                .OrderBy(b => b.StartUtcMs).LastOrDefault();
-            if (arrival is not null && CityOfZone(arrival.EndTz!) is { } arrivalCity)
+            if (hotel.Count > 0)
             {
-                queries.Add(arrivalCity);
+                queries.Add(hotel[^1]);
             }
 
             if (!string.IsNullOrWhiteSpace(trip.Destination))
@@ -95,8 +99,7 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
         var name = string.IsNullOrWhiteSpace(hotel.StartPlace) ? hotel.Title : hotel.StartPlace;
         if (!string.IsNullOrWhiteSpace(name))
         {
-            // Con la ciudad de su zona horaria, para no dar con otro hotel del mismo nombre en otro país.
-            yield return CityOfZone(hotel.StartTz) is { } city ? $"{name.Trim()}, {city}" : name.Trim();
+            yield return name.Trim();
         }
     }
 
@@ -137,7 +140,7 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
                 continue;
             }
 
-            var point = await source.GeocodeAsync(query, ct);
+            var point = query.StartsWith(AirportPrefix, StringComparison.Ordinal) ? Airports.Find(query[AirportPrefix.Length..]) : await source.GeocodeAsync(query, ct);
             _places[query] = (point, point is null ? now + MissTtl : DateTimeOffset.MaxValue);
             if (point is not null)
             {
@@ -167,17 +170,6 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
             log.LogWarning("Sin previsión para {Sitio}: {Error}", point.Label, e.Message);
             return cached.Days ?? [];
         }
-    }
-
-    /// <summary>«America/Argentina/Buenos_Aires» → «Buenos Aires»; null para zonas que no son ciudades («UTC», «Etc/GMT+3»).</summary>
-    public static string? CityOfZone(string? zone)
-    {
-        if (string.IsNullOrWhiteSpace(zone) || !zone.Contains('/') || zone.StartsWith("Etc/", StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        return zone[(zone.LastIndexOf('/') + 1)..].Replace('_', ' ');
     }
 
     private static string CheckOut(Booking hotel) => hotel.EndLocal?[..10] ?? Shift(hotel.StartLocal[..10], 1);
