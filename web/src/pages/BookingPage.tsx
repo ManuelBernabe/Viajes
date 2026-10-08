@@ -14,7 +14,8 @@ import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
 import { TimeAt } from '../components/TimeAt';
-import { repairedArrival } from '../domain/changes';
+import { applyFixes as saveFixes, useAutoFix } from '../components/useAutoFix';
+import { useFlightStatus } from '../components/FlightStatus';
 
 export function BookingPage() {
   const { bookingId = '' } = useParams();
@@ -25,6 +26,9 @@ export function BookingPage() {
   const { attach, progress } = useAttachFiles(session.email ?? '');
   const fileInput = useRef<HTMLInputElement>(null);
   const isHidden = useLiveQuery(async () => (await hiddenBookings()).has(bookingId), [bookingId]);
+  const [flight] = useFlightStatus(booking ?? undefined);
+  // Lo que se puede arreglar con seguridad se arregla solo; lo que no, se avisa.
+  const fixes = useAutoFix(booking, flight);
 
   if (booking === undefined || attachments === undefined) {
     return <main className="page muted">{t('Cargando…')}</main>;
@@ -58,20 +62,10 @@ export function BookingPage() {
     );
   }
 
-  const fixedArrival = repairedArrival(booking);
-
-  /** Pone la llegada que corresponde a la salida nueva (la reserva se guardó con la llegada de antes). */
-  async function fixArrival() {
-    const b = booking!;
-    await saveBooking(
-      {
-        tripId: b.tripId, type: b.type, title: b.title, startLocal: b.startLocal, startTz: b.startTz, startPlace: b.startPlace,
-        endLocal: fixedArrival, endTz: b.endTz, endPlace: b.endPlace, reference: b.reference, address: b.address, notes: b.notes, changeNote: b.changeNote,
-        visibility: b.visibility ?? 'household', sharedWith: b.sharedWith ?? [],
-      },
-      session.email ?? '',
-      b.id,
-    );
+  async function applyFixes() {
+    if (fixes) {
+      await saveFixes(booking!, fixes, session.email ?? '');
+    }
   }
 
   async function remove() {
@@ -104,12 +98,17 @@ export function BookingPage() {
         </div>
       )}
 
-      {fixedArrival && (
+      {fixes && (
         <div className="notice danger">
-          <strong>⚠️ {t('La llegada ha quedado antes que la salida: no se movió al cambiar el horario.')}</strong>
-          <button className="btn small primary" style={{ marginTop: 8 }} type="button" onClick={() => void fixArrival()}>
-            {t('Corregir la llegada: {time}', { time: fixedArrival.slice(11, 16) })}
-          </button>
+          <strong>⚠️ {t('Hay datos de esta reserva que no cuadran:')}</strong>
+          {fixes.lines.map((line) => (
+            <div key={line}>• {line}</div>
+          ))}
+          {(fixes.startPlace || fixes.endLocal) && (
+            <button className="btn small primary" style={{ marginTop: 8 }} type="button" onClick={() => void applyFixes()}>
+              {t('Corregir')}
+            </button>
+          )}
         </div>
       )}
 

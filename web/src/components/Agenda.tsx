@@ -8,6 +8,7 @@ import { clock, hasFlightNumber, statusLabel } from '../domain/flightStatus';
 import { countdown, passengerOf, withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
 import { useFlightStatus } from './FlightStatus';
+import { useAutoFix } from './useAutoFix';
 
 export function startsIn(ms: number): string {
   const { days, hours, minutes } = countdown(ms);
@@ -41,6 +42,10 @@ function Place({ text }: { text: string | null }) {
 export function BoardingCard({ group, qr, now, label: heading }: { group: Booking[]; qr: ReadonlySet<string>; now: number; label?: string }) {
   const booking = group[0];
   const [flight] = useFlightStatus(hasFlightNumber(booking) ? booking : undefined);
+  // Si la reserva tiene el origen y el destino al revés o la llegada sin mover, se corrige sola (cada pasajero la suya).
+  useAutoFix(group[0], flight);
+  useAutoFix(group[1], flight);
+  useAutoFix(group[2], flight);
   const info = flight?.configured ? flight.info : null;
   const label = info ? statusLabel(info, flight?.delayMinutes ?? 0) : null;
   const running = isInProgress(booking, now);

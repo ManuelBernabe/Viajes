@@ -235,3 +235,51 @@ export function repairedArrival(booking: Booking): string | null {
     return null;
   }
 }
+
+/** Lo que se arreglaría en una reserva cuyos datos no cuadran, y cómo explicarlo. */
+export interface Fixes {
+  startPlace?: string;
+  endPlace?: string;
+  endLocal?: string;
+  lines: string[];
+}
+
+/**
+ * Datos que no cuadran en una reserva de vuelo o tren:
+ * - origen y destino al revés respecto al título («JA3157 IGR → AEP» con salida AEP y llegada IGR) o al estado del vuelo;
+ * - llegada antes que la salida: se corrige con la salida anterior del aviso de cambio o, si no, con la llegada que da el
+ *   estado del vuelo (`arrivalUtcMs`).
+ * Null si todo cuadra o no se sabe cómo arreglarlo.
+ */
+export function consistencyFixes(
+  booking: Booking,
+  flight?: { origin: string | null; destination: string | null; arrivalUtcMs: number | null } | null,
+): Fixes | null {
+  if (booking.type !== 'flight' && booking.type !== 'train') {
+    return null;
+  }
+  const fixes: Fixes = { lines: [] };
+  const route = /\b([A-Z]{3})\s*(?:→|->|-)\s*([A-Z]{3})\b/.exec(booking.title);
+  const from = flight?.origin ?? route?.[1] ?? null;
+  const to = flight?.destination ?? route?.[2] ?? null;
+  if (from && to && norm(booking.startPlace) === norm(to) && norm(booking.endPlace) === norm(from)) {
+    fixes.startPlace = from;
+    fixes.endPlace = to;
+    fixes.lines.push(t('Origen y destino estaban al revés: {from} → {to}', { from, to }));
+  }
+  try {
+    const endTz = booking.endTz ?? booking.startTz;
+    if (booking.endLocal && toUtcMs(booking.endLocal, endTz) < toUtcMs(booking.startLocal, booking.startTz)) {
+      const arrival = repairedArrival(booking) ?? (flight?.arrivalUtcMs && flight.arrivalUtcMs > booking.startUtcMs ? fromUtcMs(flight.arrivalUtcMs, endTz) : null);
+      if (arrival) {
+        fixes.endLocal = arrival;
+        fixes.lines.push(t('La llegada era anterior a la salida: pasa a las {time}', { time: timeOf(arrival) }));
+      } else {
+        fixes.lines.push(t('La llegada es anterior a la salida: corrígela con «Editar».'));
+      }
+    }
+  } catch {
+    // Zona horaria rara: no se toca.
+  }
+  return fixes.lines.length > 0 ? fixes : null;
+}
