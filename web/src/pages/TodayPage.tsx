@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AgendaRow, BoardingCard } from '../components/Agenda';
+import { BrandMark } from '../components/BrandMark';
 import { SyncButton } from '../components/SyncButton';
 import { TextSizeButton } from '../components/TextSize';
 import { useTripWeather } from '../components/WeatherStrip';
@@ -101,6 +102,7 @@ export function TodayPage() {
   return (
     <main className="page today-page">
       <div className="topbar">
+        <BrandMark size={40} />
         <h1>{titles[view]}</h1>
         <TextSizeButton />
         <SyncButton />

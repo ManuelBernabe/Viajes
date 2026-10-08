@@ -3,6 +3,7 @@ import { ForgotPassword } from './ForgotPassword';
 import { describeError } from '../api';
 import { useSession } from '../app/SessionContext';
 import { t } from '../i18n';
+import { BrandMark } from '../components/BrandMark';
 
 export function LoginPage() {
   const session = useSession();
@@ -32,8 +33,10 @@ export function LoginPage() {
 
   return (
     <main className="page no-tabs">
-      <div className="topbar">
+      <div className="brand-hero">
+        <BrandMark size={88} />
         <h1>Viajes</h1>
+        <p className="muted">{t('Tus viajes y reservas, siempre a mano.')}</p>
       </div>
       {session.unverified && <p className="notice">{t('Sin conexión: no se ha podido comprobar la sesión. Inténtalo cuando tengas red.')}</p>}
       <form onSubmit={submit} className="card">

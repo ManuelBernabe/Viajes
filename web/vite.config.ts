@@ -46,8 +46,8 @@ export default defineConfig({
         lang: 'es',
         display: 'standalone',
         start_url: '/',
-        background_color: '#ffffff',
-        theme_color: '#1f3a5f',
+        background_color: '#0f1d3a',
+        theme_color: '#0f1d3a',
       },
       injectManifest: {
         // El worker de pdf.js es .mjs y los iconos .png: sin ellos en la caché, sin red no se abren los PDF.
