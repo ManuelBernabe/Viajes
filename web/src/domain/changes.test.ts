@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking } from '../data/types';
-import { applyChanges, describeChanges, diffBooking, findExistingBooking, repairedArrival, type Proposal } from './changes';
+import { applyChanges, describeChanges, diffBooking, findExistingBooking, repairedArrival, consistencyFixes, type Proposal } from './changes';
 
 const booking = (overrides: Partial<Booking> = {}): Booking => ({
   id: 'b1', tripId: 't1', type: 'train', title: 'AVE 05143 Alicante → Chamartín', startLocal: '2026-10-01T14:35', startTz: 'Europe/Madrid',
@@ -133,5 +133,29 @@ describe('reservas ya guardadas con la llegada antes de la salida', () => {
     expect(repairedArrival(roto)).toBe('2026-10-08T14:55');
     expect(repairedArrival(booking())).toBeNull();
     expect(repairedArrival({ ...roto, changeNote: null })).toBeNull();
+  });
+});
+
+describe('datos que no cuadran', () => {
+  const manuel = booking({
+    type: 'flight', title: 'JA3157 IGR → AEP', startLocal: '2026-10-08T13:04', startTz: 'America/Argentina/Buenos_Aires', startPlace: 'AEP',
+    endLocal: '2026-10-08T10:49', endTz: 'America/Argentina/Buenos_Aires', endPlace: 'IGR', changeNote: null, startUtcMs: Date.UTC(2026, 9, 8, 16, 4),
+  });
+
+  it('origen y destino al revés y llegada antes de la salida, con la llegada del estado del vuelo', () => {
+    const fixes = consistencyFixes(manuel, { origin: 'IGR', destination: 'AEP', arrivalUtcMs: Date.UTC(2026, 9, 8, 17, 55) })!;
+    expect(fixes).toMatchObject({ startPlace: 'IGR', endPlace: 'AEP', endLocal: '2026-10-08T14:55' });
+    expect(fixes.lines).toHaveLength(2);
+  });
+
+  it('sin estado del vuelo: el título dice el sentido; la llegada queda para corregir a mano', () => {
+    const fixes = consistencyFixes(manuel)!;
+    expect(fixes.startPlace).toBe('IGR');
+    expect(fixes.endLocal).toBeUndefined();
+    expect(fixes.lines[1]).toMatch(/Editar/);
+  });
+
+  it('una reserva que cuadra no tiene arreglos', () => {
+    expect(consistencyFixes(booking())).toBeNull();
   });
 });
