@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking } from '../data/types';
-import { countdown, todayView } from './today';
+import { countdown, dayPlan, groupSameTrip, passengerOf, todayView, weekPlans, withoutPassenger } from './today';
 import { destinationOf, directionsUrls } from './directions';
 
 const h = 3_600_000;
@@ -76,5 +76,30 @@ describe('destinationOf', () => {
     expect(destinationOf({ type: 'train', title: 'AVE', startPlace: 'Madrid Chamartín', address: null })).toBe('Madrid Chamartín');
     expect(destinationOf({ type: 'ticket', title: 'Museo', startPlace: null, address: null })).toBeNull();
     expect(directionsUrls('AEP Airport').google).toBe('https://www.google.com/maps/dir/?api=1&destination=AEP%20Airport');
+  });
+});
+
+describe('agenda por días', () => {
+  it('lo de mañana: lo que empieza, la salida del hotel y la noche', () => {
+    const plan = dayPlan(
+      [
+        b('vuelo', { startLocal: '2026-10-07T08:49', startUtcMs: now + 20 * h }),
+        b('viejo', { type: 'hotel', startLocal: '2026-10-04T15:00', endLocal: '2026-10-07T10:00', startUtcMs: now - 48 * h }),
+        b('nuevo', { type: 'hotel', startLocal: '2026-10-07T15:00', endLocal: '2026-10-09T11:00', startUtcMs: now + 27 * h }),
+      ],
+      '2026-10-07',
+    );
+    expect(plan.starting.map((x) => x.id)).toEqual(['vuelo', 'nuevo']);
+    expect(plan.checkOuts.map((x) => x.id)).toEqual(['viejo']);
+    expect(plan.night?.id).toBe('nuevo');
+    expect(weekPlans([b('x', { startLocal: '2026-10-09T10:00' })], '2026-10-06', 7).map((d) => d.date)).toEqual(['2026-10-09']);
+  });
+
+  it('el mismo vuelo de dos pasajeros es una sola tarjeta', () => {
+    const groups = groupSameTrip([b('p', { title: 'JA 3157 IGR → AEP · Paco' }), b('m', { title: 'JA 3157 IGR → AEP · Manuel' }), b('c', { title: 'Cena', type: 'other' })]);
+    expect(groups.map((g) => g.map((x) => x.id))).toEqual([['p', 'm'], ['c']]);
+    expect(passengerOf('JA 3157 IGR → AEP · Manuel')).toBe('Manuel');
+    expect(passengerOf('JA 3157 IGR → AEP')).toBeNull();
+    expect(withoutPassenger('JA 3157 IGR → AEP · Paco')).toBe('JA 3157 IGR → AEP');
   });
 });

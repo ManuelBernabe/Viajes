@@ -20,21 +20,26 @@ public static class AppGuide
         Versión nueva: sale «Hay una versión nueva» → «Actualizar ahora». También en Ajustes → Versión → «Buscar actualizaciones».
 
         ## Pestañas
-        Abajo: Inicio, Documentos y Ajustes. En pantallas largas hay botones flotantes ↑ / ↓ para ir arriba o al final.
-        Arriba en Inicio hay un botón ↻ para sincronizar al momento (también en «Por revisar» y en Ajustes → Sincronización).
+        Abajo: Hoy, Viajes, Documentos y Ajustes. En pantallas largas hay botones flotantes ↑ / ↓ para ir arriba o al final.
+        Arriba en Hoy y en Viajes hay un botón ↻ para sincronizar al momento (también en «Por revisar» y en Ajustes → Sincronización).
 
-        ## Inicio
-        - «Hoy» (arriba, solo si hoy hay algo): el tiempo de hoy donde se está; lo siguiente que empieza hoy (o está en curso)
-          con cuenta atrás, su QR, «Cómo llegar» y, en los vuelos, el estado en directo (en hora, retraso, puerta);
-          «Esta noche» con el hotel donde se duerme; y «Más tarde, hoy» con el resto del día. Lo de mañana no sale en «Hoy»:
-          llega en el aviso de la víspera.
-        - Viajes «En curso», «Próximos viajes» y, al final, el «Histórico» de viajes realizados, plegado por años.
+        ## Hoy (la pantalla de inicio)
+        - Arriba la fecha y el tiempo de donde se está. Tres vistas: Hoy, Mañana y Semana (los próximos 7 días).
+        - Hoy: «Lo siguiente» como una tarjeta de embarque (origen y destino, hora, terminal, puerta, asiento, localizador y
+          el estado del vuelo), con «Ver QR» (o «Cómo llegar») y «Ver reserva». Si es el mismo vuelo de varias personas
+          (una reserva cada una), sale una sola tarjeta con los pasajeros. Debajo «Esta noche» (el hotel) y «Resto del día».
+          Lo de mañana no sale en Hoy: hay un acceso «Mañana: …» que abre esa vista.
+        - Mañana y Semana: lo que empieza cada día, las salidas de hotel y dónde se duerme.
         - «N correos por revisar» si han llegado reservas por correo o por el atajo que esperan confirmación.
+
+        ## Viajes
+        - Viajes «En curso», «Próximos viajes» y, al final, el «Histórico» de viajes realizados, plegado por años. Cada
+          viaje muestra fechas, número de reservas, lo siguiente y si está guardado para verse sin conexión.
         - «Nuevo viaje» crea un viaje (título, destino, fechas de ida y vuelta).
 
         ## Un viaje
-        - Arriba «Lo siguiente»: la próxima reserva y las que empiezan en la misma hora (por ejemplo el mismo vuelo de dos
-          personas), con «Ver QR» y «Ver reserva». Un hotel en el que ya se está no tapa lo siguiente.
+        - Arriba «Lo siguiente» como tarjeta de embarque: la próxima reserva (si es el mismo vuelo de varias personas, una sola
+          tarjeta con los pasajeros), con «Ver QR» y «Ver reserva». Un hotel en el que ya se está no tapa lo siguiente.
         - Aviso de documentos si un pasaporte o DNI caduca antes de acabar el viaje o le quedan menos de 6 meses al salir.
         - «🌤️ El tiempo»: previsión día a día (Open-Meteo) para donde se duerme cada noche, hasta 16 días por delante; también
           junto a cada día de la agenda. Si no hay hotel, usa el destino del viaje.

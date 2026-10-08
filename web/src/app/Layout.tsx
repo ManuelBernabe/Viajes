@@ -9,8 +9,12 @@ export function Layout() {
       <HelpBubble />
       <nav className="tabs">
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span className="icon">📅</span>
+          {t('Hoy')}
+        </NavLink>
+        <NavLink to="/trips" className={({ isActive }) => (isActive ? 'active' : '')}>
           <span className="icon">🧳</span>
-          {t('Inicio')}
+          {t('Viajes')}
         </NavLink>
         <NavLink to="/documents" className={({ isActive }) => (isActive ? 'active' : '')}>
           <span className="icon">🛂</span>

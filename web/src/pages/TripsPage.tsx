@@ -8,7 +8,7 @@ import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBookings, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
 import { SyncButton } from '../components/SyncButton';
-import { TodayPanel } from '../components/TodayPanel';
+import { withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
 
 /** Resumen de las reservas de un viaje para su tarjeta: cuántas hay y cuál es la siguiente. */
@@ -22,34 +22,29 @@ interface TripSummary {
 function TripCard({ trip, summary, done = false, current = false }: { trip: Trip; summary?: TripSummary; done?: boolean; current?: boolean }) {
   const offline = useTripOffline(trip);
   const next = summary?.next ?? [];
+  const first = next[0];
+  const count = summary ? (summary.count === 0 ? t('Sin reservas todavía') : summary.count === 1 ? t('1 reserva') : t('{n} reservas', { n: summary.count })) : null;
   return (
-    <Link className={`card${done ? ' done' : ''}${current ? ' highlight' : ''}`} to={`/trips/${trip.id}`}>
-      <div className="row between">
-        <div className="grow">
-          <h3>
-            {trip.title}
-            {done && <span className="badge done">{t('Realizado')}</span>}
-            {current && <span className="badge">{t('En curso')}</span>}
-          </h3>
-          <div className="muted small">
-            {[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}
+    <Link className={`trip-card${done ? ' done' : ''}${current ? ' current' : ''}`} to={`/trips/${trip.id}`}>
+      <div className="trip-main">
+        <h3>{trip.title}</h3>
+        <div className="muted small">{[trip.destination, formatRange(trip.startDate, trip.endDate), count].filter(Boolean).join(' · ')}</div>
+        {!done && first && (
+          <div className="trip-next">
+            <span className="muted">{summary?.inProgress ? t('En curso') : t('Lo siguiente')}</span>
+            <span>
+              {TYPE_INFO[first.type].icon} {withoutPassenger(first.title)} · {formatDay(first.startLocal)} <strong className="time-big">{timeOf(first.startLocal)}</strong>
+              {next.length > 1 && <span className="muted"> · {t('{n} reservas', { n: next.length })}</span>}
+            </span>
           </div>
-          {!done &&
-            next.map((booking, index) => (
-              <div key={booking.id} className="small" style={{ marginTop: index === 0 ? 4 : 0 }}>
-                {index === 0 ? `${summary?.inProgress ? t('En curso') : t('Lo siguiente')}: ` : '+ '}
-                {TYPE_INFO[booking.type].icon} {booking.title} · {formatDay(booking.startLocal)} <strong className="time-big">{timeOf(booking.startLocal)}</strong>
-              </div>
-            ))}
-          {summary && (
-            <div className="muted small">
-              {summary.count === 0 ? t('Sin reservas todavía') : summary.count === 1 ? t('1 reserva') : t('{n} reservas', { n: summary.count })}
-            </div>
-          )}
+        )}
+        <div className="trip-tags">
+          {current && <span className="chip tone-ok">{t('En curso')}</span>}
+          {done && <span className="chip">{t('Realizado')}</span>}
+          {!done && <OfflineBadge state={offline} />}
         </div>
-        {!done && <OfflineBadge state={offline} />}
-        <span className="muted">›</span>
       </div>
+      <span className="trip-go">›</span>
     </Link>
   );
 }
@@ -91,7 +86,8 @@ function History({ trips }: { trips: Trip[] }) {
   );
 }
 
-export function HomePage() {
+/** «Viajes»: en curso, próximos y el histórico. La agenda del día está en «Hoy». */
+export function TripsPage() {
   const trips = useLiveQuery(listTrips, []);
   const summaries = useLiveQuery(async () => {
     const now = Date.now();
@@ -118,7 +114,7 @@ export function HomePage() {
   return (
     <main className="page">
       <div className="topbar">
-        <h1 className="two-words">{t('Viajes y reservas')}</h1>
+        <h1>{t('Viajes')}</h1>
         <SyncButton />
         <Link className="btn primary add" to="/trips/new" aria-label={t('Nuevo viaje')}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -144,7 +140,6 @@ export function HomePage() {
           </div>
         </Link>
       )}
-      <TodayPanel />
       {sorted && sorted.active.length === 0 && sorted.past.length === 0 && (
         <div className="empty">
           <p>{t('Todavía no hay viajes.')}</p>

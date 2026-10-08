@@ -9,7 +9,8 @@ import { AttachmentViewerPage } from './pages/AttachmentViewerPage';
 import { BookingFormPage } from './pages/BookingFormPage';
 import { BookingPage } from './pages/BookingPage';
 import { GuidePage } from './pages/GuidePage';
-import { HomePage } from './pages/HomePage';
+import { TodayPage } from './pages/TodayPage';
+import { TripsPage } from './pages/TripsPage';
 import { HelpChatPage } from './pages/HelpChatPage';
 import { DocumentFormPage } from './pages/DocumentFormPage';
 import { DocumentsPage } from './pages/DocumentsPage';
@@ -66,7 +67,8 @@ function Gate() {
       <AppLock />
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/trips" element={<TripsPage />} />
           <Route path="/trips/new" element={<TripFormPage />} />
           <Route path="/trips/:tripId" element={<TripPage />} />
           <Route path="/trips/:tripId/edit" element={<TripFormPage />} />

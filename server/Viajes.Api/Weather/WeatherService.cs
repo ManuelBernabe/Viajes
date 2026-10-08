@@ -47,6 +47,19 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
             if (night is not null)
             {
                 queries.AddRange(HotelQueries(night));
+                if (CityOfZone(night.StartTz) is { } hotelCity)
+                {
+                    queries.Add(hotelCity);
+                }
+            }
+
+            // Sin hotel: la ciudad de llegada del último vuelo o tren del día (por su zona horaria), antes que el nombre
+            // del viaje, que puede ser ambiguo («Argentina Brasil» llevaba a una calle de Criciúma).
+            var arrival = alive.Where(b => (b.Type == "flight" || b.Type == "train") && b.StartLocal[..10] == date && b.EndTz is not null)
+                .OrderBy(b => b.StartUtcMs).LastOrDefault();
+            if (arrival is not null && CityOfZone(arrival.EndTz!) is { } arrivalCity)
+            {
+                queries.Add(arrivalCity);
             }
 
             if (!string.IsNullOrWhiteSpace(trip.Destination))
@@ -82,7 +95,8 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
         var name = string.IsNullOrWhiteSpace(hotel.StartPlace) ? hotel.Title : hotel.StartPlace;
         if (!string.IsNullOrWhiteSpace(name))
         {
-            yield return name.Trim();
+            // Con la ciudad de su zona horaria, para no dar con otro hotel del mismo nombre en otro país.
+            yield return CityOfZone(hotel.StartTz) is { } city ? $"{name.Trim()}, {city}" : name.Trim();
         }
     }
 
@@ -153,6 +167,17 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
             log.LogWarning("Sin previsión para {Sitio}: {Error}", point.Label, e.Message);
             return cached.Days ?? [];
         }
+    }
+
+    /// <summary>«America/Argentina/Buenos_Aires» → «Buenos Aires»; null para zonas que no son ciudades («UTC», «Etc/GMT+3»).</summary>
+    public static string? CityOfZone(string? zone)
+    {
+        if (string.IsNullOrWhiteSpace(zone) || !zone.Contains('/') || zone.StartsWith("Etc/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return zone[(zone.LastIndexOf('/') + 1)..].Replace('_', ' ');
     }
 
     private static string CheckOut(Booking hotel) => hotel.EndLocal?[..10] ?? Shift(hotel.StartLocal[..10], 1);

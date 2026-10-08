@@ -1,14 +1,15 @@
 :root {
-  --bg: #f4f5f7;
+  --bg: #eef1f5;
   --surface: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --primary: #1f3a5f;
+  --raise: #e9edf3;
+  --text: #12213a;
+  --muted: #5e6b80;
+  --primary: #2457c5;
   --primary-text: #ffffff;
-  --border: #e3e6eb;
+  --border: #dce2ea;
   --danger: #b42318;
-  --ok: #15803d;
-  --warn: #b45309;
+  --ok: #157a45;
+  --warn: #a8610a;
   --radius: 14px;
   --tab-h: 56px;
   color-scheme: light dark;
@@ -16,16 +17,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
-    --surface: #1a1d23;
-    --text: #f3f4f6;
-    --muted: #9ca3af;
-    --primary: #8db4e8;
-    --primary-text: #0b1220;
-    --border: #2a2f3a;
+    --bg: #0e1420;
+    --surface: #161e2c;
+    --raise: #1f2a3c;
+    --text: #eef2f8;
+    --muted: #8d99ad;
+    --primary: #6fa3ff;
+    --primary-text: #0b1630;
+    --border: #273246;
     --danger: #f87171;
-    --ok: #4ade80;
-    --warn: #fbbf24;
+    --ok: #5bc48a;
+    --warn: #f2b04a;
   }
 }
 
@@ -461,3 +463,72 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .time-big { font-weight: 700; font-size: 1.15em; font-variant-numeric: tabular-nums; color: var(--text, inherit); }
 .booking .time { font-size: 1.15rem; font-weight: 700; }
 .today-time { font-weight: 700; font-size: 1.1em; font-variant-numeric: tabular-nums; }
+
+
+/* «Hoy»: agenda con la tarjeta de embarque */
+.today-page .topbar h1 { font-size: 1.9rem; letter-spacing: -0.02em; }
+.today-sub { color: var(--muted); margin: -8px 0 14px; }
+.today-sub b { color: var(--text); }
+.segmented { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3px; margin-bottom: 16px; }
+.segmented button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.95rem; padding: 8px 0; border-radius: 9px; }
+.segmented button.on { background: var(--raise); color: var(--text); font-weight: 600; }
+.section-title { font-size: 0.85rem; color: var(--muted); font-weight: 600; margin: 22px 2px 8px; }
+.section-title.day-title { text-transform: capitalize; color: var(--text); font-size: 0.95rem; }
+
+.pass { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; margin-bottom: 14px; }
+.pass-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 18px 0; font-size: 0.85rem; color: var(--muted); }
+.chip { font-size: 0.78rem; font-weight: 600; padding: 4px 9px; border-radius: 999px; white-space: nowrap; background: var(--raise); }
+.chip.tone-warn { background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.chip.tone-danger { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+.chip.tone-ok { background: color-mix(in srgb, var(--ok) 16%, transparent); }
+.pass-route { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 6px; padding: 10px 18px 0; }
+.pass-route .right { text-align: right; }
+.pass-code { font-size: 2.1rem; font-weight: 700; line-height: 1.1; letter-spacing: 0.01em; }
+.pass-place { font-size: 1.05rem; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.pass-time { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pass-time s { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
+.pass-time.big { font-size: 2rem; }
+.pass-mid { text-align: center; color: var(--muted); padding-bottom: 20px; font-size: 0.9rem; }
+.pass-line { width: 56px; border-top: 1.5px dashed var(--border); margin: 6px auto 0; }
+.pass-name { padding: 2px 18px 0; color: var(--muted); font-size: 0.85rem; }
+.pass-plain { padding: 8px 18px 0; }
+.pass-title { font-size: 1.15rem; font-weight: 700; margin-top: 2px; }
+.pass-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; padding: 12px 18px 12px; }
+.pass-facts span { display: block; font-size: 0.75rem; color: var(--muted); }
+.pass-facts b { font-size: 1.1rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pass-people { margin: 0 18px 10px; border-top: 1px solid var(--border); }
+.pass-person { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.pass-warn { margin: 0 18px 10px; color: var(--danger); font-size: 0.85rem; white-space: pre-line; }
+.pass-perf { border-top: 1.5px dashed var(--border); position: relative; margin-top: 4px; }
+.pass-perf::before, .pass-perf::after { content: ''; position: absolute; top: -10px; width: 20px; height: 20px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); }
+.pass-perf::before { left: -11px; }
+.pass-perf::after { right: -11px; }
+.pass-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 18px 16px; }
+.pass-actions .btn { margin: 0; text-align: center; }
+
+.agenda { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.agenda-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.agenda-row:first-child { border-top: 0; }
+.agenda-row.past { opacity: 0.55; }
+.agenda-time { width: 50px; font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.agenda-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--raise); display: grid; place-items: center; font-size: 1rem; flex: none; }
+.agenda-text { flex: 1; min-width: 0; }
+.agenda-text b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-text span { display: block; font-size: 0.85rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-go { color: var(--muted); }
+.teaser { box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 14px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; color: var(--text); font: inherit; text-align: left; text-decoration: none; }
+.teaser.link { margin-top: 22px; }
+.notice { box-sizing: border-box; display: flex; justify-content: space-between; padding: 12px 16px; margin-bottom: 14px; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); border-radius: 14px; color: var(--text); text-decoration: none; }
+.calm { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+
+/* «Viajes» */
+.trip-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; color: var(--text); text-decoration: none; }
+.trip-card.current { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); }
+.trip-card.done { opacity: 0.8; }
+.trip-main { flex: 1; min-width: 0; }
+.trip-main h3 { margin: 0 0 2px; font-size: 1.1rem; }
+.trip-next { margin-top: 8px; font-size: 0.92rem; }
+.trip-next > .muted { display: block; font-size: 0.78rem; }
+.trip-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.trip-tags:empty { display: none; }
+.trip-go { color: var(--muted); font-size: 1.2rem; }
