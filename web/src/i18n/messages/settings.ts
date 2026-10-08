@@ -621,4 +621,9 @@ export const settings: Messages = {
   'Face ID sin activar': { en: 'Face ID not set up', fr: 'Face ID non activé', it: 'Face ID non attivato' },
   'sin Face ID en su equipo': { en: 'no Face ID on their device', fr: 'pas de Face ID sur son appareil', it: 'senza Face ID sul suo dispositivo' },
   'Face ID: aún no ha abierto la versión nueva': { en: 'Face ID: hasn’t opened the new version yet', fr: 'Face ID : n’a pas encore ouvert la nouvelle version', it: 'Face ID: non ha ancora aperto la nuova versione' },
+  'Este iPhone no deja usar Face ID en la app ahora mismo. Comprueba en Ajustes del iPhone → Face ID y código que hay un código puesto, y en Ajustes → General → Autorrelleno y contraseñas que «Contraseñas» está activado. Después vuelve a abrir Viajes.': {
+    en: 'This iPhone isn’t letting the app use Face ID right now. Check in iPhone Settings → Face ID & Passcode that a passcode is set, and in Settings → General → AutoFill & Passwords that “Passwords” is on. Then open Viajes again.',
+    fr: 'Cet iPhone ne permet pas d’utiliser Face ID dans l’app pour le moment. Vérifiez dans Réglages → Face ID et code qu’un code est défini, et dans Réglages → Général → Remplissage automatique et mots de passe que « Mots de passe » est activé. Puis rouvrez Viajes.',
+    it: 'Questo iPhone non permette di usare Face ID nell’app al momento. Controlla in Impostazioni → Face ID e codice che ci sia un codice, e in Impostazioni → Generali → Riempimento automatico e password che «Password» sia attivo. Poi riapri Viajes.',
+  },
 };
