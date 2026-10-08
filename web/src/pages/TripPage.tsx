@@ -5,6 +5,7 @@ import { BoardingCard } from '../components/Agenda';
 import { BookingCard } from '../components/BookingCard';
 import { groupSameTrip } from '../domain/today';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
+import { TripReview } from '../components/TripReview';
 import { TypeChips } from '../components/TypeChips';
 import { DayWeatherBadge, useTripWeather, WeatherStrip } from '../components/WeatherStrip';
 import { formatLongDay, formatRange } from '../data/localTime';
@@ -128,6 +129,8 @@ export function TripPage() {
           ))}
         </Link>
       )}
+
+      <TripReview trip={trip} bookings={shown} />
 
       <WeatherStrip days={weather} />
 
