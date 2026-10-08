@@ -8,11 +8,12 @@ import { AttachmentThumbs } from '../components/AttachmentThumbs';
 import { Directions } from '../components/Directions';
 import { FlightStatusCard } from '../components/FlightStatus';
 import { SeatCheckIn } from '../components/SeatCheckIn';
-import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
+import { formatLongDay } from '../data/localTime';
 import { deleteBooking, getBooking, hiddenBookings, listAttachments, saveBooking, setBookingHidden } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
+import { TimeAt } from '../components/TimeAt';
 
 export function BookingPage() {
   const { bookingId = '' } = useParams();
@@ -95,14 +96,14 @@ export function BookingPage() {
       <dl className="detail card">
         <dt>{info.startLabel}</dt>
         <dd>
-          {formatLongDay(booking.startLocal)} · {t('{time} hora de {zone}', { time: timeOf(booking.startLocal), zone: zoneLabel(booking.startTz) })}
+          {formatLongDay(booking.startLocal)} · <TimeAt local={booking.startLocal} tz={booking.startTz} />
           {booking.startPlace && <div>{booking.startPlace}</div>}
         </dd>
         {booking.endLocal && (
           <>
             <dt>{info.endLabel}</dt>
             <dd>
-              {formatLongDay(booking.endLocal)} · {t('{time} hora de {zone}', { time: timeOf(booking.endLocal), zone: zoneLabel(booking.endTz ?? booking.startTz) })}
+              {formatLongDay(booking.endLocal)} · <TimeAt local={booking.endLocal} tz={booking.endTz ?? booking.startTz} />
               {booking.endPlace && <div>{booking.endPlace}</div>}
             </dd>
           </>

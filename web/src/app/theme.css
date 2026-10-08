@@ -456,3 +456,8 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .badge.tone-warn { border-color: var(--warn); }
 .badge.tone-danger { border-color: var(--danger); }
 .flight-line { margin-top: 2px; font-weight: 600; }
+
+/* Las horas, en negrita y algo más grandes, para encontrarlas de un vistazo */
+.time-big { font-weight: 700; font-size: 1.15em; font-variant-numeric: tabular-nums; color: var(--text, inherit); }
+.booking .time { font-size: 1.15rem; font-weight: 700; }
+.today-time { font-weight: 700; font-size: 1.1em; font-variant-numeric: tabular-nums; }
