@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { parseBoardingPass } from '../attachments/bcbp';
-import { isImage, isPdf } from '../attachments/files';
-import { drawQr, readQr } from '../attachments/qr';
+import { rescan } from '../attachments/rescan';
+import { drawQr } from '../attachments/qr';
 import { splitQrCodes } from '../attachments/qrCodes';
 import { useWakeLock } from '../attachments/useWakeLock';
-import { getBlob, getBooking, listAttachments, updateAttachment } from '../data/repo';
+import { getBooking, listAttachments } from '../data/repo';
 import type { Attachment } from '../data/types';
-import { downloadAttachment } from '../data/syncClient';
 import { useLiveQuery } from '../data/useLive';
 import { t } from '../i18n';
 import { TimeAt } from '../components/TimeAt';
@@ -35,32 +34,6 @@ function entriesOf(attachments: readonly Attachment[]): QrEntry[] {
     return entries.map((e) => ({ ...e, label: parseBoardingPass(e.code)?.passenger || e.attachment.name }));
   }
   return entries;
-}
-
-/** Adjuntos ya releídos en esta sesión: la relectura de lo guardado con la versión anterior se hace una sola vez. */
-const rescanned = new Set<string>();
-
-/**
- * Los adjuntos guardados antes de leer varios QR por fichero solo tienen el primero. El fichero se
- * vuelve a leer (del móvil o del servidor) y, si salen más códigos, se guardan.
- */
-async function rescan(attachments: readonly Attachment[]): Promise<void> {
-  for (const attachment of attachments) {
-    if (rescanned.has(attachment.id) || !(isPdf(attachment.mime) || isImage(attachment.mime))) {
-      continue;
-    }
-    rescanned.add(attachment.id);
-    // Del móvil si está guardado; si no, se baja (sin red simplemente no se relee).
-    const stored = await getBlob(attachment.id);
-    const bytes = stored?.bytes ?? (attachment.uploaded ? await downloadAttachment(attachment).catch(() => null) : null);
-    if (!bytes) {
-      continue;
-    }
-    const text = await readQr(bytes, stored?.mime || attachment.mime);
-    if (text && splitQrCodes(text).length > splitQrCodes(attachment.qrText).length) {
-      await updateAttachment(attachment.id, { qrText: text });
-    }
-  }
 }
 
 type QrSize = 'small' | 'normal' | 'large';

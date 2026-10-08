@@ -4,6 +4,7 @@ import type { Booking } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
 import { FlightStatusLine, isTracked } from './FlightStatus';
+import { formatSeats, useSeats } from './useSeats';
 
 /** `past`: reserva ya terminada, en el histórico (atenuada y marcada como realizada). */
 /**
@@ -25,6 +26,7 @@ export function BookingCard({
 }) {
   const info = TYPE_INFO[booking.type];
   const route = [booking.startPlace, booking.endPlace].filter(Boolean).join(' → ');
+  const seats = useSeats(booking.type === 'flight' || booking.type === 'train' ? [booking] : []);
   return (
     <Link className={`card booking type-${booking.type}${past || hidden ? ' past' : ''}`} to={`/bookings/${booking.id}`}>
       <div className="time">
@@ -45,6 +47,11 @@ export function BookingCard({
         {showDay && <div className="sub">{showDay}</div>}
         {route && <div className="sub">{route}</div>}
         {booking.reference && <div className="sub">{t('Localizador')} {booking.reference}</div>}
+        {seats.length > 0 && (
+          <div className="sub">
+            💺 <strong>{formatSeats(seats)}</strong>
+          </div>
+        )}
         {!past && isTracked(booking) && <FlightStatusLine booking={booking} />}
       </div>
       {onHide && (
