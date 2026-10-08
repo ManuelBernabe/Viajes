@@ -116,4 +116,5 @@ export const travel: Messages = {
     fr: 'Le fournisseur n’a pas encore de données pour ce vol (vérifié {ago}).',
     it: 'Il fornitore non ha ancora dati per questo volo (controllato {ago}).',
   },
+  Asientos: { en: 'Seats', fr: 'Sièges', it: 'Posti' },
 };

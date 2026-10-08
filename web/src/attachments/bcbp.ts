@@ -107,3 +107,52 @@ export function prefillFromBoardingPass(pass: BoardingPass): BookingPrefill {
     notes,
   };
 }
+
+/** Un asiento leído de una tarjeta de embarque: de quién es y cuál. */
+export interface PassSeat {
+  passenger: string;
+  seat: string;
+}
+
+/** «BELSO/PACO» ya limpio («PACO BELSO») → «Paco». */
+function firstName(passenger: string): string {
+  const first = passenger.trim().split(/\s+/)[0] ?? '';
+  return first ? first[0].toUpperCase() + first.slice(1).toLowerCase() : '';
+}
+
+/**
+ * Los asientos de las tarjetas de embarque (QR IATA) de una reserva: solo los tramos de ese vuelo (mismo origen y
+ * destino, o mismo número de vuelo). Así sale el asiento aunque el correo o el PDF no lo pusieran en las notas.
+ */
+export function seatsFromCodes(
+  codes: readonly string[],
+  booking: { startPlace: string | null; endPlace: string | null; flightNumber: string | null },
+  now = new Date(),
+): PassSeat[] {
+  const seats: PassSeat[] = [];
+  const seen = new Set<string>();
+  for (const code of codes) {
+    const pass = parseBoardingPass(code, now);
+    if (!pass) {
+      continue;
+    }
+    const matching = pass.legs.filter(
+      (leg) =>
+        (booking.startPlace?.toUpperCase() === leg.from && booking.endPlace?.toUpperCase() === leg.to) ||
+        (booking.flightNumber !== null && booking.flightNumber === `${leg.carrier}${leg.flight}`.replace(/\s+/g, '')),
+    );
+    // Sin datos con los que comparar (ni lugares ni número de vuelo), vale la tarjeta de un solo tramo.
+    const unknown = !booking.flightNumber && !(booking.startPlace && booking.endPlace);
+    const legs = matching.length > 0 ? matching : unknown && pass.legs.length === 1 ? pass.legs : [];
+    for (const leg of legs) {
+      if (leg.seat && /^\d{1,3}[A-Z]$/.test(leg.seat)) {
+        const key = `${pass.passenger}|${leg.seat}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          seats.push({ passenger: firstName(pass.passenger), seat: leg.seat });
+        }
+      }
+    }
+  }
+  return seats;
+}
