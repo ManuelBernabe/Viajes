@@ -79,8 +79,8 @@ public static partial class FlightWatch
         booking.StartPlace is { Length: 3 } place && place.All(char.IsLetter) ? place.ToUpperInvariant() : null;
 
     /// <summary>
-    /// Cada cuánto se consulta: cada 6 h hasta 6 h antes, cada 30 min hasta 1 h antes, cada 15 min hasta la salida y cada
-    /// 30 min en vuelo hasta que aterriza. Null si no toca mirar (aún es pronto, ya ha terminado o hace mucho que salió).
+    /// Cada cuánto se consulta: cada 6 h hasta 6 h antes, cada hora hasta 1 h antes, cada 20 min hasta la salida y cada
+    /// hora en vuelo hasta que aterriza. Null si no toca mirar (aún es pronto, ya ha terminado o hace mucho que salió).
     /// </summary>
     public static long? Interval(long departureMs, FlightInfo? last, long nowMs)
     {
@@ -97,7 +97,8 @@ public static partial class FlightWatch
         }
 
         var until = departure - nowMs;
-        return until > 6 * Hour ? 6 * Hour : until > Hour ? 30 * Minute : until > 0 ? 15 * Minute : 30 * Minute;
+        // Pocas consultas: el plan gratuito del proveedor da unas cientos al mes para todos los vuelos del hogar.
+        return until > 6 * Hour ? 6 * Hour : until > Hour ? Hour : until > 0 ? 20 * Minute : Hour;
     }
 
     public static bool IsDue(long departureMs, FlightInfo? last, long? fetchedMs, long nowMs) =>

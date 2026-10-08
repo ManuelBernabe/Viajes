@@ -108,4 +108,12 @@ export const travel: Messages = {
     fr: 'Un e-mail a changé l’origine et la destination, qui ne correspondent plus au titre : il concernait peut-être un autre vol avec la même référence. Vérifiez-la avec « Modifier ».',
     it: 'Un’email ha cambiato origine e destinazione, che non corrispondono più al titolo: forse riguardava un altro volo con lo stesso codice. Controllala con «Modifica».',
   },
+  'Se empezará a comprobar un día antes de salir.': { en: 'It will be checked from one day before departure.', fr: 'Il sera vérifié dès la veille du départ.', it: 'Verrà controllato da un giorno prima della partenza.' },
+  'Comprobando el estado del vuelo…': { en: 'Checking the flight status…', fr: 'Vérification du statut du vol…', it: 'Controllo dello stato del volo…' },
+  'Estado comprobado {ago}': { en: 'Status checked {ago}', fr: 'Statut vérifié {ago}', it: 'Stato controllato {ago}' },
+  'El proveedor aún no tiene datos de este vuelo (comprobado {ago}).': {
+    en: 'The provider has no data for this flight yet (checked {ago}).',
+    fr: 'Le fournisseur n’a pas encore de données pour ce vol (vérifié {ago}).',
+    it: 'Il fornitore non ha ancora dati per questo volo (controllato {ago}).',
+  },
 };

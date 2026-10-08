@@ -134,9 +134,9 @@ public sealed class FlightWatchRuleTests
         var dep = 100 * H;
         Assert.Null(FlightWatch.Interval(dep, null, dep - 25 * H));
         Assert.Equal(6 * H, FlightWatch.Interval(dep, null, dep - 20 * H));
-        Assert.Equal(H / 2, FlightWatch.Interval(dep, null, dep - 3 * H));
-        Assert.Equal(H / 4, FlightWatch.Interval(dep, null, dep - H / 2));
-        Assert.Equal(H / 2, FlightWatch.Interval(dep, new FlightInfo { Status = "departed", ArrScheduledMs = dep + 2 * H }, dep + H));
+        Assert.Equal(H, FlightWatch.Interval(dep, null, dep - 3 * H));
+        Assert.Equal(H / 3, FlightWatch.Interval(dep, null, dep - H / 2));
+        Assert.Equal(H, FlightWatch.Interval(dep, new FlightInfo { Status = "departed", ArrScheduledMs = dep + 2 * H }, dep + H));
         Assert.Null(FlightWatch.Interval(dep, new FlightInfo { Status = "landed" }, dep + 3 * H));
         Assert.Null(FlightWatch.Interval(dep, new FlightInfo { Status = "departed", ArrScheduledMs = dep + 2 * H }, dep + 5 * H));
 
