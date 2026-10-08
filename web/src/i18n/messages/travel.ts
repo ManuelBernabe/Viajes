@@ -89,4 +89,5 @@ export const travel: Messages = {
     it: 'L’arrivo è prima della partenza: non è stato spostato quando è cambiato l’orario.',
   },
   'Corregir la llegada: {time}': { en: 'Fix the arrival: {time}', fr: 'Corriger l’arrivée : {time}', it: 'Correggi l’arrivo: {time}' },
+  'Tus viajes y reservas, siempre a mano.': { en: 'Your trips and bookings, always at hand.', fr: 'Vos voyages et réservations, toujours sous la main.', it: 'I tuoi viaggi e prenotazioni, sempre a portata di mano.' },
 };

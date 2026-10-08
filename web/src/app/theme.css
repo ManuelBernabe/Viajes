@@ -569,3 +569,11 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .tabs a { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 25%; }
 .pass-head { flex-wrap: wrap; }
 .tabs a { font-size: min(0.72rem, 14px); }
+
+/* Símbolo de la app */
+.brand-mark { flex: none; display: block; border-radius: 22%; box-shadow: 0 4px 14px rgba(15, 29, 58, 0.35); }
+.topbar .brand-mark { margin-right: 4px; }
+.brand-hero { text-align: center; margin: 28px 0 18px; }
+.brand-hero .brand-mark { margin: 0 auto 12px; box-shadow: 0 10px 30px rgba(15, 29, 58, 0.45); }
+.brand-hero h1 { margin: 0; font-size: 2rem; letter-spacing: -0.02em; }
+.brand-hero p { margin: 4px 0 0; }

@@ -7,6 +7,7 @@ import { useSyncStatus } from '../data/syncClient';
 import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBookings, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
+import { BrandMark } from '../components/BrandMark';
 import { SyncButton } from '../components/SyncButton';
 import { TextSizeButton } from '../components/TextSize';
 import { withoutPassenger } from '../domain/today';
@@ -115,6 +116,7 @@ export function TripsPage() {
   return (
     <main className="page">
       <div className="topbar">
+        <BrandMark size={40} />
         <h1>{t('Viajes')}</h1>
         <TextSizeButton />
         <SyncButton />
