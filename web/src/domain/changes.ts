@@ -1,4 +1,5 @@
 import { formatDay, fromUtcMs, timeOf, toUtcMs, zoneLabel } from '../data/localTime';
+import { flightNumberOf } from './flightStatus';
 import type { Booking, BookingBody } from '../data/types';
 import { t } from '../i18n';
 
@@ -29,23 +30,47 @@ function daysApart(a: string, b: string): number {
 }
 
 /**
+ * ¿Puede ser el mismo trayecto? Una ida y vuelta suele compartir localizador: el correo de la vuelta no debe pisar la ida.
+ * No lo es si el trayecto va al revés, ni si el número de vuelo es otro y la fecha está a más de un día.
+ */
+export function sameLeg(booking: Booking, proposal: Proposal): boolean {
+  if (proposal.startPlace && proposal.endPlace && booking.startPlace && booking.endPlace) {
+    const reversed = norm(booking.startPlace) === norm(proposal.endPlace) && norm(booking.endPlace) === norm(proposal.startPlace);
+    if (reversed && norm(proposal.startPlace) !== norm(proposal.endPlace)) {
+      return false;
+    }
+  }
+  if (booking.type === 'flight' && proposal.type === 'flight' && proposal.startLocal) {
+    const mine = flightNumberOf(booking);
+    const theirs = flightNumberOf({ type: 'flight', title: proposal.title ?? '', notes: proposal.notes ?? null });
+    if (mine && theirs && mine !== theirs && daysApart(booking.startLocal, proposal.startLocal) > 1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * La reserva ya cargada a la que se refiere el correo, por este orden:
- * 1. mismo localizador;
+ * 1. mismo localizador y el mismo trayecto (si hay varias con el localizador, la de fecha más cercana);
  * 2. mismo tipo y misma ruta (origen y destino) con salida a menos de 7 días: un cambio que mueve la fecha y
  *    emite localizador nuevo (Renfe lo hace) sigue siendo la misma reserva;
  * 3. mismo tipo, mismo día de salida y mismo origen o destino.
  */
 export function findExistingBooking(bookings: readonly Booking[], proposal: Proposal): Booking | undefined {
   if (proposal.reference) {
-    const byReference = bookings.find((b) => norm(b.reference) === norm(proposal.reference));
-    if (byReference) {
-      return byReference;
+    const byReference = bookings
+      .filter((b) => norm(b.reference) === norm(proposal.reference))
+      .filter((b) => sameLeg(b, proposal))
+      .sort((a, b) => (proposal.startLocal ? daysApart(a.startLocal, proposal.startLocal) - daysApart(b.startLocal, proposal.startLocal) : 0));
+    if (byReference.length > 0) {
+      return byReference[0];
     }
   }
   if (!proposal.type || !proposal.startLocal) {
     return undefined;
   }
-  const sameType = bookings.filter((b) => b.type === proposal.type);
+  const sameType = bookings.filter((b) => b.type === proposal.type && sameLeg(b, proposal));
   if (proposal.startPlace && proposal.endPlace) {
     const byRoute = sameType
       .filter((b) => norm(b.startPlace) === norm(proposal.startPlace) && norm(b.endPlace) === norm(proposal.endPlace))
@@ -263,9 +288,16 @@ export function consistencyFixes(
   const from = flight?.origin ?? route?.[1] ?? null;
   const to = flight?.destination ?? route?.[2] ?? null;
   if (from && to && norm(booking.startPlace) === norm(to) && norm(booking.endPlace) === norm(from)) {
-    fixes.startPlace = from;
-    fixes.endPlace = to;
-    fixes.lines.push(t('Origen y destino estaban al revés: {from} → {to}', { from, to }));
+    // Si los lugares los puso un correo de cambio, quizá el correo era de otro trayecto (la vuelta con el mismo
+    // localizador): no se toca nada solo, se avisa para revisarlo.
+    const placesFromEmail = /^•\s*(Origen|From|Départ|Partenza|Destino|Destination|Destinazione)\s*:/m.test(booking.changeNote ?? '');
+    if (placesFromEmail) {
+      fixes.lines.push(t('Un correo cambió el origen y el destino y ya no coinciden con el título: puede que fuera de otro vuelo con el mismo localizador. Revísala con «Editar».'));
+    } else {
+      fixes.startPlace = from;
+      fixes.endPlace = to;
+      fixes.lines.push(t('Origen y destino estaban al revés: {from} → {to}', { from, to }));
+    }
   }
   try {
     const endTz = booking.endTz ?? booking.startTz;

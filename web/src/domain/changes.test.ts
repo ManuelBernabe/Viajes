@@ -159,3 +159,40 @@ describe('datos que no cuadran', () => {
     expect(consistencyFixes(booking())).toBeNull();
   });
 });
+
+describe('ida y vuelta con el mismo localizador', () => {
+  const ida = booking({
+    id: 'ida', type: 'flight', title: 'JA 3140 AEP → IGR', startLocal: '2026-10-06T13:33', startTz: 'America/Argentina/Buenos_Aires', startPlace: 'AEP',
+    endLocal: '2026-10-06T15:27', endTz: 'America/Argentina/Buenos_Aires', endPlace: 'IGR', reference: 'AE9RPH',
+  });
+  const correoVuelta = proposal({
+    type: 'flight', title: 'JA 3157 IGR → AEP', startLocal: '2026-10-08T08:49', startTz: 'America/Argentina/Buenos_Aires', startPlace: 'IGR',
+    endLocal: '2026-10-08T10:49', endPlace: 'AEP', reference: 'AE9RPH',
+  });
+
+  it('el correo de la vuelta no pisa la ida: es otra reserva', () => {
+    expect(findExistingBooking([ida], correoVuelta)).toBeUndefined();
+  });
+
+  it('si la vuelta ya está cargada, va a la vuelta y no a la ida', () => {
+    const vuelta = booking({ ...ida, id: 'vuelta', title: 'JA 3157 IGR → AEP', startLocal: '2026-10-08T08:49', startPlace: 'IGR', endPlace: 'AEP', endLocal: '2026-10-08T10:49' });
+    expect(findExistingBooking([ida, vuelta], { ...correoVuelta, startLocal: '2026-10-08T13:04', endLocal: null })?.id).toBe('vuelta');
+  });
+
+  it('un cambio de número de vuelo el mismo día sigue siendo la misma reserva', () => {
+    expect(findExistingBooking([ida], proposal({ ...correoVuelta, title: 'JA 3142 AEP → IGR', startPlace: 'AEP', endPlace: 'IGR', startLocal: '2026-10-06T16:10' }))?.id).toBe('ida');
+  });
+});
+
+describe('reserva pisada por el correo de otro trayecto', () => {
+  it('no se corrige sola: se avisa', () => {
+    const pisada = booking({
+      type: 'flight', title: 'JA 3140 AEP → IGR', startLocal: '2026-10-08T08:49', startTz: 'America/Argentina/Buenos_Aires', startPlace: 'IGR',
+      endLocal: '2026-10-08T10:49', endTz: 'America/Argentina/Buenos_Aires', endPlace: 'AEP',
+      changeNote: 'Changed on 08/10 according to an email:\n• Departure: Tue 6 Oct 13:33 → Thu 8 Oct 08:49\n• From: AEP → IGR\n• Destination: IGR → AEP',
+    });
+    const fixes = consistencyFixes(pisada)!;
+    expect(fixes.startPlace).toBeUndefined();
+    expect(fixes.lines[0]).toMatch(/otro vuelo/);
+  });
+});
