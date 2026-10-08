@@ -608,4 +608,5 @@ export const settings: Messages = {
     it: 'Per aprire Viajes serve Face ID (o il codice dell’iPhone). Prenotazioni, QR e documenti restano protetti anche se qualcuno prende il telefono sbloccato.',
   },
   'Entrar ahora y activarlo la próxima vez': { en: 'Continue now and set it up next time', fr: 'Entrer maintenant et l’activer la prochaine fois', it: 'Entra ora e attivalo la prossima volta' },
+  'Tras 1 hora fuera': { en: 'After 1 hour away', fr: 'Après 1 heure hors de l’app', it: 'Dopo 1 ora fuori' },
 };

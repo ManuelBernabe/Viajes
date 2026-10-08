@@ -10,7 +10,12 @@ export interface LockConfig {
   credentialId: string;
   /** Minutos fuera de la app tras los que se vuelve a pedir; 0 = cada vez que se sale. */
   afterMinutes: number;
+  /** 2 desde que el valor por defecto pasó de 1 a 15 minutos. */
+  v?: number;
 }
+
+/** Cada cuánto se vuelve a pedir Face ID si no se elige otra cosa: el iPhone enseña su aviso de llave cada vez. */
+export const DEFAULT_AFTER_MINUTES = 15;
 
 const KEY = 'viajes:lock';
 const listeners = new Set<() => void>();
@@ -20,7 +25,17 @@ let locked = config !== null;
 function read(): LockConfig | null {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as LockConfig) : null;
+    if (!raw) {
+      return null;
+    }
+    const stored = JSON.parse(raw) as LockConfig;
+    // Los activados con el antiguo valor por defecto (1 minuto) pasan una vez a 15.
+    if (!stored.v) {
+      const migrated = { ...stored, afterMinutes: stored.afterMinutes === 1 ? DEFAULT_AFTER_MINUTES : stored.afterMinutes, v: 2 };
+      localStorage.setItem(KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+    return stored;
   } catch {
     return null;
   }
@@ -68,7 +83,7 @@ export function setLocked(value: boolean) {
 
 export function setAfterMinutes(afterMinutes: number) {
   if (config) {
-    save({ ...config, afterMinutes });
+    save({ ...config, afterMinutes, v: 2 });
   }
 }
 
@@ -141,7 +156,7 @@ export async function enableLock(email: string, afterMinutes: number): Promise<v
   if (!credential) {
     throw new Error('cancelled');
   }
-  save({ credentialId: toBase64Url(credential.rawId), afterMinutes });
+  save({ credentialId: toBase64Url(credential.rawId), afterMinutes, v: 2 });
 }
 
 /**

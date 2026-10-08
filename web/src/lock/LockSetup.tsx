@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '../app/SessionContext';
 import { t } from '../i18n';
-import { enableLock, lockSupported, useLockConfig } from './appLock';
+import { DEFAULT_AFTER_MINUTES, enableLock, lockSupported, useLockConfig } from './appLock';
 
 /** Si no se ha podido activar, se deja entrar solo hasta cerrar la app: al volver a abrirla se pide otra vez. */
 let postponed = false;
@@ -30,7 +30,7 @@ export function LockSetup() {
     setBusy(true);
     setFailed(false);
     try {
-      await enableLock(session.email ?? '', 1);
+      await enableLock(session.email ?? '', DEFAULT_AFTER_MINUTES);
     } catch {
       setFailed(true);
     } finally {
