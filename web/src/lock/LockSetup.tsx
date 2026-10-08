@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { api } from '../api';
 import { useSession } from '../app/SessionContext';
 import { t } from '../i18n';
 import { DEFAULT_AFTER_MINUTES, enableLock, lockSupported, useLockConfig } from './appLock';
@@ -21,6 +22,16 @@ export function LockSetup() {
   useEffect(() => {
     void lockSupported().then(setSupported);
   }, []);
+
+  // Se cuenta al servidor si este móvil tiene Face ID activado, para que quien administra vea quién falta.
+  useEffect(() => {
+    if (supported === null) {
+      return;
+    }
+    void api('/api/household/lock-status', { method: 'POST', body: JSON.stringify({ enabled: config !== null, supported }) }).catch(() => {
+      // Sin conexión: se contará la próxima vez.
+    });
+  }, [supported, config !== null]);
 
   if (config || !supported || postponed) {
     return null;

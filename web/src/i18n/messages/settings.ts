@@ -617,4 +617,8 @@ export const settings: Messages = {
     fr: 'Agrandissez ou réduisez tout le texte de l’app sur ce téléphone, sans zoomer.',
     it: 'Ingrandisci o riduci tutto il testo dell’app su questo telefono, senza zoom.',
   },
+  'Face ID activado': { en: 'Face ID on', fr: 'Face ID activé', it: 'Face ID attivo' },
+  'Face ID sin activar': { en: 'Face ID not set up', fr: 'Face ID non activé', it: 'Face ID non attivato' },
+  'sin Face ID en su equipo': { en: 'no Face ID on their device', fr: 'pas de Face ID sur son appareil', it: 'senza Face ID sul suo dispositivo' },
+  'Face ID: aún no ha abierto la versión nueva': { en: 'Face ID: hasn’t opened the new version yet', fr: 'Face ID : n’a pas encore ouvert la nouvelle version', it: 'Face ID: non ha ancora aperto la nuova versione' },
 };

@@ -9,7 +9,12 @@ namespace Viajes.Api.Households;
 
 public static class HouseholdEndpoints
 {
-    public sealed record MemberDto(string UserId, string? Email, string Role, bool Me);
+    /// <summary>FaceId: «on» (activado en su móvil), «off» (sin activar), «unsupported» (su equipo no tiene) o null (aún no se sabe).</summary>
+    public sealed record MemberDto(string UserId, string? Email, string Role, bool Me, string? FaceId = null);
+
+    public sealed record LockStatusRequest(bool Enabled, bool Supported);
+
+    public static string LockKey(string userId) => $"lock:{userId}";
 
     public sealed record InvitationDto(Guid Id, string? CreatedByEmail, long CreatedMs, long ExpiresMs);
 
@@ -34,6 +39,8 @@ public static class HouseholdEndpoints
         household.MapPost("/invitations", CreateInvitation);
         household.MapDelete("/invitations/{id:guid}", RevokeInvitation);
         household.MapDelete("/members/{userId}", RemoveMember);
+        // Cada móvil dice si tiene Face ID activado: quien administra lo ve junto a cada miembro.
+        household.MapPost("/lock-status", ReportLockStatus);
         household.MapDelete("/former-members/{userId}", DeleteFormerAccount);
 
         // Quien recibe el enlace aún no tiene sesión: la consulta es anónima pero con límite de intentos.
@@ -58,6 +65,8 @@ public static class HouseholdEndpoints
         var inviters = await db.Users.Where(u => inviterIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Email);
 
         var iAmAdmin = memberships.Any(m => m.UserId == userId && m.Role == HouseholdMember.Admin);
+        var lockKeys = ids.Select(LockKey).ToList();
+        var locks = (await db.AppSettings.Where(a => lockKeys.Contains(a.Key)).ToListAsync()).ToDictionary(a => a.Key, a => a.Value);
         var formerMembers = new List<FormerMemberDto>();
         if (iAmAdmin)
         {
@@ -80,7 +89,7 @@ public static class HouseholdEndpoints
             memberships
                 .OrderBy(m => m.Role == HouseholdMember.Admin ? 0 : 1)
                 .ThenBy(m => emails.GetValueOrDefault(m.UserId))
-                .Select(m => new MemberDto(m.UserId, emails.GetValueOrDefault(m.UserId), m.Role, m.UserId == userId))
+                .Select(m => new MemberDto(m.UserId, emails.GetValueOrDefault(m.UserId), m.Role, m.UserId == userId, locks.GetValueOrDefault(LockKey(m.UserId))))
                 .ToList(),
             invitations.Select(i => new InvitationDto(i.Id, inviters.GetValueOrDefault(i.CreatedBy), i.CreatedMs, i.ExpiresMs)).ToList(),
             formerMembers));
@@ -165,6 +174,26 @@ public static class HouseholdEndpoints
     }
 
     /// <summary>Solo quien administra el hogar quita miembros; a sí mismo no puede. Quien sale vuelve a un hogar vacío al entrar.</summary>
+    private static async Task<IResult> ReportLockStatus(LockStatusRequest body, ClaimsPrincipal principal, UserManager<IdentityUser> users, AppDbContext db)
+    {
+        var userId = users.GetUserId(principal)!;
+        var value = body.Enabled ? "on" : body.Supported ? "off" : "unsupported";
+        var key = LockKey(userId);
+        var row = await db.AppSettings.FirstOrDefaultAsync(a => a.Key == key);
+        // Un móvil con Face ID no se pisa por otro equipo que no lo tiene (el ordenador de casa, por ejemplo).
+        if (row is not null && row.Value == "on" && value == "unsupported")
+        {
+            return Results.NoContent();
+        }
+
+        row ??= db.AppSettings.Add(new AppSetting { Key = key, Value = value }).Entity;
+        row.Value = value;
+        row.UpdatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        row.UpdatedBy = userId;
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> RemoveMember(string userId, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db)
     {
         var me = users.GetUserId(principal)!;

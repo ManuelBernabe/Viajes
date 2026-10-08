@@ -149,6 +149,17 @@ export function HouseholdSettings() {
                 {member.email ?? member.userId}
                 {member.me ? ` (${t('tú')})` : ''}
                 {member.role === 'admin' ? ` · ${t('administra')}` : ''}
+                {home.iAmAdmin && (
+                  <span className={`face-id-state ${member.faceId ?? 'unknown'}`}>
+                    {member.faceId === 'on'
+                      ? ` · 🔒 ${t('Face ID activado')}`
+                      : member.faceId === 'off'
+                        ? ` · ⚠️ ${t('Face ID sin activar')}`
+                        : member.faceId === 'unsupported'
+                          ? ` · ${t('sin Face ID en su equipo')}`
+                          : ` · ${t('Face ID: aún no ha abierto la versión nueva')}`}
+                  </span>
+                )}
               </span>
               {home.iAmAdmin && !member.me && (
                 <span className="row" style={{ gap: 6 }}>

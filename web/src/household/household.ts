@@ -9,6 +9,8 @@ export interface Member {
   email: string | null;
   role: 'admin' | 'member';
   me: boolean;
+  /** Face ID en su móvil: activado, sin activar, su equipo no tiene, o aún no se sabe (no ha abierto la versión nueva). */
+  faceId?: 'on' | 'off' | 'unsupported' | null;
 }
 
 export interface PendingInvitation {
