@@ -3,6 +3,7 @@ import { useSession } from '../app/SessionContext';
 import { describeError } from '../api';
 import { t } from '../i18n';
 import { setLocked, trustForAWhile, useLocked, verify, watchVisibility } from './appLock';
+import { LockSetup } from './LockSetup';
 
 /** Pantalla de bloqueo: tapa toda la app hasta pasar Face ID (o la contraseña de la cuenta, si Face ID no va). */
 export function AppLock() {
@@ -61,7 +62,8 @@ export function AppLock() {
   }
 
   if (!locked) {
-    return null;
+    // Sin Face ID activado en este móvil, se pide activarlo: es obligatorio.
+    return <LockSetup />;
   }
 
   return (
