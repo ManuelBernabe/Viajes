@@ -51,6 +51,21 @@ public sealed class WeatherTests(TestApp app) : IClassFixture<TestApp>
     }
 
     [Fact]
+    public void Without_a_hotel_the_arrival_city_comes_before_an_ambiguous_trip_name()
+    {
+        var trip = new Trip { Id = Guid.NewGuid(), Title = "Argentina Brasil", Destination = "Argentina Brasil", StartDate = "2026-10-08", EndDate = "2026-10-08", CreatedBy = "x" };
+        var flight = new Booking
+        {
+            Id = Guid.NewGuid(), TripId = trip.Id, Type = "flight", Title = "JA3157 IGR → AEP", StartLocal = "2026-10-08T13:04", StartTz = "America/Argentina/Ushuaia",
+            EndLocal = "2026-10-08T14:55", EndTz = "America/Argentina/Buenos_Aires", CreatedBy = "x",
+        };
+        var days = WeatherService.DayQueries(trip, [flight], "2026-10-08");
+        Assert.Equal(["Buenos Aires", "Argentina Brasil"], days[0].Queries);
+        Assert.Null(WeatherService.CityOfZone("Etc/GMT+3"));
+        Assert.Null(WeatherService.CityOfZone("UTC"));
+    }
+
+    [Fact]
     public void Past_and_far_days_are_left_out()
     {
         var trip = new Trip { Id = Guid.NewGuid(), Title = "Viaje", Destination = "Roma", StartDate = "2026-10-01", EndDate = "2026-11-30", CreatedBy = "x" };

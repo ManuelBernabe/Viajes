@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BackLink } from '../app/Layout';
+import { BoardingCard } from '../components/Agenda';
 import { BookingCard } from '../components/BookingCard';
+import { groupSameTrip } from '../domain/today';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TypeChips } from '../components/TypeChips';
 import { DayWeatherBadge, useTripWeather, WeatherStrip } from '../components/WeatherStrip';
-import { formatDay, formatLongDay, formatRange } from '../data/localTime';
+import { formatLongDay, formatRange } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
 import { deleteTrip, getTrip, hiddenBookings, listAttachments, listBookings, listDocuments, listPlaces, setBookingHidden } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
 import type { BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, isInProgress, isPast, nextBookings, todayLocal, TYPE_INFO } from '../domain/agenda';
+import { groupByDay, isPast, nextBookings, todayLocal } from '../domain/agenda';
 import { documentAlerts } from '../domain/documents';
 import { t } from '../i18n';
-import { TimeAt } from '../components/TimeAt';
 
 export function TripPage() {
   const { tripId = '' } = useParams();
@@ -47,7 +48,7 @@ export function TripPage() {
     return (
       <main className="page">
         <div className="topbar">
-          <BackLink to="/" />
+          <BackLink to="/trips" />
           <h1>{t('Viaje')}</h1>
         </div>
         <p className="empty">{t('Este viaje ya no existe.')}</p>
@@ -93,13 +94,13 @@ export function TripPage() {
       return;
     }
     await deleteTrip(tripId);
-    navigate('/', { replace: true });
+    navigate('/trips', { replace: true });
   }
 
   return (
     <main className="page">
       <div className="topbar">
-        <BackLink to="/" />
+        <BackLink to="/trips" />
         <h1>{trip.title}</h1>
         <Link className="btn small" to={`/trips/${tripId}/edit`}>
           {t('Editar')}
@@ -107,31 +108,15 @@ export function TripPage() {
       </div>
       <div className="muted">{[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}</div>
 
-      {highlights?.map((highlight) => (
-        <section key={highlight.next.id} className={`card highlight type-${highlight.next.type}`}>
-          <div className="small eyebrow-type">
-            {isInProgress(highlight.next, Date.now()) ? t('En curso') : t('Lo siguiente')} · {TYPE_INFO[highlight.next.type].label}
-          </div>
-          <h3>
-            {TYPE_INFO[highlight.next.type].icon} {highlight.next.title}
-          </h3>
-          {highlight.next.changeNote && <div className="error small" style={{ whiteSpace: 'pre-line' }}>⚠️ {highlight.next.changeNote}</div>}
-          <div>
-            {formatDay(highlight.next.startLocal)} · <TimeAt local={highlight.next.startLocal} tz={highlight.next.startTz} />
-            {highlight.next.startPlace && ` · ${highlight.next.startPlace}`}
-          </div>
-          <div className="actions">
-            {highlight.qr && (
-              <Link className="btn primary" to={`/bookings/${highlight.next.id}/qr`}>
-                {t('Ver QR')}
-              </Link>
-            )}
-            <Link className="btn" to={`/bookings/${highlight.next.id}`}>
-              {t('Ver reserva')}
-            </Link>
-          </div>
-        </section>
-      ))}
+      {highlights &&
+        groupSameTrip(highlights.map((h) => h.next)).map((group) => (
+          <BoardingCard
+            key={group[0].id}
+            group={group}
+            qr={new Set(highlights.filter((h) => h.qr).map((h) => h.next.id))}
+            now={Date.now()}
+          />
+        ))}
 
       {docAlerts && docAlerts.length > 0 && (
         <Link className="card highlight" to="/documents" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
