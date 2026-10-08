@@ -7,7 +7,7 @@ import { destinationOf, directionsUrls, isAppleDevice } from '../domain/directio
 import { clock, hasFlightNumber, statusLabel } from '../domain/flightStatus';
 import { countdown, passengerOf, withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
-import { useFlightStatus } from './FlightStatus';
+import { FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
 import { useAutoFix } from './useAutoFix';
 
 export function startsIn(ms: number): string {
@@ -185,6 +185,7 @@ export function AgendaRow({ booking, group, kind = 'start', now }: { booking: Bo
       <span className="agenda-text">
         <b>{name}</b>
         {detail && <span>{detail}</span>}
+        {kind === 'start' && !past && isTracked(booking) && <FlightStatusLine booking={booking} />}
       </span>
       <span className="agenda-go">›</span>
     </Link>

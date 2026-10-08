@@ -14,19 +14,65 @@ public static partial class FlightWatch
     /// <summary>Se empieza a mirar un vuelo un día antes de que salga.</summary>
     public const long StartBefore = 24 * Hour;
 
-    [GeneratedRegex(@"^\s*([A-Z][A-Z0-9]|[0-9][A-Z])\s?(\d{1,4})[A-Z]?\b")]
+    /// <summary>Un número de vuelo en cualquier parte del texto, en mayúsculas: «IB 3170», «JA3157», «G3 7651».</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])([A-Z][A-Z0-9]|[0-9][A-Z])\s?(\d{1,4})(?![0-9:.,])")]
     private static partial Regex FlightNumberPattern();
 
-    /// <summary>«JA 3157 IGR → AEP» → «JA3157»; null si el título no empieza por un número de vuelo.</summary>
-    public static string? FlightNumber(string title)
+    /// <summary>«Vuelo: 3157» o «Flight 3157» en las notas: el número sin la aerolínea.</summary>
+    [GeneratedRegex(@"(?:vuelo|flight|vol|volo)\s*(?:n[º°o.]*\s*)?:?\s*(\d{1,4})(?![0-9])", RegexOptions.IgnoreCase)]
+    private static partial Regex BareNumberPattern();
+
+    /// <summary>Aerolíneas por su nombre, para completar un número de vuelo que viene sin código.</summary>
+    private static readonly (string Name, string Code)[] AirlineNames =
+    [
+        ("iberia express", "I2"), ("iberia", "IB"), ("vueling", "VY"), ("ryanair", "FR"), ("air europa", "UX"),
+        ("aerolineas argentinas", "AR"), ("aerolíneas argentinas", "AR"), ("latam", "LA"), ("jetsmart", "JA"),
+        ("gol", "G3"), ("azul", "AD"), ("air france", "AF"), ("klm", "KL"), ("lufthansa", "LH"), ("british airways", "BA"),
+        ("easyjet", "U2"), ("tap", "TP"), ("ita airways", "AZ"), ("american airlines", "AA"), ("united", "UA"), ("delta", "DL"),
+    ];
+
+    /// <summary>«JA 3157 IGR → AEP» → «JA3157»; null si el texto no trae un número de vuelo.</summary>
+    public static string? FlightNumber(string text)
     {
-        var match = FlightNumberPattern().Match(title.ToUpperInvariant());
+        var match = FlightNumberPattern().Match(text);
         return match.Success ? match.Groups[1].Value + match.Groups[2].Value.TrimStart('0').PadLeft(1, '0') : null;
+    }
+
+    /// <summary>
+    /// El número de vuelo de una reserva: en el título; si no, en las notas; si no, el nombre de la aerolínea (título o
+    /// notas) con «Vuelo: 3157» de las notas.
+    /// </summary>
+    public static string? FlightNumberOf(Booking booking)
+    {
+        if (FlightNumber(booking.Title) is { } inTitle)
+        {
+            return inTitle;
+        }
+
+        if (booking.Notes is { } notes && FlightNumber(notes) is { } inNotes)
+        {
+            return inNotes;
+        }
+
+        var bare = booking.Notes is null ? null : BareNumberPattern().Match(booking.Notes);
+        if (bare is { Success: true })
+        {
+            var text = $"{booking.Title} {booking.Notes}".ToLowerInvariant();
+            foreach (var (name, code) in AirlineNames)
+            {
+                if (Regex.IsMatch(text, $@"(?<![a-záéíóú]){Regex.Escape(name)}(?![a-záéíóú])"))
+                {
+                    return code + bare.Groups[1].Value.TrimStart('0').PadLeft(1, '0');
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>«JA3157|2026-10-08»: lo comparten las reservas del mismo vuelo (una por pasajero).</summary>
     public static string? KeyOf(Booking booking) =>
-        booking.Type == "flight" && FlightNumber(booking.Title) is { } number ? $"{number}|{booking.StartLocal[..10]}" : null;
+        booking.Type == "flight" && FlightNumberOf(booking) is { } number ? $"{number}|{booking.StartLocal[..10]}" : null;
 
     /// <summary>Código IATA de salida si la reserva lo tiene («IGR»).</summary>
     public static string? Origin(Booking booking) =>

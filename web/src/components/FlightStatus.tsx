@@ -33,6 +33,11 @@ function ago(ms: number): string {
   return minutes < 1 ? t('ahora mismo') : minutes < 60 ? t('hace {n} min', { n: minutes }) : t('hace {n} h', { n: Math.round(minutes / 60) });
 }
 
+/** Si el vuelo está en la ventana en la que se sigue (desde un día antes hasta que llega): solo entonces hay estado. */
+export function isTracked(booking: Booking, now = Date.now()): boolean {
+  return hasFlightNumber(booking) && now >= booking.startUtcMs - 24 * 3_600_000 && now <= booking.startUtcMs + 20 * 3_600_000;
+}
+
 /** Una línea para «Hoy»: «🟠 Retraso de 40 min · Puerta 5». */
 export function FlightStatusLine({ booking }: { booking: Booking }) {
   const [status] = useFlightStatus(booking);
@@ -83,6 +88,16 @@ function Leg({ title, scheduled, expected, actual, timeZone, extra }: {
 /** «Estado del vuelo» en la reserva: salida y llegada (programado → previsto/real), terminal, puerta, mostradores y cinta. */
 export function FlightStatusCard({ booking }: { booking: Booking }) {
   const [status, refresh] = useFlightStatus(booking);
+  if (booking.type === 'flight' && !hasFlightNumber(booking)) {
+    return (
+      <section className="card">
+        <h3 style={{ margin: 0 }}>🛰️ {t('Estado del vuelo')}</h3>
+        <p className="small muted" style={{ marginBottom: 0 }}>
+          {t('Para seguir retrasos, puerta y cinta, la reserva necesita el número de vuelo: ponlo en el título con «Editar» (por ejemplo «IB 3170 MAD → LHR»).')}
+        </p>
+      </section>
+    );
+  }
   if (!hasFlightNumber(booking) || !status?.configured) {
     return null;
   }

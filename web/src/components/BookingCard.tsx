@@ -3,6 +3,7 @@ import { timeOf, zoneLabel } from '../data/localTime';
 import type { Booking } from '../data/types';
 import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
+import { FlightStatusLine, isTracked } from './FlightStatus';
 
 /** `past`: reserva ya terminada, en el histórico (atenuada y marcada como realizada). */
 /**
@@ -44,6 +45,7 @@ export function BookingCard({
         {showDay && <div className="sub">{showDay}</div>}
         {route && <div className="sub">{route}</div>}
         {booking.reference && <div className="sub">{t('Localizador')} {booking.reference}</div>}
+        {!past && isTracked(booking) && <FlightStatusLine booking={booking} />}
       </div>
       {onHide && (
         <button
