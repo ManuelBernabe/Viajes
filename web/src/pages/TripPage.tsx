@@ -5,7 +5,7 @@ import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TypeChips } from '../components/TypeChips';
 import { DayWeatherBadge, useTripWeather, WeatherStrip } from '../components/WeatherStrip';
-import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
+import { formatDay, formatLongDay, formatRange } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
 import { deleteTrip, getTrip, hiddenBookings, listAttachments, listBookings, listDocuments, listPlaces, setBookingHidden } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
@@ -14,6 +14,7 @@ import { useLiveQuery } from '../data/useLive';
 import { groupByDay, isInProgress, isPast, nextBookings, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { documentAlerts } from '../domain/documents';
 import { t } from '../i18n';
+import { TimeAt } from '../components/TimeAt';
 
 export function TripPage() {
   const { tripId = '' } = useParams();
@@ -116,7 +117,7 @@ export function TripPage() {
           </h3>
           {highlight.next.changeNote && <div className="error small" style={{ whiteSpace: 'pre-line' }}>⚠️ {highlight.next.changeNote}</div>}
           <div>
-            {formatDay(highlight.next.startLocal)} · {t('{time} hora de {zone}', { time: timeOf(highlight.next.startLocal), zone: zoneLabel(highlight.next.startTz) })}
+            {formatDay(highlight.next.startLocal)} · <TimeAt local={highlight.next.startLocal} tz={highlight.next.startTz} />
             {highlight.next.startPlace && ` · ${highlight.next.startPlace}`}
           </div>
           <div className="actions">

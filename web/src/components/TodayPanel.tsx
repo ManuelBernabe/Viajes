@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatLongDay, timeOf, zoneLabel } from '../data/localTime';
+import { formatLongDay, timeOf } from '../data/localTime';
 import { hiddenBookings, listAllBookings, listAttachments, listTrips } from '../data/repo';
 import type { Booking } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
@@ -11,6 +11,7 @@ import { t } from '../i18n';
 import { Directions } from './Directions';
 import { FlightStatusLine } from './FlightStatus';
 import { useTripWeather } from './WeatherStrip';
+import { BigTime, TIME_MARK, TimeAt } from './TimeAt';
 
 function startsIn(ms: number): string {
   const { days, hours, minutes } = countdown(ms);
@@ -30,13 +31,18 @@ function NextCard({ booking, qr, now }: { booking: Booking; qr: boolean; now: nu
     <div className="today-item">
       <div className="small eyebrow-type">
         {running ? t('En curso') : startsIn(booking.startUtcMs - now)}
-        {running && booking.endLocal && ` · ${t('hasta las {time}', { time: timeOf(booking.endLocal) })}`}
+        {running && booking.endLocal && (
+          <>
+            {' · '}
+            <BigTime text={t('hasta las {time}', { time: TIME_MARK })} time={timeOf(booking.endLocal)} />
+          </>
+        )}
       </div>
       <h3>
         {info.icon} {booking.title}
       </h3>
       <div className="small">
-        {t('{time} hora de {zone}', { time: timeOf(booking.startLocal), zone: zoneLabel(booking.startTz) })}
+        <TimeAt local={booking.startLocal} tz={booking.startTz} />
         {booking.startPlace && ` · ${booking.startPlace}`}
         {booking.reference && ` · ${booking.reference}`}
       </div>

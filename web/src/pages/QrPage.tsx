@@ -5,12 +5,12 @@ import { isImage, isPdf } from '../attachments/files';
 import { drawQr, readQr } from '../attachments/qr';
 import { splitQrCodes } from '../attachments/qrCodes';
 import { useWakeLock } from '../attachments/useWakeLock';
-import { timeOf, zoneLabel } from '../data/localTime';
 import { getBlob, getBooking, listAttachments, updateAttachment } from '../data/repo';
 import type { Attachment } from '../data/types';
 import { downloadAttachment } from '../data/syncClient';
 import { useLiveQuery } from '../data/useLive';
 import { t } from '../i18n';
+import { TimeAt } from '../components/TimeAt';
 
 /** Un QR para enseñar: un adjunto puede traer varios (uno por pasajero). */
 interface QrEntry {
@@ -115,7 +115,7 @@ export function QrPage() {
             <>
               <strong>{data.booking.title}</strong>
               <div className="small">
-                {t('{time} hora de {zone}', { time: timeOf(data.booking.startLocal), zone: zoneLabel(data.booking.startTz) })}
+                <TimeAt local={data.booking.startLocal} tz={data.booking.startTz} />
                 {data.booking.startPlace && ` · ${data.booking.startPlace}`}
               </div>
             </>

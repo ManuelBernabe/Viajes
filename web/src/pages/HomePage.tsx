@@ -38,7 +38,7 @@ function TripCard({ trip, summary, done = false, current = false }: { trip: Trip
             next.map((booking, index) => (
               <div key={booking.id} className="small" style={{ marginTop: index === 0 ? 4 : 0 }}>
                 {index === 0 ? `${summary?.inProgress ? t('En curso') : t('Lo siguiente')}: ` : '+ '}
-                {TYPE_INFO[booking.type].icon} {booking.title} · {formatDay(booking.startLocal)} {timeOf(booking.startLocal)}
+                {TYPE_INFO[booking.type].icon} {booking.title} · {formatDay(booking.startLocal)} <strong className="time-big">{timeOf(booking.startLocal)}</strong>
               </div>
             ))}
           {summary && (
