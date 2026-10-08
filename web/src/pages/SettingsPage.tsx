@@ -6,6 +6,7 @@ import { formatSize } from '../attachments/files';
 import { AccountSecurity } from '../components/AccountSecurity';
 import { AiSettings } from '../components/AiSettings';
 import { BackupSettings } from '../components/BackupSettings';
+import { FlightKeySettings } from '../components/FlightKeySettings';
 import { HouseholdSettings } from '../components/HouseholdSettings';
 import { LanguageSettings } from '../components/LanguageSettings';
 import { ShareShortcut } from '../components/ShareShortcut';
@@ -143,6 +144,8 @@ export function SettingsPage() {
       <ImportTokens admin={admin} />
 
       <AiSettings />
+
+      <FlightKeySettings admin={admin} />
 
       <BackupSettings admin={admin} />
 
