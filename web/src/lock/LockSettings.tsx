@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '../app/SessionContext';
 import { t } from '../i18n';
-import { enableLock, lockSupported, setAfterMinutes, useLockConfig } from './appLock';
+import { DEFAULT_AFTER_MINUTES, enableLock, lockSupported, setAfterMinutes, useLockConfig } from './appLock';
 
-const DELAYS = [0, 1, 5, 15];
+const DELAYS = [0, 1, 5, 15, 30, 60];
 
 /** Ajustes → «Face ID»: es obligatorio; aquí se elige cuándo se vuelve a pedir (o se activa si quedó pendiente). */
 export function LockSettings() {
@@ -19,7 +19,7 @@ export function LockSettings() {
   async function enable() {
     setMessage('');
     try {
-      await enableLock(session.email ?? '', 1);
+      await enableLock(session.email ?? '', DEFAULT_AFTER_MINUTES);
       setMessage(`✓ ${t('Activado. A partir de ahora la app pedirá Face ID al abrirla.')}`);
     } catch {
       setMessage(t('No se ha podido activar. Si el iPhone abre otra app (Microsoft Authenticator, por ejemplo), esa app no sirve para esto: al guardar la llave elige «Contraseñas». Si no te deja elegir, ve a Ajustes del iPhone → General → Autorrelleno y contraseñas, activa «Contraseñas» y vuelve a intentarlo.'))
@@ -27,7 +27,13 @@ export function LockSettings() {
   }
 
   const label = (minutes: number) =>
-    minutes === 0 ? t('Cada vez que vuelvo a la app') : minutes === 1 ? t('Tras 1 minuto fuera') : t('Tras {n} minutos fuera', { n: minutes });
+    minutes === 0
+      ? t('Cada vez que vuelvo a la app')
+      : minutes === 1
+        ? t('Tras 1 minuto fuera')
+        : minutes === 60
+          ? t('Tras 1 hora fuera')
+          : t('Tras {n} minutos fuera', { n: minutes });
 
   return (
     <section className="card">
