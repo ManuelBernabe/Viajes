@@ -9,6 +9,7 @@ import { countdown, todayView } from '../domain/today';
 import { describeWeather, temps } from '../domain/weather';
 import { t } from '../i18n';
 import { Directions } from './Directions';
+import { FlightStatusLine } from './FlightStatus';
 import { useTripWeather } from './WeatherStrip';
 
 function startsIn(ms: number): string {
@@ -39,6 +40,7 @@ function NextCard({ booking, qr, now }: { booking: Booking; qr: boolean; now: nu
         {booking.startPlace && ` · ${booking.startPlace}`}
         {booking.reference && ` · ${booking.reference}`}
       </div>
+      <FlightStatusLine booking={booking} />
       {booking.changeNote && <div className="error small">⚠️ {booking.changeNote}</div>}
       <div className="actions">
         {qr && (

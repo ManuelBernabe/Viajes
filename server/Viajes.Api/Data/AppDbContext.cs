@@ -42,6 +42,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
 
+    public DbSet<FlightStatusRow> FlightStatuses => Set<FlightStatusRow>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -174,6 +176,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             subscription.Property(s => s.LastError).HasMaxLength(500);
             subscription.HasIndex(s => s.Endpoint).IsUnique();
             subscription.HasIndex(s => s.UserId);
+        });
+
+        builder.Entity<FlightStatusRow>(flight =>
+        {
+            flight.ToTable("FlightStatuses");
+            flight.HasKey(f => f.Key);
+            flight.Property(f => f.Key).HasMaxLength(40);
         });
 
         builder.Entity<ReminderLog>(log =>

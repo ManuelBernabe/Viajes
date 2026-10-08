@@ -5,6 +5,7 @@ using Viajes.Api.Backup;
 using Viajes.Api.Calendar;
 using Viajes.Api.Data;
 using Viajes.Api.Diag;
+using Viajes.Api.Flights;
 using Viajes.Api.Documents;
 using Viajes.Api.Hosting;
 using Viajes.Api.Help;
@@ -39,6 +40,7 @@ builder.Services.AddPush();
 builder.Services.AddHouseholds();
 builder.Services.AddBackups(dataDir);
 builder.Services.AddWeather();
+FlightTracker.AddFlightStatus(builder.Services, builder.Configuration);
 
 // Railway pone dos saltos en X-Forwarded-For (cliente, borde); con el límite por defecto de uno
 // la IP «remota» sería la del borde y el límite de intentos compartiría un contador para todos.
@@ -87,6 +89,7 @@ app.MapPushEndpoints();
 app.MapHouseholdEndpoints();
 app.MapBackupEndpoints();
 app.MapWeatherEndpoints();
+app.MapFlightEndpoints();
 app.Map("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html", SpaHosting.StaticOptions(spa));
 

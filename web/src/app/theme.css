@@ -444,3 +444,15 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .weather-place.same { visibility: hidden; }
 .weather-badge { font-weight: 400; font-size: 0.85rem; margin-left: 8px; color: var(--muted); text-transform: none; white-space: nowrap; }
 .today-weather { margin: -6px 0 10px; }
+
+/* Estado del vuelo */
+.flight-legs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 10px; }
+.flight-times { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.flight-times s { font-size: 1rem; }
+.tone-ok { color: var(--ok); }
+.tone-warn { color: var(--warn); }
+.tone-danger { color: var(--danger); }
+.tone-muted { color: var(--muted); }
+.badge.tone-warn { border-color: var(--warn); }
+.badge.tone-danger { border-color: var(--danger); }
+.flight-line { margin-top: 2px; font-weight: 600; }

@@ -423,6 +423,20 @@ public sealed class PushSubscription
 }
 
 /// <summary>Aviso ya enviado para una reserva: no se repite salvo que cambie la hora de salida.</summary>
+/// <summary>
+/// Lo último que se sabe de un vuelo (salida, llegada, puertas, retraso), por número y día: «JA3157|2026-10-08». Lo
+/// comparten todas las reservas de ese vuelo (cada pasajero puede tener la suya).
+/// </summary>
+public sealed class FlightStatusRow
+{
+    public required string Key { get; set; }
+
+    /// <summary>El <c>FlightInfo</c> en JSON.</summary>
+    public required string Json { get; set; }
+
+    public long FetchedMs { get; set; }
+}
+
 public sealed class ReminderLog
 {
     public Guid BookingId { get; set; }
