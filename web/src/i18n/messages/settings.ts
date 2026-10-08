@@ -596,4 +596,16 @@ export const settings: Messages = {
     fr: 'Impossible de télécharger la pièce jointe de l’e-mail.',
     it: 'Impossibile scaricare l’allegato dell’email.',
   },
+  'Face ID es obligatorio para entrar en Viajes: no se puede quitar.': {
+    en: 'Face ID is required to open Viajes: it can’t be turned off.',
+    fr: 'Face ID est obligatoire pour ouvrir Viajes : impossible de le désactiver.',
+    it: 'Face ID è obbligatorio per aprire Viajes: non si può disattivare.',
+  },
+  'Protege Viajes con Face ID': { en: 'Protect Viajes with Face ID', fr: 'Protégez Viajes avec Face ID', it: 'Proteggi Viajes con Face ID' },
+  'Para entrar en Viajes hace falta Face ID (o el código del iPhone). Así tus reservas, QR y documentos quedan protegidos aunque alguien coja el móvil desbloqueado.': {
+    en: 'Opening Viajes requires Face ID (or the iPhone passcode). Your bookings, QR codes and documents stay protected even if someone picks up your unlocked phone.',
+    fr: 'Pour ouvrir Viajes, il faut Face ID (ou le code de l’iPhone). Vos réservations, QR et documents restent protégés même si quelqu’un prend votre téléphone déverrouillé.',
+    it: 'Per aprire Viajes serve Face ID (o il codice dell’iPhone). Prenotazioni, QR e documenti restano protetti anche se qualcuno prende il telefono sbloccato.',
+  },
+  'Entrar ahora y activarlo la próxima vez': { en: 'Continue now and set it up next time', fr: 'Entrer maintenant et l’activer la prochaine fois', it: 'Entra ora e attivalo la prossima volta' },
 };

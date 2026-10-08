@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '../app/SessionContext';
 import { t } from '../i18n';
-import { disableLock, enableLock, isTrusted, lockSupported, setAfterMinutes, useLockConfig, verify } from './appLock';
+import { enableLock, lockSupported, setAfterMinutes, useLockConfig } from './appLock';
 
 const DELAYS = [0, 1, 5, 15];
 
-/** Ajustes → «Face ID»: activar el bloqueo en este móvil y cuándo se vuelve a pedir. */
+/** Ajustes → «Face ID»: es obligatorio; aquí se elige cuándo se vuelve a pedir (o se activa si quedó pendiente). */
 export function LockSettings() {
   const config = useLockConfig();
   const session = useSession();
@@ -23,16 +23,6 @@ export function LockSettings() {
       setMessage(`✓ ${t('Activado. A partir de ahora la app pedirá Face ID al abrirla.')}`);
     } catch {
       setMessage(t('No se ha podido activar. Si el iPhone abre otra app (Microsoft Authenticator, por ejemplo), esa app no sirve para esto: al guardar la llave elige «Contraseñas». Si no te deja elegir, ve a Ajustes del iPhone → General → Autorrelleno y contraseñas, activa «Contraseñas» y vuelve a intentarlo.'))
-    }
-  }
-
-  async function disable() {
-    // Para quitarlo también hay que pasar Face ID: si no, cualquiera con el móvil lo apagaría.
-    if (isTrusted() || (await verify())) {
-      disableLock();
-      setMessage('');
-    } else {
-      setMessage(t('Para quitar el bloqueo hay que pasar Face ID. Si no te funciona, bloquea la app, entra con la contraseña y quítalo enseguida.'));
     }
   }
 
@@ -58,9 +48,7 @@ export function LockSettings() {
               ))}
             </select>
           </div>
-          <button className="btn block danger" type="button" onClick={() => void disable()}>
-            {t('Quitar Face ID')}
-          </button>
+          <p className="small muted">{t('Face ID es obligatorio para entrar en Viajes: no se puede quitar.')}</p>
         </>
       ) : (
         supported && (
