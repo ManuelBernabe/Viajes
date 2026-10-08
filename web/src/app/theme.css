@@ -585,3 +585,10 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .pass-check .error { color: var(--warn); }
 .face-id-state.off { color: var(--warn); }
 .face-id-state.on { color: var(--ok); }
+
+/* Revisión del viaje */
+.review-item { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.review-item:first-of-type { border-top: 0; }
+.review-item.danger > div > div:first-child { color: var(--danger); }
+.review-item.warning > div > div:first-child { color: var(--warn); }
+.review-ok { margin: 8px 2px; }
