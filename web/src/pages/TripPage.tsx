@@ -176,6 +176,10 @@ export function TripPage() {
           🌍 {t('Destino')}
         </Link>
 
+        <Link className="btn" to={`/trips/${tripId}/share`}>
+          🔗 {t('Compartir')}
+        </Link>
+
       </div>
 
       <div style={{ marginTop: 12 }}>

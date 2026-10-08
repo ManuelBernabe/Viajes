@@ -8,11 +8,12 @@ import { packing } from './packing';
 import { places } from './places';
 import { server } from './server';
 import { settings } from './settings';
+import { share } from './share';
 import { travel } from './travel';
 import { trips } from './trips';
 import type { Messages } from './types';
 
-export const SOURCES: Record<string, Messages> = { common, trips, inbox, settings, auth, server, guide, places, documents, travel, packing, destination };
+export const SOURCES: Record<string, Messages> = { common, trips, inbox, settings, auth, server, guide, places, documents, travel, packing, destination, share };
 
 /** Todas juntas. Si una clave está en dos ficheros con la misma traducción, da igual; el test avisa si difieren. */
 export const MESSAGES: Messages = Object.assign({}, ...Object.values(SOURCES));
