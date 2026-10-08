@@ -24,8 +24,10 @@ public static class AppGuide
         Arriba en Inicio hay un botón ↻ para sincronizar al momento (también en «Por revisar» y en Ajustes → Sincronización).
 
         ## Inicio
-        - «Hoy» (arriba, solo si hoy hay algo): lo siguiente con cuenta atrás, su QR y «Cómo llegar»; «Esta noche» con el hotel
-          donde se duerme; y «Más tarde, hoy» con el resto del día.
+        - «Hoy» (arriba, solo si hoy hay algo): el tiempo de hoy donde se está; lo siguiente que empieza hoy (o está en curso)
+          con cuenta atrás, su QR, «Cómo llegar» y, en los vuelos, el estado en directo (en hora, retraso, puerta);
+          «Esta noche» con el hotel donde se duerme; y «Más tarde, hoy» con el resto del día. Lo de mañana no sale en «Hoy»:
+          llega en el aviso de la víspera.
         - Viajes «En curso», «Próximos viajes» y, al final, el «Histórico» de viajes realizados, plegado por años.
         - «N correos por revisar» si han llegado reservas por correo o por el atajo que esperan confirmación.
         - «Nuevo viaje» crea un viaje (título, destino, fechas de ida y vuelta).
@@ -34,6 +36,8 @@ public static class AppGuide
         - Arriba «Lo siguiente»: la próxima reserva y las que empiezan en la misma hora (por ejemplo el mismo vuelo de dos
           personas), con «Ver QR» y «Ver reserva». Un hotel en el que ya se está no tapa lo siguiente.
         - Aviso de documentos si un pasaporte o DNI caduca antes de acabar el viaje o le quedan menos de 6 meses al salir.
+        - «🌤️ El tiempo»: previsión día a día (Open-Meteo) para donde se duerme cada noche, hasta 16 días por delante; también
+          junto a cada día de la agenda. Si no hay hotel, usa el destino del viaje.
         - «Guardar en el móvil» baja todos los billetes para verlos sin cobertura (se hace solo 7 días antes del viaje).
         - «+ Añadir reserva» y «📍 Lugares».
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.
@@ -59,6 +63,11 @@ public static class AppGuide
 
         ## Dentro de una reserva
         - Datos, «🧭 Cómo llegar» (Apple Maps o Google Maps hasta el aeropuerto, estación u hotel) y adjuntos.
+        - En los vuelos con número en el título («JA 3157 IGR → AEP»), «🛰️ Estado del vuelo»: en hora o con retraso, horas
+          previstas o reales de salida y llegada, terminal, puerta, mostradores y cinta de equipaje, con «↻ Actualizar». Se
+          empieza a seguir un día antes de salir; llegan avisos si hay retraso (de 15 min en adelante), cambio de puerta o
+          terminal, cancelación, desvío o cinta de equipaje. Solo funciona si el servidor tiene la clave de un proveedor de
+          datos de vuelos (AeroDataBox o FlightAware); si no, la tarjeta no sale.
         - En los vuelos, «💺 Asiento y check-in»: el asiento si la reserva lo dice, cuándo abre el check-in de la aerolínea, botón
           para elegir o cambiar asiento en la web de la aerolínea y «Copiar localizador». Llega un aviso cuando abre el check-in.
           La app no puede mostrar los asientos libres: eso solo lo hace la aerolínea.
@@ -96,7 +105,8 @@ public static class AppGuide
           El enlace es personal: no compartirlo.
         - Atajo de iPhone, Sincronización, Idioma (español, inglés, francés, italiano), Hogar (invitar con un enlace de un solo
           uso de 30 días; quien administra quita miembros y genera enlaces para cambiar la contraseña de alguien), Avisos
-          («Activar avisos en este móvil»: la víspera a las 20:00, 3 horas antes, check-in abierto y cambios), Importar desde
+          («Activar avisos en este móvil»: la víspera a las 20:00 un resumen de todo lo de mañana con el tiempo y la hora a
+          la que estar en el aeropuerto; 3 horas antes; check-in abierto; cambios en reservas y en el estado de los vuelos), Importar desde
           Gmail y Copias de seguridad (solo quien administra), Espacio en el móvil, Guía de uso y Versión.
         - Contraseña olvidada: en la pantalla de entrada, «¿Has olvidado la contraseña?» → llega un enlace por correo (24 h).
 
