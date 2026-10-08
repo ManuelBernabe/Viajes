@@ -14,6 +14,7 @@ import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
 import { t } from '../i18n';
 import { TimeAt } from '../components/TimeAt';
+import { repairedArrival } from '../domain/changes';
 
 export function BookingPage() {
   const { bookingId = '' } = useParams();
@@ -57,6 +58,22 @@ export function BookingPage() {
     );
   }
 
+  const fixedArrival = repairedArrival(booking);
+
+  /** Pone la llegada que corresponde a la salida nueva (la reserva se guardó con la llegada de antes). */
+  async function fixArrival() {
+    const b = booking!;
+    await saveBooking(
+      {
+        tripId: b.tripId, type: b.type, title: b.title, startLocal: b.startLocal, startTz: b.startTz, startPlace: b.startPlace,
+        endLocal: fixedArrival, endTz: b.endTz, endPlace: b.endPlace, reference: b.reference, address: b.address, notes: b.notes, changeNote: b.changeNote,
+        visibility: b.visibility ?? 'household', sharedWith: b.sharedWith ?? [],
+      },
+      session.email ?? '',
+      b.id,
+    );
+  }
+
   async function remove() {
     if (!confirm(t('¿Borrar «{name}»?', { name: booking!.title }))) {
       return;
@@ -83,6 +100,15 @@ export function BookingPage() {
           <strong>⚠️ {booking.changeNote}</strong>
           <button className="btn small" style={{ marginTop: 8 }} type="button" onClick={() => void acknowledge()}>
             {t('Entendido, quitar el aviso')}
+          </button>
+        </div>
+      )}
+
+      {fixedArrival && (
+        <div className="notice danger">
+          <strong>⚠️ {t('La llegada ha quedado antes que la salida: no se movió al cambiar el horario.')}</strong>
+          <button className="btn small primary" style={{ marginTop: 8 }} type="button" onClick={() => void fixArrival()}>
+            {t('Corregir la llegada: {time}', { time: fixedArrival.slice(11, 16) })}
           </button>
         </div>
       )}

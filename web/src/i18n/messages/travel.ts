@@ -83,4 +83,10 @@ export const travel: Messages = {
   'Ver todos los viajes': { en: 'See all trips', fr: 'Voir tous les voyages', it: 'Vedi tutti i viaggi' },
   'en {time}': { en: 'in {time}', fr: 'dans {time}', it: 'tra {time}' },
   'Noche en el hotel': { en: 'Night at the hotel', fr: 'Nuit à l’hôtel', it: 'Notte in hotel' },
+  'La llegada ha quedado antes que la salida: no se movió al cambiar el horario.': {
+    en: 'The arrival is now before the departure: it wasn’t moved when the schedule changed.',
+    fr: 'L’arrivée est avant le départ : elle n’a pas été décalée lors du changement d’horaire.',
+    it: 'L’arrivo è prima della partenza: non è stato spostato quando è cambiato l’orario.',
+  },
+  'Corregir la llegada: {time}': { en: 'Fix the arrival: {time}', fr: 'Corriger l’arrivée : {time}', it: 'Correggi l’arrivo: {time}' },
 };

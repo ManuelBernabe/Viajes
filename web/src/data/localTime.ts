@@ -56,6 +56,24 @@ export function toUtcMs(local: string, tz: string): number {
   return second;
 }
 
+/** ms UTC → «2026-10-12T10:05» en la zona dada. */
+export function fromUtcMs(utcMs: number, tz: string): string {
+  return new Date(utcMs + zoneOffsetMs(tz, utcMs)).toISOString().slice(0, 16);
+}
+
+/** Mueve una hora local «2026-10-12T10:05» unos minutos (sin zona: el mismo cambio que se ve en el reloj). */
+export function shiftLocal(local: string, minutes: number): string {
+  const { y, m, d, hh, mm } = parts(local);
+  return new Date(Date.UTC(y, m - 1, d, hh, mm) + minutes * 60_000).toISOString().slice(0, 16);
+}
+
+/** Minutos entre dos horas locales, contadas en el reloj. */
+export function localMinutesBetween(from: string, to: string): number {
+  const a = parts(from);
+  const b = parts(to);
+  return Math.round((Date.UTC(b.y, b.m - 1, b.d, b.hh, b.mm) - Date.UTC(a.y, a.m - 1, a.d, a.hh, a.mm)) / 60_000);
+}
+
 export function isValidZone(tz: string): boolean {
   try {
     formatter(tz);
