@@ -110,8 +110,23 @@ public sealed class FlightWatchRuleTests
     [InlineData("G3 1234", "G31234")]
     [InlineData("U2 8091 · Paco", "U28091")]
     [InlineData("Vuelo a Tokio", null)]
+    [InlineData("Iberia IB6845 Madrid → Río", "IB6845")]
+    [InlineData("Vuelo de las 10:05 a Lima", null)]
     [InlineData("AVE 05143 Alicante → Madrid", null)]
     public void Flight_numbers_come_from_the_title(string title, string? expected) => Assert.Equal(expected, FlightWatch.FlightNumber(title));
+
+    [Fact]
+    public void The_flight_number_can_come_from_the_notes_or_the_airline_name()
+    {
+        Booking Flight(string title, string? notes) => new()
+        {
+            Id = Guid.NewGuid(), TripId = Guid.NewGuid(), Type = "flight", Title = title, Notes = notes, StartLocal = "2026-10-08T13:04", StartTz = "UTC", CreatedBy = "x",
+        };
+        Assert.Equal("LA8065", FlightWatch.FlightNumberOf(Flight("Vuelo a Lima", "Pasajero: Ana · Vuelo LA8065 · Asiento 12A")));
+        Assert.Equal("JA3157", FlightWatch.FlightNumberOf(Flight("JetSMART Iguazú → Buenos Aires", "Pasajero: MANUEL · Vuelo: 3157 · Clase: P")));
+        Assert.Null(FlightWatch.FlightNumberOf(Flight("Vuelo a Tokio", "Asiento 12A")));
+        Assert.Equal("JA3157|2026-10-08", FlightWatch.KeyOf(Flight("JetSMART Iguazú → Buenos Aires", "Vuelo: 3157")));
+    }
 
     [Fact]
     public void Lookups_get_closer_together_as_departure_nears_and_stop_when_it_lands()

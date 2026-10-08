@@ -98,4 +98,9 @@ export const travel: Messages = {
     fr: 'Si le lecteur ne le lit pas, essayez une autre taille et augmentez la luminosité.',
     it: 'Se il lettore non lo legge, prova un’altra dimensione e alza la luminosità.',
   },
+  'Para seguir retrasos, puerta y cinta, la reserva necesita el número de vuelo: ponlo en el título con «Editar» (por ejemplo «IB 3170 MAD → LHR»).': {
+    en: 'To track delays, gate and baggage belt, the booking needs the flight number: add it to the title with “Edit” (for example “IB 3170 MAD → LHR”).',
+    fr: 'Pour suivre retards, porte et tapis, la réservation a besoin du numéro de vol : ajoutez-le au titre avec « Modifier » (par exemple « IB 3170 MAD → LHR »).',
+    it: 'Per seguire ritardi, gate e nastro, la prenotazione ha bisogno del numero di volo: aggiungilo al titolo con «Modifica» (per esempio «IB 3170 MAD → LHR»).',
+  },
 };

@@ -31,9 +31,40 @@ export interface FlightStatusResponse {
   delayMinutes: number;
 }
 
-/** El mismo criterio que el servidor: el título empieza por el número de vuelo («JA 3157 IGR → AEP»). */
-export function hasFlightNumber(booking: Pick<Booking, 'type' | 'title'>): boolean {
-  return booking.type === 'flight' && /^\s*([A-Z][A-Z0-9]|[0-9][A-Z])\s?\d{1,4}[A-Z]?\b/.test(booking.title.toUpperCase());
+const NUMBER = /(?<![A-Za-z0-9])([A-Z][A-Z0-9]|[0-9][A-Z])\s?(\d{1,4})(?![0-9:.,])/;
+const BARE = /(?:vuelo|flight|vol|volo)\s*(?:n[º°o.]*\s*)?:?\s*(\d{1,4})(?![0-9])/i;
+const AIRLINE_NAMES: [string, string][] = [
+  ['iberia express', 'I2'], ['iberia', 'IB'], ['vueling', 'VY'], ['ryanair', 'FR'], ['air europa', 'UX'], ['aerolineas argentinas', 'AR'],
+  ['aerolíneas argentinas', 'AR'], ['latam', 'LA'], ['jetsmart', 'JA'], ['gol', 'G3'], ['azul', 'AD'], ['air france', 'AF'], ['klm', 'KL'],
+  ['lufthansa', 'LH'], ['british airways', 'BA'], ['easyjet', 'U2'], ['tap', 'TP'], ['ita airways', 'AZ'], ['american airlines', 'AA'],
+  ['united', 'UA'], ['delta', 'DL'],
+];
+
+/** El mismo criterio que el servidor: número de vuelo en el título, si no en las notas, o aerolínea + «Vuelo: 3157». */
+export function flightNumberOf(booking: Pick<Booking, 'type' | 'title' | 'notes'>): string | null {
+  if (booking.type !== 'flight') {
+    return null;
+  }
+  const clean = (code: string, digits: string) => code + (digits.replace(/^0+/, '') || '0');
+  for (const text of [booking.title, booking.notes ?? '']) {
+    const match = NUMBER.exec(text);
+    if (match) {
+      return clean(match[1], match[2]);
+    }
+  }
+  const bare = booking.notes ? BARE.exec(booking.notes) : null;
+  if (bare) {
+    const text = `${booking.title} ${booking.notes}`.toLowerCase();
+    const airline = AIRLINE_NAMES.find(([name]) => new RegExp(`(?<![a-záéíóú])${name}(?![a-záéíóú])`).test(text));
+    if (airline) {
+      return clean(airline[1], bare[1]);
+    }
+  }
+  return null;
+}
+
+export function hasFlightNumber(booking: Pick<Booking, 'type' | 'title' | 'notes'>): boolean {
+  return flightNumberOf(booking) !== null;
 }
 
 /** Icono, texto y tono del estado: «🟠 Retraso de 40 min». */
