@@ -103,4 +103,9 @@ export const travel: Messages = {
     fr: 'Pour suivre retards, porte et tapis, la réservation a besoin du numéro de vol : ajoutez-le au titre avec « Modifier » (par exemple « IB 3170 MAD → LHR »).',
     it: 'Per seguire ritardi, gate e nastro, la prenotazione ha bisogno del numero di volo: aggiungilo al titolo con «Modifica» (per esempio «IB 3170 MAD → LHR»).',
   },
+  'Un correo cambió el origen y el destino y ya no coinciden con el título: puede que fuera de otro vuelo con el mismo localizador. Revísala con «Editar».': {
+    en: 'An email changed the origin and destination and they no longer match the title: it may have been about another flight with the same booking reference. Check it with “Edit”.',
+    fr: 'Un e-mail a changé l’origine et la destination, qui ne correspondent plus au titre : il concernait peut-être un autre vol avec la même référence. Vérifiez-la avec « Modifier ».',
+    it: 'Un’email ha cambiato origine e destinazione, che non corrispondono più al titolo: forse riguardava un altro volo con lo stesso codice. Controllala con «Modifica».',
+  },
 };
