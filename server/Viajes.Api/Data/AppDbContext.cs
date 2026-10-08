@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<PlaceIdea> PlaceIdeas => Set<PlaceIdea>();
 
+    public DbSet<PackingItem> PackingItems => Set<PackingItem>();
+
     public DbSet<TravelDocument> TravelDocuments => Set<TravelDocument>();
 
     public DbSet<Attachment> Attachments => Set<Attachment>();
@@ -116,6 +118,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             document.Property(d => d.Visibility).HasMaxLength(20);
             document.HasIndex(d => d.HouseholdId);
             document.HasIndex(d => d.Version);
+        });
+
+        builder.Entity<PackingItem>(item =>
+        {
+            item.HasKey(i => i.Id);
+            item.Property(i => i.Text).HasMaxLength(200);
+            item.Property(i => i.Category).HasMaxLength(40);
+            item.Property(i => i.ForWhom).HasMaxLength(100);
+            item.Property(i => i.CheckedBy).HasMaxLength(256);
+            item.HasIndex(i => i.TripId);
         });
 
         builder.Entity<PlaceIdea>(idea =>

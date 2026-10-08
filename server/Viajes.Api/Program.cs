@@ -80,6 +80,7 @@ app.MapTripEndpoints();
 app.MapInboxEndpoints();
 app.MapExtractionEndpoints();
 app.MapPlaceSuggestions();
+app.MapPacking();
 app.MapTripProposals();
 app.MapCalendarFeed();
 app.MapDocumentEndpoints();

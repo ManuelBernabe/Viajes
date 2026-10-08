@@ -142,6 +142,30 @@ public sealed class TravelDocument : IVersioned
 /// Una idea de sitio propuesta por la IA para un viaje. Se guarda para no tener que volver a pedirla: la lista de ideas se
 /// queda en el viaje hasta que alguien la añade a «Lugares» o la descarta. No se sincroniza; se lee con la API.
 /// </summary>
+/// <summary>Una cosa de la lista de equipaje de un viaje: la comparte todo el hogar.</summary>
+public sealed class PackingItem
+{
+    public Guid Id { get; set; }
+
+    public Guid TripId { get; set; }
+
+    public required string Text { get; set; }
+
+    /// <summary>Grupo («Ropa», «Documentos», «Aseo»…); null = «Otros».</summary>
+    public string? Category { get; set; }
+
+    /// <summary>Para quién es, si no es para todos («Paco»).</summary>
+    public string? ForWhom { get; set; }
+
+    public bool Checked { get; set; }
+
+    public string? CheckedBy { get; set; }
+
+    public required string CreatedBy { get; set; }
+
+    public long CreatedMs { get; set; }
+}
+
 public sealed class PlaceIdea
 {
     public Guid Id { get; set; }
