@@ -603,3 +603,16 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .packing-row.done .packing-check > span:first-of-type { text-decoration: line-through; color: var(--muted); }
 .packing-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
 .packing-form-grid > * { min-width: 0; width: 100%; box-sizing: border-box; }
+
+/* Información del destino */
+.dest-card { border-left: 4px solid var(--primary); }
+.dest-title { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1.2rem; }
+.dest-flag { font-size: 1.6rem; line-height: 1; }
+.dest-money { padding: 8px 10px; border-radius: 10px; background: var(--raise); margin-bottom: 8px; }
+.dest-rate { font-size: 1.15rem; font-weight: 700; margin-top: 2px; }
+.dest-rows { margin: 0; }
+.dest-row { display: grid; grid-template-columns: 8.5em 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); }
+.dest-row dt { color: var(--muted); }
+.dest-row dd { margin: 0; }
+.dest-tips { margin: 8px 0 0; padding-left: 1.2em; }
+.dest-tips li { margin: 4px 0; }

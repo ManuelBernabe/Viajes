@@ -40,6 +40,8 @@ builder.Services.AddPush();
 builder.Services.AddHouseholds();
 builder.Services.AddBackups(dataDir);
 builder.Services.AddWeather();
+builder.Services.AddHttpClient("rates", client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddSingleton<ExchangeRates>();
 FlightTracker.AddFlightStatus(builder.Services, builder.Configuration);
 
 // Railway pone dos saltos en X-Forwarded-For (cliente, borde); con el límite por defecto de uno
@@ -81,6 +83,7 @@ app.MapInboxEndpoints();
 app.MapExtractionEndpoints();
 app.MapPlaceSuggestions();
 app.MapPacking();
+app.MapDestinationInfo();
 app.MapTripProposals();
 app.MapCalendarFeed();
 app.MapDocumentEndpoints();
