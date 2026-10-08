@@ -29,6 +29,8 @@ export interface FlightStatusResponse {
   fetchedMs: number | null;
   info: FlightInfo | null;
   delayMinutes: number;
+  /** Por qué no hay datos si el proveedor falla («Se han acabado las consultas del mes…»). */
+  problem?: string | null;
 }
 
 const NUMBER = /(?<![A-Za-z0-9])([A-Z][A-Z0-9]|[0-9][A-Z])\s?(\d{1,4})(?![0-9:.,])/;

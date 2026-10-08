@@ -38,6 +38,28 @@ export function isTracked(booking: Booking, now = Date.now()): boolean {
   return hasFlightNumber(booking) && now >= booking.startUtcMs - 24 * 3_600_000 && now <= booking.startUtcMs + 20 * 3_600_000;
 }
 
+/**
+ * Qué ha pasado con la comprobación del vuelo, para que se vea que se mira: «🛰️ Comprobado hace 5 min · AeroDataBox»,
+ * «el proveedor aún no tiene datos» o el fallo del proveedor.
+ */
+export function FlightCheckNote({ status }: { status: FlightStatusResponse | null }) {
+  if (!status?.configured) {
+    return null;
+  }
+  if (status.problem && !status.info) {
+    return <div className="small error">⚠️ {status.problem}</div>;
+  }
+  if (!status.fetchedMs) {
+    return <div className="small muted">🛰️ {Date.now() < status.trackingFromMs ? t('Se empezará a comprobar un día antes de salir.') : t('Comprobando el estado del vuelo…')}</div>;
+  }
+  return (
+    <div className="small muted">
+      🛰️ {status.info ? t('Estado comprobado {ago}', { ago: ago(status.fetchedMs) }) : t('El proveedor aún no tiene datos de este vuelo (comprobado {ago}).', { ago: ago(status.fetchedMs) })}
+      {status.info?.source ? ` · ${status.info.source}` : ''}
+    </div>
+  );
+}
+
 /** Una línea para «Hoy»: «🟠 Retraso de 40 min · Puerta 5». */
 export function FlightStatusLine({ booking }: { booking: Booking }) {
   const [status] = useFlightStatus(booking);
@@ -122,7 +144,7 @@ export function FlightStatusCard({ booking }: { booking: Booking }) {
       {!info && Date.now() < status.trackingFromMs && (
         <p className="small muted">{t('Se empieza a seguir el {flight} un día antes de salir: {when}. Te avisaremos si cambia la puerta, la hora o se cancela.', { flight: status.flight, when: from })}</p>
       )}
-      {!info && Date.now() >= status.trackingFromMs && <p className="small muted">{t('Aún no hay datos de este vuelo.')}</p>}
+      {!info && Date.now() >= status.trackingFromMs && <p className="small muted">{status.problem ? `⚠️ ${status.problem}` : t('Aún no hay datos de este vuelo.')}</p>}
       {info && (
         <div className="flight-legs">
           <Leg

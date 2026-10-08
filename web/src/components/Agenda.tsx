@@ -7,7 +7,7 @@ import { destinationOf, directionsUrls, isAppleDevice } from '../domain/directio
 import { clock, hasFlightNumber, statusLabel } from '../domain/flightStatus';
 import { countdown, passengerOf, withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
-import { FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
+import { FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
 import { useAutoFix } from './useAutoFix';
 
 export function startsIn(ms: number): string {
@@ -137,6 +137,11 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
       )}
 
       {booking.changeNote && <div className="pass-warn">⚠️ {booking.changeNote}</div>}
+      {hasFlightNumber(booking) && (
+        <div className="pass-check">
+          <FlightCheckNote status={flight} />
+        </div>
+      )}
 
       <div className="pass-perf" />
       <div className="pass-actions">

@@ -181,14 +181,14 @@ public sealed class FlightWatchService(IServiceProvider services, IFlightStatusS
 
 public static class FlightEndpoints
 {
-    /// <summary>Si se pide desde la app, se vuelve a consultar como mucho cada 10 minutos.</summary>
-    public const long ManualMinAgeMs = 10 * 60_000;
+    /// <summary>Si se pide desde la app, se vuelve a consultar como mucho cada 20 minutos (cuidando el cupo del proveedor).</summary>
+    public const long ManualMinAgeMs = 20 * 60_000;
 
     public static void MapFlightEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/bookings/{id:guid}/flight-status", async (
             Guid id, bool? refresh, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, FlightTracker tracker,
-            CancellationToken ct) =>
+            IFlightStatusSource source, CancellationToken ct) =>
         {
             var userId = users.GetUserId(principal)!;
             var booking = await access.VisibleBooking(userId, id);
@@ -223,6 +223,8 @@ public static class FlightEndpoints
                 fetchedMs = result.FetchedMs,
                 info,
                 delayMinutes = info?.DelayMinutes ?? 0,
+                // Por qué no hay datos, si el proveedor falla (clave rechazada, cupo del mes agotado…); lo ve todo el hogar.
+                problem = (source as DynamicFlightSource)?.LastError,
             });
         }).RequireAuthorization();
     }
