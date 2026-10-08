@@ -121,6 +121,8 @@ export const travel: Messages = {
   'Revisión del viaje: todo cuadra.': { en: 'Trip check: everything adds up.', fr: 'Vérification du voyage : tout est cohérent.', it: 'Controllo del viaggio: tutto torna.' },
   'Ver «{name}»': { en: 'See “{name}”', fr: 'Voir « {name} »', it: 'Vedi «{name}»' },
   '«{name}»: la llegada es anterior a la salida.': { en: '“{name}”: the arrival is before the departure.', fr: '« {name} » : l’arrivée est avant le départ.', it: '«{name}»: l’arrivo è prima della partenza.' },
+  '+ Añadir alojamiento': { en: '+ Add accommodation', fr: '+ Ajouter un hébergement', it: '+ Aggiungi alloggio' },
+  'Ya lo tengo resuelto': { en: 'Already sorted', fr: 'C’est déjà réglé', it: 'Già sistemato' },
   'Noche sin alojamiento: {days}.': { en: 'Night without accommodation: {days}.', fr: 'Nuit sans hébergement : {days}.', it: 'Notte senza alloggio: {days}.' },
   '{n} noches sin alojamiento: {days}.': { en: '{n} nights without accommodation: {days}.', fr: '{n} nuits sans hébergement : {days}.', it: '{n} notti senza alloggio: {days}.' },
   '«{a}» y «{b}» se solapan.': { en: '“{a}” and “{b}” overlap.', fr: '« {a} » et « {b} » se chevauchent.', it: '«{a}» e «{b}» si sovrappongono.' },

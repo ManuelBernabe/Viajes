@@ -10,12 +10,42 @@ export interface ReviewIssue {
   message: string;
   /** Reservas afectadas, para ir a ellas. */
   bookings: Booking[];
+  /** Si es el aviso de noches sin alojamiento: cuáles (para poder darlas por buenas). */
+  nights?: string[];
 }
 
 const MINUTE = 60_000;
 
-function checkOut(hotel: Booking): string {
-  return hotel.endLocal?.slice(0, 10) ?? shiftDate(hotel.startLocal.slice(0, 10), 1);
+const isTransport = (b: Booking) => b.type === 'flight' || b.type === 'train';
+
+/** Alojamientos que no son de tipo hotel: apartamentos, casas, cruceros… apuntados como «Otro». */
+const STAY_WORDS = /\b(apartamento|apartment|appartement|appartamento|airbnb|vrbo|alojamiento|accommodation|hébergement|alloggio|casa rural|hostal|hostel|posada|pousada|lodge|caba[ñn]a|cabin|resort|villa|crucero|cruise|croisière|crociera|camping|glamping|b&b|bed and breakfast|guest ?house|estancia)\b/i;
+
+function isStay(b: Booking): boolean {
+  if (b.type === 'hotel') {
+    return true;
+  }
+  if (b.type !== 'other' || !b.endLocal || b.endLocal.slice(0, 10) <= b.startLocal.slice(0, 10)) {
+    return false;
+  }
+  return STAY_WORDS.test(`${b.title} ${b.startPlace ?? ''} ${b.notes ?? ''}`);
+}
+
+/**
+ * Día de salida de un alojamiento. Si no tiene (una reserva apuntada a mano sin fecha de salida), se supone que dura
+ * hasta el siguiente alojamiento o el siguiente vuelo o tren, y como mínimo una noche.
+ */
+function stayEnd(stay: Booking, all: readonly Booking[]): string {
+  const from = stay.startLocal.slice(0, 10);
+  const end = stay.endLocal?.slice(0, 10);
+  if (end && end > from) {
+    return end;
+  }
+  const next = all
+    .filter((b) => b.id !== stay.id && (isTransport(b) || b.type === 'hotel') && b.startLocal.slice(0, 10) > from)
+    .map((b) => b.startLocal.slice(0, 10))
+    .sort()[0];
+  return next ?? shiftDate(from, 1);
 }
 
 function arrivalMs(b: Booking): number | null {
@@ -46,17 +76,22 @@ function ranges(dates: readonly string[]): string {
   return parts.join(', ');
 }
 
-const isTransport = (b: Booking) => b.type === 'flight' || b.type === 'train';
 
 /**
  * Lo que no cuadra en un viaje, mirando solo lo que queda por delante:
  * - una llegada antes de la salida;
- * - noches sin alojamiento (ni hotel ni un vuelo o tren nocturno);
+ * - noches sin alojamiento (ni hotel u otro alojamiento ni un vuelo o tren nocturno), salvo las que se den por buenas;
  * - dos trayectos que se solapan (sin contar el mismo vuelo de varios pasajeros);
  * - escalas cortas (menos de 1 h en el mismo aeropuerto o estación) y cambios de aeropuerto con poco margen;
  * - reservas fuera de las fechas del viaje.
  */
-export function reviewTrip(trip: Trip, bookings: readonly Booking[], nowMs: number, today: string): ReviewIssue[] {
+export function reviewTrip(
+  trip: Trip,
+  bookings: readonly Booking[],
+  nowMs: number,
+  today: string,
+  ignoredNights: ReadonlySet<string> = new Set(),
+): ReviewIssue[] {
   const issues: ReviewIssue[] = [];
   const alive = bookings.filter((b) => b.deletedAtMs === null);
   const ahead = alive.filter((b) => (arrivalMs(b) ?? b.startUtcMs) >= nowMs || b.startUtcMs >= nowMs);
@@ -69,18 +104,28 @@ export function reviewTrip(trip: Trip, bookings: readonly Booking[], nowMs: numb
     }
   }
 
-  // Noches sin alojamiento.
-  const first = trip.startDate ?? alive.map((b) => b.startLocal.slice(0, 10)).sort()[0];
-  const last = trip.endDate ?? alive.map((b) => (b.endLocal ?? b.startLocal).slice(0, 10)).sort().pop();
+  // Noches sin alojamiento: solo entre la primera y la última reserva de viaje (antes y después se está en casa).
+  const stays = alive.filter(isStay);
+  const travel = alive.filter((b) => isTransport(b) || isStay(b));
+  const first = travel.map((b) => b.startLocal.slice(0, 10)).sort()[0];
+  // Hasta la vuelta a casa (un trayecto que llega a donde salió el primero) o, si no hay vuelta, hasta el fin del viaje.
+  const journeys = alive.filter(isTransport).sort((a, b) => a.startUtcMs - b.startUtcMs);
+  const home = journeys[0]?.startPlace?.trim().toLowerCase();
+  const back = home ? journeys.slice(1).find((b) => b.endPlace?.trim().toLowerCase() === home) : undefined;
+  const last = back
+    ? back.startLocal.slice(0, 10)
+    : [trip.endDate, ...journeys.map((b) => b.startLocal.slice(0, 10)), ...stays.map((h) => stayEnd(h, alive))]
+        .filter((d): d is string => !!d)
+        .sort()
+        .pop();
   if (first && last) {
-    const hotels = alive.filter((b) => b.type === 'hotel');
     const nights: string[] = [];
     for (let night = first > today ? first : today; night < last; night = shiftDate(night, 1)) {
       const covered =
-        hotels.some((h) => h.startLocal.slice(0, 10) <= night && night < checkOut(h)) ||
+        stays.some((h) => h.startLocal.slice(0, 10) <= night && night < stayEnd(h, alive)) ||
         // Un vuelo o tren que sale ese día y llega al día siguiente o más tarde: se duerme viajando.
         alive.some((b) => isTransport(b) && b.startLocal.slice(0, 10) <= night && (b.endLocal?.slice(0, 10) ?? '') > night);
-      if (!covered) {
+      if (!covered && !ignoredNights.has(night)) {
         nights.push(night);
       }
     }
@@ -92,6 +137,7 @@ export function reviewTrip(trip: Trip, bookings: readonly Booking[], nowMs: numb
             ? t('Noche sin alojamiento: {days}.', { days: formatDay(nights[0]) })
             : t('{n} noches sin alojamiento: {days}.', { n: nights.length, days: ranges(nights) }),
         bookings: [],
+        nights,
       });
     }
   }
