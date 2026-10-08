@@ -609,4 +609,12 @@ export const settings: Messages = {
   },
   'Entrar ahora y activarlo la próxima vez': { en: 'Continue now and set it up next time', fr: 'Entrer maintenant et l’activer la prochaine fois', it: 'Entra ora e attivalo la prossima volta' },
   'Tras 1 hora fuera': { en: 'After 1 hour away', fr: 'Après 1 heure hors de l’app', it: 'Dopo 1 ora fuori' },
+  'Tamaño de la letra': { en: 'Text size', fr: 'Taille du texte', it: 'Dimensione del testo' },
+  'Letra más pequeña': { en: 'Smaller text', fr: 'Texte plus petit', it: 'Testo più piccolo' },
+  'Letra más grande': { en: 'Larger text', fr: 'Texte plus grand', it: 'Testo più grande' },
+  'Agranda o reduce toda la letra de la app en este móvil, sin tener que hacer zoom.': {
+    en: 'Make all the text in the app bigger or smaller on this phone, without zooming.',
+    fr: 'Agrandissez ou réduisez tout le texte de l’app sur ce téléphone, sans zoomer.',
+    it: 'Ingrandisci o riduci tutto il testo dell’app su questo telefono, senza zoom.',
+  },
 };

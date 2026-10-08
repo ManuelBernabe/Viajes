@@ -11,7 +11,7 @@
   --ok: #157a45;
   --warn: #a8610a;
   --radius: 14px;
-  --tab-h: 56px;
+  --tab-h: 3.5rem;
   color-scheme: light dark;
 }
 
@@ -557,3 +557,15 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .trip-card.done { box-shadow: none; border-color: var(--border); }
 .card { border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); }
 .card.highlight { border-color: var(--primary); }
+
+/* Tamaño de la letra */
+.text-size-anchor { position: relative; }
+.btn.icon.text-size-btn { font-weight: 700; font-size: 0.95rem; letter-spacing: -0.02em; }
+.btn.icon.text-size-btn.on { border-color: var(--primary); color: var(--primary); }
+.text-size-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: 14px; padding: 10px 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); min-width: 220px; }
+.text-size { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.text-size .btn { flex: 1; margin: 0; font-weight: 700; }
+.text-size-value { min-width: 4.2em; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tabs a { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 25%; }
+.pass-head { flex-wrap: wrap; }
+.tabs a { font-size: min(0.72rem, 14px); }

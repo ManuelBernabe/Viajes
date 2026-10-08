@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AgendaRow, BoardingCard } from '../components/Agenda';
 import { SyncButton } from '../components/SyncButton';
+import { TextSizeButton } from '../components/TextSize';
 import { useTripWeather } from '../components/WeatherStrip';
 import { formatLongDay, timeOf } from '../data/localTime';
 import { hiddenBookings, listAllBookings, listAttachments, listInbox, listTrips } from '../data/repo';
@@ -101,6 +102,7 @@ export function TodayPage() {
     <main className="page today-page">
       <div className="topbar">
         <h1>{titles[view]}</h1>
+        <TextSizeButton />
         <SyncButton />
       </div>
       <p className="today-sub">
