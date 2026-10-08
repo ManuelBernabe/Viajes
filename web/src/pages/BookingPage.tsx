@@ -16,6 +16,7 @@ import { t } from '../i18n';
 import { TimeAt } from '../components/TimeAt';
 import { applyFixes as saveFixes, useAutoFix } from '../components/useAutoFix';
 import { useFlightStatus } from '../components/FlightStatus';
+import { formatSeats, useSeats } from '../components/useSeats';
 
 export function BookingPage() {
   const { bookingId = '' } = useParams();
@@ -27,6 +28,8 @@ export function BookingPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const isHidden = useLiveQuery(async () => (await hiddenBookings()).has(bookingId), [bookingId]);
   const [flight] = useFlightStatus(booking ?? undefined);
+  // Asientos: de las notas y de las tarjetas de embarque adjuntas (su QR lleva el de cada pasajero).
+  const seats = useSeats(booking ? [booking] : []);
   // Lo que se puede arreglar con seguridad se arregla solo; lo que no, se avisa.
   const fixes = useAutoFix(booking, flight);
 
@@ -137,6 +140,14 @@ export function BookingPage() {
           <>
             <dt>{t('Quién la ve')}</dt>
             <dd>{booking.visibility === 'private' ? t('Solo quien la creó y quien administra') : t('Personas concretas ({n}) además de quien la creó y quien administra', { n: (booking.sharedWith ?? []).length })}</dd>
+          </>
+        )}
+        {seats.length > 0 && (
+          <>
+            <dt>{seats.length === 1 ? t('Asiento') : t('Asientos')}</dt>
+            <dd>
+              <strong className="time-big">{formatSeats(seats)}</strong>
+            </dd>
           </>
         )}
         {booking.reference && (
