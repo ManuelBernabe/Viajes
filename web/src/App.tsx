@@ -17,6 +17,7 @@ import { DocumentsPage } from './pages/DocumentsPage';
 import { InboxItemPage } from './pages/InboxItemPage';
 import { InboxPage } from './pages/InboxPage';
 import { InvitationPage } from './pages/InvitationPage';
+import { DestinationPage } from './pages/DestinationPage';
 import { PackingPage } from './pages/PackingPage';
 import { PlacesPage } from './pages/PlacesPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -75,6 +76,7 @@ function Gate() {
           <Route path="/trips/:tripId/edit" element={<TripFormPage />} />
           <Route path="/trips/:tripId/places" element={<PlacesPage />} />
           <Route path="/trips/:tripId/packing" element={<PackingPage />} />
+          <Route path="/trips/:tripId/info" element={<DestinationPage />} />
           <Route path="/trips/:tripId/bookings/new" element={<BookingFormPage />} />
           <Route path="/bookings/:bookingId" element={<BookingPage />} />
           <Route path="/bookings/:bookingId/edit" element={<BookingFormPage />} />

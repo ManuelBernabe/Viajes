@@ -47,6 +47,10 @@ public static class AppGuide
         - «+ Añadir reserva», «📍 Lugares» y «🧳 Equipaje»: lista de equipaje compartida por el hogar, con grupos (Ropa, Aseo,
           Documentos…), «para quién» opcional y casillas para marcar lo que ya va en la maleta. Se empieza con plantillas
           (Básico, Playa, Frío y nieve, Trabajo, Con niños) o copiando la lista de otro viaje; no se repite lo que ya está.
+        - «🌍 Destino»: por cada país del viaje, moneda y cambio del día (1 € = …, y cuánto son 10, 50 y 100 €), enchufes y
+          voltaje, emergencias, propinas, idioma, si hace falta visado con los pasaportes del hogar y consejos. Lo prepara la
+          IA una vez y se guarda (también sin conexión); «↻ Actualizar» lo rehace. Los requisitos de entrada, confirmarlos
+          en la web oficial.
         - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
           aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.

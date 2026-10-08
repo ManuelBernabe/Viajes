@@ -172,6 +172,10 @@ export function TripPage() {
           🧳 {t('Equipaje')}
         </Link>
 
+        <Link className="btn" to={`/trips/${tripId}/info`}>
+          🌍 {t('Destino')}
+        </Link>
+
       </div>
 
       <div style={{ marginTop: 12 }}>

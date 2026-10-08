@@ -135,6 +135,16 @@ export const server: Messages = {
     fr: 'L’invitation n’est pas valide, a expiré ou a déjà été utilisée.',
     it: 'L’invito non è valido, è scaduto o è già stato usato.',
   },
+  'La información del destino con IA no está configurada en el servidor.': {
+    en: 'AI destination info isn’t set up on the server.',
+    fr: 'Les infos de destination par IA ne sont pas configurées sur le serveur.',
+    it: 'Le info sulla destinazione con IA non sono configurate sul server.',
+  },
+  'No se ha podido preparar la información del destino. Inténtalo dentro de un rato.': {
+    en: 'Couldn’t prepare the destination info. Try again in a while.',
+    fr: 'Impossible de préparer les infos sur la destination. Réessayez dans un moment.',
+    it: 'Impossibile preparare le info sulla destinazione. Riprova tra un po’.',
+  },
   'La lectura con IA no está configurada en el servidor.': {
     en: 'AI reading isn’t set up on the server.',
     fr: 'La lecture par IA n’est pas configurée sur le serveur.',
