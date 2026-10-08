@@ -159,7 +159,7 @@ public sealed class PushTests(PushApp app) : IClassFixture<PushApp>
         var zone = offset == 0 ? "Etc/GMT" : $"Etc/GMT{(offset > 0 ? "-" : "+")}{Math.Abs(offset)}";
         var tomorrow = utcNow.AddHours(offset).Date.AddDays(1).ToString("yyyy-MM-dd");
         var first = Guid.NewGuid();
-        await api.PutBooking(first, tripId, new { title = "Tren a Rosario", type = "train", startLocal = $"{tomorrow}T09:30", startTz = zone, endLocal = (string?)null, endTz = (string?)null });
+        await api.PutBooking(first, tripId, new { title = "Tren a Rosario", type = "train", startLocal = $"{tomorrow}T09:30", startTz = zone, endLocal = (string?)null, endTz = (string?)null, endPlace = (string?)null });
         await api.PutBooking(Guid.NewGuid(), tripId, new { title = "Tango", type = "ticket", startLocal = $"{tomorrow}T21:00", startTz = zone, endLocal = (string?)null, endTz = (string?)null });
 
         var reminders = app.Services.GetServices<IHostedService>().OfType<ReminderService>().Single();

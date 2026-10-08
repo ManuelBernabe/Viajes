@@ -110,6 +110,8 @@ public static class AppGuide
         - 📅 Calendario: «Añadir al calendario del iPhone» suscribe el calendario a los viajes (días completos) y reservas (con
           hora; hoteles noche a noche). Se actualiza solo. «Copiar el enlace» para Google Calendar; «Quitar del calendario».
           El enlace es personal: no compartirlo.
+        - 🔠 Tamaño de la letra: el botón «Aa» arriba en Hoy y en Viajes (o Ajustes → Tamaño de la letra) agranda o reduce
+          toda la letra de la app en ese móvil (90 % a 150 %), sin hacer zoom.
         - Atajo de iPhone, Sincronización, Idioma (español, inglés, francés, italiano), Hogar (invitar con un enlace de un solo
           uso de 30 días; quien administra quita miembros y genera enlaces para cambiar la contraseña de alguien), Avisos
           («Activar avisos en este móvil»: la víspera a las 20:00 un resumen de todo lo de mañana con el tiempo y la hora a

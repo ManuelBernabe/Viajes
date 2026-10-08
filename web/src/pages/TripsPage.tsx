@@ -8,6 +8,7 @@ import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBookings, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
 import { SyncButton } from '../components/SyncButton';
+import { TextSizeButton } from '../components/TextSize';
 import { withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
 
@@ -115,6 +116,7 @@ export function TripsPage() {
     <main className="page">
       <div className="topbar">
         <h1>{t('Viajes')}</h1>
+        <TextSizeButton />
         <SyncButton />
         <Link className="btn primary add" to="/trips/new" aria-label={t('Nuevo viaje')}>
           <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -7,6 +7,7 @@ import { AccountSecurity } from '../components/AccountSecurity';
 import { AiSettings } from '../components/AiSettings';
 import { BackupSettings } from '../components/BackupSettings';
 import { FlightKeySettings } from '../components/FlightKeySettings';
+import { TextSizeControl } from '../components/TextSize';
 import { HouseholdSettings } from '../components/HouseholdSettings';
 import { LanguageSettings } from '../components/LanguageSettings';
 import { ShareShortcut } from '../components/ShareShortcut';
@@ -127,6 +128,12 @@ export function SettingsPage() {
         <button className="btn block" disabled={sync.running} onClick={() => void syncNow()}>
           {sync.running ? t('Sincronizando…') : t('Sincronizar ahora')}
         </button>
+      </section>
+
+      <section className="card">
+        <h3>🔠 {t('Tamaño de la letra')}</h3>
+        <p className="small muted">{t('Agranda o reduce toda la letra de la app en este móvil, sin tener que hacer zoom.')}</p>
+        <TextSizeControl />
       </section>
 
       <LanguageSettings />
