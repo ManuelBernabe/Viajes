@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { zoneLabel } from '../data/localTime';
 import type { Booking } from '../data/types';
-import { airlineOf, checkInOpensMs, seatsIn } from '../domain/airlines';
+import { airlineOf, checkInOpensMs } from '../domain/airlines';
 import { lang, locale, t } from '../i18n';
+import { formatSeats, useSeats } from './useSeats';
 
 /**
  * «Asiento y check-in» en un vuelo: el asiento que ya tiene (si sale en la reserva), cuándo abre el check-in online
@@ -11,12 +12,13 @@ import { lang, locale, t } from '../i18n';
  */
 export function SeatCheckIn({ booking }: { booking: Booking }) {
   const [copied, setCopied] = useState(false);
+  // De las notas y de las tarjetas de embarque adjuntas (el QR lleva el asiento de cada pasajero).
+  const seats = useSeats([booking]);
   if (booking.type !== 'flight') {
     return null;
   }
 
   const airline = airlineOf(booking.title);
-  const seats = seatsIn(booking.notes, booking.title);
   const opens = checkInOpensMs(booking.startUtcMs, booking.title);
   const now = Date.now();
   const when = new Intl.DateTimeFormat(locale(), {
@@ -47,7 +49,7 @@ export function SeatCheckIn({ booking }: { booking: Booking }) {
       <div>
         {seats.length > 0 ? (
           <>
-            {seats.length === 1 ? t('Tu asiento:') : t('Vuestros asientos:')} <strong>{seats.join(' · ')}</strong>
+            {seats.length === 1 ? t('Tu asiento:') : t('Vuestros asientos:')} <strong>{formatSeats(seats)}</strong>
           </>
         ) : (
           <span className="muted">{t('La reserva no dice el asiento.')}</span>

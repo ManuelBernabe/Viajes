@@ -2,13 +2,13 @@ import { Link } from 'react-router-dom';
 import { timeOf } from '../data/localTime';
 import type { Booking } from '../data/types';
 import { isInProgress, TYPE_INFO } from '../domain/agenda';
-import { seatsIn } from '../domain/airlines';
 import { destinationOf, directionsUrls, isAppleDevice } from '../domain/directions';
 import { clock, hasFlightNumber, statusLabel } from '../domain/flightStatus';
 import { countdown, passengerOf, withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
 import { FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
 import { useAutoFix } from './useAutoFix';
+import { formatSeats, useSeats } from './useSeats';
 
 export function startsIn(ms: number): string {
   const { days, hours, minutes } = countdown(ms);
@@ -53,14 +53,14 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
   const planned = timeOf(booking.startLocal);
   const expected = info && info.depActualMs === null ? clock(info.depEstimatedMs, booking.startTz) : null;
   const arrival = info ? clock(info.arrActualMs ?? info.arrEstimatedMs ?? info.arrScheduledMs, booking.endTz ?? booking.startTz) : null;
-  const seats = seatsIn(booking.notes, booking.title);
+  const seats = useSeats(group);
   const withQr = group.find((b) => qr.has(b.id));
   const destination = destinationOf(booking);
   const directions = destination ? directionsUrls(destination) : null;
   const facts = [
     info?.depTerminal && { label: t('Terminal'), value: info.depTerminal },
     info?.depGate && { label: t('Puerta'), value: info.depGate },
-    group.length === 1 && seats.length > 0 && { label: t('Asiento'), value: seats.join(', ') },
+    group.length === 1 && seats.length > 0 && { label: seats.length === 1 ? t('Asiento') : t('Asientos'), value: formatSeats(seats) },
     group.length === 1 && booking.reference && { label: t('Localizador'), value: booking.reference },
   ].filter((x): x is { label: string; value: string } => Boolean(x));
 
@@ -128,7 +128,14 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
         <div className="pass-people">
           {group.map((b) => (
             <Link key={b.id} to={`/bookings/${b.id}`} className="pass-person">
-              <span>{passengerOf(b.title) ?? b.title}</span>
+              <span>
+                {passengerOf(b.title) ?? b.title}
+                {(() => {
+                  const name = (passengerOf(b.title) ?? '').toLowerCase();
+                  const mine = seats.find((s) => s.passenger && name.startsWith(s.passenger.toLowerCase()));
+                  return mine ? <strong> · {t('Asiento')} {mine.seat}</strong> : null;
+                })()}
+              </span>
               <span className="muted">{b.reference ?? ''}</span>
               <span className="muted">›</span>
             </Link>

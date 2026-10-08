@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateFromDayOfYear, parseBoardingPass, prefillFromBoardingPass } from './bcbp';
+import { dateFromDayOfYear, parseBoardingPass, prefillFromBoardingPass, seatsFromCodes } from './bcbp';
 
 // Ejemplo del estándar IATA (Resolution 792), con un tramo.
 const IATA_EXAMPLE = 'M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 100';
@@ -53,5 +53,19 @@ describe('prefillFromBoardingPass', () => {
       endPlace: 'FRA',
       notes: 'Pasajero: LUC DESMARAIS · Asiento 1A',
     });
+  });
+});
+
+describe('seatsFromCodes', () => {
+  it('saca el asiento de cada pasajero del tramo de esa reserva', () => {
+    const now = new Date(2026, 9, 8);
+    const paco = 'M1BELSO/PACO          EOEGC6H IGRAEPJA 3157 281Y019A0093 100';
+    const manuel = 'M1BERNABE/MANUEL      EOEGC6H IGRAEPJA 3157 281Y019B0094 100';
+    const otro = 'M1BELSO/PACO          EOEGC6H AEPGIGG3 7651 282Y012C0011 100';
+    expect(seatsFromCodes([paco, manuel, otro], { startPlace: 'IGR', endPlace: 'AEP', flightNumber: 'JA3157' }, now)).toEqual([
+      { passenger: 'Paco', seat: '19A' },
+      { passenger: 'Manuel', seat: '19B' },
+    ]);
+    expect(seatsFromCodes(['https://example.com'], { startPlace: null, endPlace: null, flightNumber: null }, now)).toEqual([]);
   });
 });
