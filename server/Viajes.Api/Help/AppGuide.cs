@@ -44,7 +44,11 @@ public static class AppGuide
         - «🌤️ El tiempo»: previsión día a día (Open-Meteo) para donde se duerme cada noche, hasta 16 días por delante; también
           junto a cada día de la agenda. Si no hay hotel, usa el destino del viaje.
         - «Guardar en el móvil» baja todos los billetes para verlos sin cobertura (se hace solo 7 días antes del viaje).
-        - «+ Añadir reserva» y «📍 Lugares».
+        - «+ Añadir reserva», «📍 Lugares» y «🧳 Equipaje»: lista de equipaje compartida por el hogar, con grupos (Ropa, Aseo,
+          Documentos…), «para quién» opcional y casillas para marcar lo que ya va en la maleta. Se empieza con plantillas
+          (Básico, Playa, Frío y nieve, Trabajo, Con niños) o copiando la lista de otro viaje; no se repite lo que ya está.
+        - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
+          aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.
         - Botón 🙈 en cada tarjeta para ocultar una reserva de MIS listas (útil para quien administra, que ve las de todos).
           Las ocultas salen plegadas al final («Ver las ocultas») y se recuperan con 👁. Ocultar solo afecta a quien lo hace:

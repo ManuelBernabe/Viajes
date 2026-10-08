@@ -592,3 +592,14 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .review-item.danger > div > div:first-child { color: var(--danger); }
 .review-item.warning > div > div:first-child { color: var(--warn); }
 .review-ok { margin: 8px 2px; }
+/* Equipaje */
+.packing-progress { margin: 10px 0; }
+.packing-bar { height: 8px; border-radius: 4px; background: var(--raise); overflow: hidden; margin-bottom: 6px; }
+.packing-bar span { display: block; height: 100%; background: var(--ok); transition: width 0.3s; }
+.packing-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.packing-row:first-child { border-top: 0; }
+.packing-check { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.packing-check input { width: 22px; height: 22px; flex: none; margin: 0; }
+.packing-row.done .packing-check > span:first-of-type { text-decoration: line-through; color: var(--muted); }
+.packing-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+.packing-form-grid > * { min-width: 0; width: 100%; box-sizing: border-box; }
