@@ -241,7 +241,10 @@ input[type='file'] { padding: 8px; }
   z-index: 20;
   overflow: auto;
 }
-.qr-page .qr-canvas { width: min(92vw, 70vh); height: min(92vw, 70vh); image-rendering: pixelated; margin: 12px 0; }
+.qr-page .qr-canvas { image-rendering: pixelated; margin: 20px 0 12px; }
+.qr-sizes { display: flex; gap: 6px; margin: 8px 0 4px; background: #f3f4f6; border-radius: 10px; padding: 3px; }
+.qr-sizes button { border: 0; background: none; font: inherit; padding: 7px 14px; border-radius: 8px; color: #374151; }
+.qr-sizes button.on { background: #fff; color: #111; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 .qr-page .btn { background: #f3f4f6; color: #111; border-color: #d1d5db; }
 .qr-page .btn.primary { background: #1f3a5f; color: #fff; }
 
@@ -577,3 +580,4 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .brand-hero .brand-mark { margin: 0 auto 12px; box-shadow: 0 10px 30px rgba(15, 29, 58, 0.45); }
 .brand-hero h1 { margin: 0; font-size: 2rem; letter-spacing: -0.02em; }
 .brand-hero p { margin: 4px 0 0; }
+.qr-page .time-big { color: inherit; }

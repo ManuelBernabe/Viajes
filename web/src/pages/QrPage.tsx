@@ -63,6 +63,31 @@ async function rescan(attachments: readonly Attachment[]): Promise<void> {
   }
 }
 
+type QrSize = 'small' | 'normal' | 'large';
+
+const QR_SIZE_KEY = 'viajes:qr-tamano';
+
+function savedQrSize(): QrSize {
+  try {
+    const value = localStorage.getItem(QR_SIZE_KEY);
+    return value === 'small' || value === 'large' ? value : 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
+/**
+ * Lado del QR en pantalla (px CSS). «Normal» ronda los 5 cm en un iPhone, como en las apps de las aerolíneas: a pantalla
+ * completa los lectores de las puertas de embarque suelen fallar porque el código no les cabe o les deslumbra.
+ */
+function qrCssSize(size: QrSize): number {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const max = Math.min(width * 0.92, height * 0.6);
+  const target = size === 'small' ? 190 : size === 'normal' ? 250 : 330;
+  return Math.round(Math.min(target, max));
+}
+
 export function QrPage() {
   const { bookingId = '' } = useParams();
   const [params, setParams] = useSearchParams();
@@ -86,16 +111,26 @@ export function QrPage() {
   const selected = params.get('q') ?? (params.get('a') ? `${params.get('a')}:0` : null);
   const current = data?.entries.find((e) => e.key === selected) ?? data?.entries[0];
 
+  const [qrSize, setQrSizeState] = useState<QrSize>(savedQrSize);
+  function setQrSize(next: QrSize) {
+    setQrSizeState(next);
+    try {
+      localStorage.setItem(QR_SIZE_KEY, next);
+    } catch {
+      // Sin almacenamiento: vuelve al normal la próxima vez.
+    }
+  }
+
   useEffect(() => {
     if (!current || !canvas.current) {
       return;
     }
-    const size = Math.round(Math.min(window.innerWidth * 0.92, window.innerHeight * 0.7) * (window.devicePixelRatio || 1));
-    drawQr(canvas.current, current.code, size).then(
+    const css = qrCssSize(qrSize);
+    drawQr(canvas.current, current.code, Math.round(css * (window.devicePixelRatio || 1)), css).then(
       () => setDrawError(''),
       () => setDrawError(t('No se ha podido dibujar el QR. Abre el original.')),
     );
-  }, [current?.key, current?.code]);
+  }, [current?.key, current?.code, qrSize]);
 
   if (!data) {
     return <div className="qr-page">{t('Cargando…')}</div>;
@@ -142,6 +177,14 @@ export function QrPage() {
               ))}
             </div>
           )}
+          <div className="qr-sizes" role="group" aria-label={t('Tamaño del QR')}>
+            {(['small', 'normal', 'large'] as const).map((option) => (
+              <button key={option} type="button" className={qrSize === option ? 'on' : ''} onClick={() => setQrSize(option)}>
+                {option === 'small' ? t('Pequeño') : option === 'normal' ? t('Normal') : t('Grande')}
+              </button>
+            ))}
+          </div>
+          <p className="small muted center">{t('Si el lector no lo coge, prueba otro tamaño y sube el brillo.')}</p>
           <div className="actions">
             <Link className="btn" to={`/attachments/${current.attachment.id}`}>
               {t('Ver original')}
