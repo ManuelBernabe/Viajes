@@ -583,3 +583,5 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .qr-page .time-big { color: inherit; }
 .pass-check { padding: 0 18px 8px; }
 .pass-check .error { color: var(--warn); }
+.face-id-state.off { color: var(--warn); }
+.face-id-state.on { color: var(--ok); }
