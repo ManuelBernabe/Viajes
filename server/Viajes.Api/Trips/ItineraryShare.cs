@@ -1,4 +1,3 @@
-using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -172,7 +171,8 @@ public static class ItineraryShare
 
         private static string L(string lang) => Texts.ContainsKey(lang) ? lang : "es";
 
-        private static string E(string? text) => WebUtility.HtmlEncode(text ?? "");
+        private static string E(string? text) =>
+            (text ?? "").Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&#39;");
 
         public static string LongDay(string date, string lang)
         {
