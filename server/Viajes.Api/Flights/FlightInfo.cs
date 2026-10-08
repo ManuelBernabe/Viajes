@@ -57,6 +57,9 @@ public interface IFlightStatusSource
 {
     string Name { get; }
 
+    /// <summary>Si hay clave con la que consultar.</summary>
+    bool IsConfigured => true;
+
     /// <summary>
     /// El vuelo «JA3157» que sale el día local <paramref name="date"/>; si hay varios (escalas), el que sale de
     /// <paramref name="origin"/> o el más cercano a <paramref name="departureUtcMs"/>. Null si el proveedor no lo conoce.

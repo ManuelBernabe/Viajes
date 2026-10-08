@@ -44,6 +44,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<FlightStatusRow> FlightStatuses => Set<FlightStatusRow>();
 
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -176,6 +178,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             subscription.Property(s => s.LastError).HasMaxLength(500);
             subscription.HasIndex(s => s.Endpoint).IsUnique();
             subscription.HasIndex(s => s.UserId);
+        });
+
+        builder.Entity<AppSetting>(setting =>
+        {
+            setting.HasKey(a => a.Key);
+            setting.Property(a => a.Key).HasMaxLength(50);
         });
 
         builder.Entity<FlightStatusRow>(flight =>

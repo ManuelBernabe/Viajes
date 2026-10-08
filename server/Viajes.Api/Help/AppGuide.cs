@@ -66,8 +66,9 @@ public static class AppGuide
         - En los vuelos con número en el título («JA 3157 IGR → AEP»), «🛰️ Estado del vuelo»: en hora o con retraso, horas
           previstas o reales de salida y llegada, terminal, puerta, mostradores y cinta de equipaje, con «↻ Actualizar». Se
           empieza a seguir un día antes de salir; llegan avisos si hay retraso (de 15 min en adelante), cambio de puerta o
-          terminal, cancelación, desvío o cinta de equipaje. Solo funciona si el servidor tiene la clave de un proveedor de
-          datos de vuelos (AeroDataBox o FlightAware); si no, la tarjeta no sale.
+          terminal, cancelación, desvío o cinta de equipaje. Solo funciona con la clave de un proveedor de datos de
+          vuelos: quien administra la pega en Ajustes → «🛰️ Estado de los vuelos» (AeroDataBox por RapidAPI, plan Basic
+          gratuito); si no hay clave, la tarjeta no sale.
         - En los vuelos, «💺 Asiento y check-in»: el asiento si la reserva lo dice, cuándo abre el check-in de la aerolínea, botón
           para elegir o cambiar asiento en la web de la aerolínea y «Copiar localizador». Llega un aviso cuando abre el check-in.
           La app no puede mostrar los asientos libres: eso solo lo hace la aerolínea.

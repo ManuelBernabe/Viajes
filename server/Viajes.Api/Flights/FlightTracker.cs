@@ -13,6 +13,8 @@ public sealed class NoFlightStatusSource : IFlightStatusSource
 {
     public string Name => "";
 
+    public bool IsConfigured => false;
+
     public Task<FlightInfo?> GetAsync(string flightNumber, string date, string? origin, long departureUtcMs, CancellationToken ct) => Task.FromResult<FlightInfo?>(null);
 }
 
@@ -26,7 +28,7 @@ public sealed class FlightTracker(AppDbContext db, IFlightStatusSource source, A
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public bool IsConfigured => source is not NoFlightStatusSource;
+    public bool IsConfigured => source.IsConfigured;
 
     public async Task<(FlightInfo? Info, long? FetchedMs)> CachedAsync(string key, CancellationToken ct)
     {
@@ -116,21 +118,11 @@ public sealed class FlightTracker(AppDbContext db, IFlightStatusSource source, A
     public static IServiceCollection AddFlightStatus(IServiceCollection services, IConfiguration config)
     {
         services.AddHttpClient("flights", client => client.Timeout = TimeSpan.FromSeconds(15));
-        var aeroApi = config["AEROAPI_KEY"];
-        var aeroDataBox = config["AERODATABOX_KEY"];
-        if (!string.IsNullOrWhiteSpace(aeroApi))
-        {
-            services.AddSingleton<IFlightStatusSource>(p => new AeroApiSource(p.GetRequiredService<IHttpClientFactory>().CreateClient("flights"), aeroApi.Trim()));
-        }
-        else if (!string.IsNullOrWhiteSpace(aeroDataBox))
-        {
-            services.AddSingleton<IFlightStatusSource>(p => new AeroDataBoxSource(p.GetRequiredService<IHttpClientFactory>().CreateClient("flights"), aeroDataBox.Trim()));
-        }
-        else
-        {
-            services.AddSingleton<IFlightStatusSource, NoFlightStatusSource>();
-        }
-
+        // La clave puede venir del servidor (variable de entorno) o pegarse en Ajustes de la app (guardada cifrada).
+        services.AddSingleton(p => new DynamicFlightSource(
+            p.GetRequiredService<IServiceScopeFactory>(), p.GetRequiredService<IHttpClientFactory>(),
+            p.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(), config["AEROAPI_KEY"], config["AERODATABOX_KEY"]));
+        services.AddSingleton<IFlightStatusSource>(p => p.GetRequiredService<DynamicFlightSource>());
         services.AddScoped<FlightTracker>();
         services.AddHostedService<FlightWatchService>();
         return services;
@@ -142,18 +134,16 @@ public sealed class FlightWatchService(IServiceProvider services, IFlightStatusS
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (source is NoFlightStatusSource)
-        {
-            log.LogInformation("Estado de vuelos desactivado: falta AEROAPI_KEY o AERODATABOX_KEY.");
-            return;
-        }
-
         await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken).ContinueWith(_ => { }, TaskScheduler.Default);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await RunOnceAsync(stoppingToken);
+                // Sin clave no se hace nada; se vuelve a mirar en la siguiente vuelta por si la han puesto en Ajustes.
+                if (source.IsConfigured)
+                {
+                    await RunOnceAsync(stoppingToken);
+                }
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

@@ -90,6 +90,7 @@ app.MapHouseholdEndpoints();
 app.MapBackupEndpoints();
 app.MapWeatherEndpoints();
 app.MapFlightEndpoints();
+app.MapFlightSettings();
 app.Map("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html", SpaHosting.StaticOptions(spa));
 
