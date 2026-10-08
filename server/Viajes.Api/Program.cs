@@ -13,6 +13,7 @@ using Viajes.Api.Inbox;
 using Viajes.Api.Push;
 using Viajes.Api.Storage;
 using Viajes.Api.Trips;
+using Viajes.Api.Weather;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,7 @@ builder.Services.AddSingleton<IJsonAsker>(provider => provider.GetRequiredServic
 builder.Services.AddPush();
 builder.Services.AddHouseholds();
 builder.Services.AddBackups(dataDir);
+builder.Services.AddWeather();
 
 // Railway pone dos saltos en X-Forwarded-For (cliente, borde); con el límite por defecto de uno
 // la IP «remota» sería la del borde y el límite de intentos compartiría un contador para todos.
@@ -84,6 +86,7 @@ app.MapHelpEndpoints();
 app.MapPushEndpoints();
 app.MapHouseholdEndpoints();
 app.MapBackupEndpoints();
+app.MapWeatherEndpoints();
 app.Map("/api/{**rest}", () => Results.NotFound());
 app.MapFallbackToFile("index.html", SpaHosting.StaticOptions(spa));
 

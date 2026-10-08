@@ -6,8 +6,10 @@ import type { Booking } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { countdown, todayView } from '../domain/today';
+import { describeWeather, temps } from '../domain/weather';
 import { t } from '../i18n';
 import { Directions } from './Directions';
+import { useTripWeather } from './WeatherStrip';
 
 function startsIn(ms: number): string {
   const { days, hours, minutes } = countdown(ms);
@@ -79,15 +81,25 @@ export function TodayPanel() {
   }, []);
 
   const view = data ? todayView(data.bookings, now, today) : null;
+  // El tiempo de hoy donde se está: el del viaje de lo que toca hoy (el hotel de esta noche manda).
+  const tripId = view ? [...view.tonight, ...view.next, ...view.today][0]?.tripId : undefined;
+  const weather = useTripWeather(tripId).find((day) => day.date === today);
   if (!data || !view) {
     return null;
   }
+  const sky = weather ? describeWeather(weather.code) : null;
 
   return (
     <section className="card today">
       <h2 style={{ marginTop: 0 }}>
-        ☀️ {t('Hoy')} <span className="muted small">· {formatLongDay(today)}</span>
+        {sky?.icon ?? '☀️'} {t('Hoy')} <span className="muted small">· {formatLongDay(today)}</span>
       </h2>
+      {weather && sky && (
+        <div className="small today-weather">
+          {sky.label} · <strong>{temps(weather)}</strong> · {weather.place}
+          {weather.rain !== null && weather.rain >= 30 && ` · 💧 ${t('lluvia {n} %', { n: weather.rain })}`}
+        </div>
+      )}
       {view.next.map((booking) => (
         <NextCard key={booking.id} booking={booking} qr={data.qr.has(booking.id)} now={now} />
       ))}

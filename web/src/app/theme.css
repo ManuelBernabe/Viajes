@@ -434,3 +434,13 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .btn.mic { flex: none; width: 48px; padding: 0; font-size: 1.2rem; }
 .btn.mic.listening { background: #e5484d; border-color: #e5484d; animation: mic-pulse 1.2s ease-in-out infinite; }
 @keyframes mic-pulse { 50% { box-shadow: 0 0 0 8px rgba(229, 72, 77, 0.25); } }
+
+/* El tiempo del viaje */
+.weather-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+.weather-day { flex: 0 0 84px; text-align: center; border: 1px solid var(--border); border-radius: 10px; padding: 6px 4px; scroll-snap-align: start; }
+.weather-day .small { text-transform: capitalize; }
+.weather-icon { font-size: 1.5rem; line-height: 1.6; }
+.weather-place { text-transform: none !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7rem; }
+.weather-place.same { visibility: hidden; }
+.weather-badge { font-weight: 400; font-size: 0.85rem; margin-left: 8px; color: var(--muted); text-transform: none; white-space: nowrap; }
+.today-weather { margin: -6px 0 10px; }

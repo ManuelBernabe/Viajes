@@ -4,6 +4,7 @@ import { BackLink } from '../app/Layout';
 import { BookingCard } from '../components/BookingCard';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TypeChips } from '../components/TypeChips';
+import { DayWeatherBadge, useTripWeather, WeatherStrip } from '../components/WeatherStrip';
 import { formatDay, formatLongDay, formatRange, timeOf, zoneLabel } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
 import { deleteTrip, getTrip, hiddenBookings, listAttachments, listBookings, listDocuments, listPlaces, setBookingHidden } from '../data/repo';
@@ -36,6 +37,7 @@ export function TripPage() {
   const [busy, setBusy] = useState('');
   const hidden = useLiveQuery(hiddenBookings, []);
   const [showHidden, setShowHidden] = useState(false);
+  const weather = useTripWeather(tripId);
 
   if (trip === undefined || bookings === undefined) {
     return <main className="page muted">{t('Cargando…')}</main>;
@@ -141,6 +143,8 @@ export function TripPage() {
         </Link>
       )}
 
+      <WeatherStrip days={weather} />
+
       <section className="card">
         <div className="row between">
           <OfflineBadge state={offline} />
@@ -185,7 +189,10 @@ export function TripPage() {
       {visible.length > 0 && days.length === 0 && <p className="muted small">{t('No queda ninguna reserva por delante en este viaje.')}</p>}
       {days.map((day) => (
         <section key={day.date}>
-          <div className="day">{formatLongDay(day.date)}</div>
+          <div className="day">
+            {formatLongDay(day.date)}
+            <DayWeatherBadge day={weather.find((w) => w.date === day.date)} />
+          </div>
           {day.bookings.map((booking) => (
             <BookingCard key={booking.id} booking={booking} onHide={hide(booking.id)} />
           ))}
