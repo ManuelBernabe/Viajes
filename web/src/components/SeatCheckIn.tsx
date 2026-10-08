@@ -13,7 +13,7 @@ import { formatSeats, useSeats } from './useSeats';
 export function SeatCheckIn({ booking }: { booking: Booking }) {
   const [copied, setCopied] = useState(false);
   // De las notas y de las tarjetas de embarque adjuntas (el QR lleva el asiento de cada pasajero).
-  const seats = useSeats([booking]);
+  const seats = useSeats([booking], true);
   if (booking.type !== 'flight') {
     return null;
   }

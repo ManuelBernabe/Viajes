@@ -29,7 +29,7 @@ export function BookingPage() {
   const isHidden = useLiveQuery(async () => (await hiddenBookings()).has(bookingId), [bookingId]);
   const [flight] = useFlightStatus(booking ?? undefined);
   // Asientos: de las notas y de las tarjetas de embarque adjuntas (su QR lleva el de cada pasajero).
-  const seats = useSeats(booking ? [booking] : []);
+  const seats = useSeats(booking ? [booking] : [], true);
   // Lo que se puede arreglar con seguridad se arregla solo; lo que no, se avisa.
   const fixes = useAutoFix(booking, flight);
 
