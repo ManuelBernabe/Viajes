@@ -19,7 +19,7 @@ public static class DestinationInfo
 {
     public sealed record CountryInfo(
         string Country, string? Flag, string? CurrencyCode, string? CurrencyName, string? Plugs, string? Voltage, string? Emergency, string? Tipping,
-        string? Language, string? Visa, List<string>? Tips)
+        string? Language, string? Visa, List<string>? Tips, string? Embassy = null)
     {
         public double? Rate { get; init; }
     }
@@ -62,8 +62,9 @@ public static class DestinationInfo
                         language = new { type = "string" },
                         visa = new { type = "string" },
                         tips = new { type = "array", items = new { type = "string" } },
+                        embassy = new { type = "string" },
                     },
-                    required = new[] { "country", "flag", "currencyCode", "currencyName", "plugs", "voltage", "emergency", "tipping", "language", "visa", "tips" },
+                    required = new[] { "country", "flag", "currencyCode", "currencyName", "plugs", "voltage", "emergency", "tipping", "language", "visa", "tips", "embassy" },
                     additionalProperties = false,
                 },
             },
@@ -119,6 +120,8 @@ public static class DestinationInfo
                 Responde en {Languages[language]}. Un elemento por país visitado (no incluyas el país de origen si solo se sale de él),
                 en el orden del viaje. «flag»: el emoji de la bandera. «visa»: qué necesitan esos pasaportes para entrar, en una frase.
                 «tips»: dos o tres consejos prácticos y concretos de ese país (transporte, seguridad, costumbres), sin obviedades.
+                «embassy»: la embajada o el consulado del país de esos pasaportes más cercano a los sitios del viaje, con la ciudad
+                y el teléfono (y el de emergencia consular si lo tiene). Si no estás seguro del teléfono, pon solo el nombre y la ciudad.
                 """;
             var json = await ai.AskJsonAsync(SystemPrompt, prompt, Schema, 3000, ct);
             var countries = Parse(json);
@@ -173,7 +176,8 @@ public static class DestinationInfo
                     Str(c, "emergency"), Str(c, "tipping"), Str(c, "language"), Str(c, "visa"),
                     c.TryGetProperty("tips", out var tips) && tips.ValueKind == JsonValueKind.Array
                         ? tips.EnumerateArray().Select(t => t.GetString()).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!.Trim()).Take(4).ToList()
-                        : []))
+                        : [],
+                    Str(c, "embassy")))
                 .Take(8)
                 .ToList();
         }

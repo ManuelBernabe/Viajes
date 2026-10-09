@@ -242,6 +242,10 @@ export function TodayPage() {
           <span className="muted">›</span>
         </Link>
       )}
+      <Link className="teaser link emergency" to="/emergency">
+        <span>🆘 {t('Emergencia')}</span>
+        <span className="muted">›</span>
+      </Link>
     </main>
   );
 }

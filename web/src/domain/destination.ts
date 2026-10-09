@@ -14,6 +14,7 @@ export interface CountryInfo {
   language?: string;
   visa?: string;
   tips?: string[];
+  embassy?: string;
   rate?: number;
 }
 

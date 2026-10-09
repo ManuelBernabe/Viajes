@@ -25,7 +25,7 @@ public sealed class DestinationApp : TestApp
         Answer = """
             {"countries": [
               {"country": "Argentina", "flag": "🇦🇷", "currencyCode": "ars", "currencyName": "Peso argentino", "plugs": "C, I", "voltage": "220 V",
-               "emergency": "911", "tipping": "10 %", "language": "Español", "visa": "No hace falta visado.", "tips": ["Lleva efectivo", " "]},
+               "emergency": "911", "tipping": "10 %", "language": "Español", "visa": "No hace falta visado.", "tips": ["Lleva efectivo", " "], "embassy": "Embajada de España en Buenos Aires: +54 11 0000 0000"},
               {"country": "Brasil", "flag": "🇧🇷", "currencyCode": "BRL", "currencyName": "Real", "plugs": "N", "voltage": "127/220 V",
                "emergency": "190", "tipping": "10 % incluido", "language": "Portugués", "visa": "No hace falta visado.", "tips": []},
               {"country": "", "flag": null}
@@ -62,6 +62,7 @@ public sealed class DestinationInfoTests(DestinationApp app) : IClassFixture<Des
         Assert.Equal("ARS", countries[0].GetProperty("currencyCode").GetString());
         Assert.Equal(1450.5, countries[0].GetProperty("rate").GetDouble());
         Assert.Equal(["Lleva efectivo"], countries[0].GetProperty("tips").EnumerateArray().Select(t => t.GetString()));
+        Assert.Equal("Embajada de España en Buenos Aires: +54 11 0000 0000", countries[0].GetProperty("embassy").GetString());
         Assert.Equal(1_700_000_000_000, info.GetProperty("ratesMs").GetInt64());
         Assert.Contains("English", app.Fake.Prompts.Last());
         Assert.Contains("Buenos Aires", app.Fake.Prompts.Last());
