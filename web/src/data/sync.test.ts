@@ -56,6 +56,25 @@ describe('pull', () => {
     expect(await getBlob('a1')).toBeUndefined();
   });
 
+  it('al unir dos viajes, las reservas que se pasan al otro conservan sus adjuntos y ficheros', async () => {
+    const database = await openDb();
+    await database.put('trips', trip('principal'));
+    await database.put('trips', trip('duplicado'));
+    await database.put('bookings', booking('b1', 'duplicado'));
+    await database.put('attachments', attachment('a1', 'b1'));
+    await database.put('blobs', { id: 'a1', mime: 'application/pdf', size: 1, bytes: new Uint8Array([1]).buffer });
+
+    await pull({
+      fetchSync: async () =>
+        response({ tripIds: ['principal'], trips: [trip('duplicado', { deletedAtMs: 5, version: 2 })], bookings: [booking('b1', 'principal', { version: 3 })] }),
+    });
+
+    expect((await listTrips()).map((t) => t.id)).toEqual(['principal']);
+    expect((await listBookings('principal')).map((b) => b.id)).toEqual(['b1']);
+    expect((await listAttachments('b1')).map((a) => a.id)).toEqual(['a1']);
+    expect(await getBlob('a1')).toBeDefined();
+  });
+
   it('purga un viaje que ya no está en la lista aunque no llegue ninguna fila suya', async () => {
     const database = await openDb();
     await database.put('trips', trip('retirado'));

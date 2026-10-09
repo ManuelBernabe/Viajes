@@ -54,6 +54,10 @@ public static class AppGuide
         - «🔗 Compartir»: crea un enlace de solo lectura del itinerario para quien no usa la app (se manda por WhatsApp,
           correo…). Muestra día a día las reservas que ve todo el hogar, con horas y lugares, sin localizadores, notas ni
           billetes; desde esa página se imprime o se guarda en PDF. Se actualiza solo y «Anular enlace» lo desactiva.
+        - «🔗 Unir con otro viaje…» (al final del viaje): pasa todo (reservas, lugares, ideas y equipaje) a otro viaje, que
+          amplía sus fechas, y borra este. Si un viaje parece parte de otro («Brasil» junto a «Argentina Brasil»), arriba
+          sale «¿Es parte de…?» con el botón para unirlos. Al añadir una reserva, las fechas del viaje se amplían solas, y una
+          etapa que sale de un sitio del viaje pocos días después se reconoce como del mismo viaje.
         - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
           aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.

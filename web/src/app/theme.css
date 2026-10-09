@@ -621,3 +621,4 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .share-points li { margin: 3px 0; }
 .share-url { width: 100%; font-size: 0.9rem; }
 .linklike { background: none; border: 0; padding: 0; color: var(--primary); font: inherit; cursor: pointer; text-decoration: underline; }
+.merge-hint { display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--warn); }

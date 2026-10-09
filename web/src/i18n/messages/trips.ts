@@ -400,4 +400,19 @@ export const trips: Messages = {
   },
   'check-in online': { en: 'online check-in', fr: 'enregistrement en ligne', it: 'check-in online' },
   'la aerolínea': { en: 'the airline', fr: 'la compagnie', it: 'la compagnia' },
+  '¿Pasar todo lo de «{from}» a «{to}» y borrar «{from}»?': {
+    en: 'Move everything from “{from}” to “{to}” and delete “{from}”?',
+    fr: 'Déplacer tout le contenu de « {from} » vers « {to} » et supprimer « {from} » ?',
+    it: 'Spostare tutto da «{from}» a «{to}» ed eliminare «{from}»?',
+  },
+  '¿Es parte de «{trip}» ({dates})?': { en: 'Is it part of “{trip}” ({dates})?', fr: 'Cela fait-il partie de « {trip} » ({dates}) ?', it: 'Fa parte di «{trip}» ({dates})?' },
+  'Unir con «{trip}»': { en: 'Merge into “{trip}”', fr: 'Fusionner avec « {trip} »', it: 'Unisci a «{trip}»' },
+  'Unir con otro viaje…': { en: 'Merge with another trip…', fr: 'Fusionner avec un autre voyage…', it: 'Unisci a un altro viaggio…' },
+  'Todo lo de este viaje (reservas, lugares, ideas y equipaje) pasa al que elijas, que amplía sus fechas, y este se borra.': {
+    en: 'Everything in this trip (bookings, places, ideas and packing) moves to the one you choose, which extends its dates, and this one is deleted.',
+    fr: 'Tout le contenu de ce voyage (réservations, lieux, idées et bagages) passe dans celui que vous choisissez, qui élargit ses dates, et celui-ci est supprimé.',
+    it: 'Tutto ciò che c’è in questo viaggio (prenotazioni, luoghi, idee e bagagli) passa a quello che scegli, che amplia le sue date, e questo viene eliminato.',
+  },
+  'Elige el viaje…': { en: 'Choose the trip…', fr: 'Choisissez le voyage…', it: 'Scegli il viaggio…' },
+  Unir: { en: 'Merge', fr: 'Fusionner', it: 'Unisci' },
 };

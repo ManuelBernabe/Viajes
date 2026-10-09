@@ -30,10 +30,13 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
   const keep = new Set(response.tripIds);
   let applied = 0;
 
+  // Los viajes borrados se quitan al final: antes llegan las reservas y lugares que se han pasado a otro viaje (al unir dos
+  // viajes), para no borrarlas con el viejo.
+  const gone: string[] = [];
   for (const trip of response.trips) {
     applied++;
     if (trip.deletedAtMs !== null || !keep.has(trip.id)) {
-      await removeTrip(trip.id);
+      gone.push(trip.id);
     } else {
       await database.put('trips', trip);
     }
@@ -86,6 +89,10 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     } else if (keep.has(place.tripId)) {
       await database.put('places', place);
     }
+  }
+
+  for (const id of gone) {
+    await removeTrip(id);
   }
 
   // Lo que espera en la cola de salida aún no lo conoce el servidor: no se purga (un viaje recién creado en el móvil, por

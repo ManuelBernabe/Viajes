@@ -145,6 +145,12 @@ export const server: Messages = {
     fr: 'Impossible de préparer les infos sur la destination. Réessayez dans un moment.',
     it: 'Impossibile preparare le info sulla destinazione. Riprova tra un po’.',
   },
+  'Elige otro viaje.': { en: 'Choose another trip.', fr: 'Choisissez un autre voyage.', it: 'Scegli un altro viaggio.' },
+  'Solo quien creó el viaje o quien administra el hogar puede unirlo con otro.': {
+    en: 'Only whoever created the trip or the household admin can merge it with another.',
+    fr: 'Seul le créateur du voyage ou l’administrateur du foyer peut le fusionner avec un autre.',
+    it: 'Solo chi ha creato il viaggio o chi amministra la famiglia può unirlo a un altro.',
+  },
   'La lectura con IA no está configurada en el servidor.': {
     en: 'AI reading isn’t set up on the server.',
     fr: 'La lecture par IA n’est pas configurée sur le serveur.',

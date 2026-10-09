@@ -5,6 +5,7 @@ import { BoardingCard } from '../components/Agenda';
 import { BookingCard } from '../components/BookingCard';
 import { groupSameTrip } from '../domain/today';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
+import { TripMerge } from '../components/TripMerge';
 import { TripReview } from '../components/TripReview';
 import { TypeChips } from '../components/TypeChips';
 import { DayWeatherBadge, useTripWeather, WeatherStrip } from '../components/WeatherStrip';
@@ -130,6 +131,7 @@ export function TripPage() {
         </Link>
       )}
 
+      <TripMerge trip={trip} mode="suggest" />
       <TripReview trip={trip} bookings={shown} />
 
       <WeatherStrip days={weather} />
@@ -227,6 +229,7 @@ export function TripPage() {
       )}
 
       <div className="spacer" />
+      <TripMerge trip={trip} mode="menu" />
       <button className="btn danger block" onClick={() => void remove()}>
         {t('Borrar viaje')}
       </button>
