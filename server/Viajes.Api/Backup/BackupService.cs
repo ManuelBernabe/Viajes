@@ -138,11 +138,18 @@ public sealed class BackupService(BackupPaths paths, ILogger<BackupService> log)
     }
 }
 
-/// <summary>Una vez al día (y al arrancar) deja una copia de la base en el volumen; guarda las 14 últimas.</summary>
-public sealed class DailyBackupService(BackupService backups, ILogger<DailyBackupService> log) : BackgroundService
+/// <summary>
+/// Una vez al día (y al arrancar) deja una copia de la base en el volumen; guarda las 14 últimas. Después de la copia, y
+/// como mucho una vez al día (la primera, media hora después de arrancar), pasa la limpieza (<see cref="Maintenance.Cleanup"/>).
+/// </summary>
+public sealed class DailyBackupService(BackupService backups, IServiceScopeFactory scopes, ILogger<DailyBackupService> log) : BackgroundService
 {
+    private static readonly TimeSpan FirstCleanupAfter = TimeSpan.FromMinutes(30);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var started = DateTimeOffset.UtcNow;
+        var lastCleanup = DateTimeOffset.MinValue;
         await Task.Delay(TimeSpan.FromSeconds(45), stoppingToken).ContinueWith(_ => { }, TaskScheduler.Default);
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -153,6 +160,23 @@ public sealed class DailyBackupService(BackupService backups, ILogger<DailyBacku
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 log.LogError(e, "No se pudo hacer la copia local de la base.");
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            if (now - started >= FirstCleanupAfter && now - lastCleanup >= TimeSpan.FromDays(1))
+            {
+                lastCleanup = now;
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    var result = await Maintenance.Cleanup.RunAsync(
+                        scope.ServiceProvider.GetRequiredService<Data.AppDbContext>(), scope.ServiceProvider.GetRequiredService<Storage.IFileStore>(), now, stoppingToken);
+                    log.LogInformation("Limpieza: {Result}", result);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    log.LogWarning(e, "La limpieza ha fallado; se reintenta mañana.");
+                }
             }
 
             try

@@ -73,35 +73,3 @@ public static class Cleanup
         }
     }
 }
-
-/// <summary>Pasa la limpieza una vez al día (la primera, un rato después de arrancar).</summary>
-public sealed class CleanupService(IServiceProvider services, ILogger<CleanupService> log) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        try
-        {
-            await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
-                {
-                    using var scope = services.CreateScope();
-                    var result = await Cleanup.RunAsync(
-                        scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<IFileStore>(), DateTimeOffset.UtcNow, stoppingToken);
-                    log.LogInformation("Limpieza: {Result}", result);
-                }
-                catch (Exception e) when (e is not OperationCanceledException)
-                {
-                    log.LogWarning(e, "La limpieza ha fallado; se reintenta mañana.");
-                }
-
-                await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Parada del servidor.
-        }
-    }
-}
