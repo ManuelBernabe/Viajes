@@ -8,7 +8,7 @@ namespace Viajes.Tests;
 
 public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
 {
-    [Fact(Skip = "diagnóstico")]
+    [Fact]
     public async Task The_cleanup_removes_only_what_is_no_longer_needed()
     {
         using var scope = app.Services.CreateScope();
@@ -47,14 +47,18 @@ public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
         // (Ago() no se puede usar dentro de una consulta: se calcula antes.)
         await db.SaveChangesAsync();
 
+        // La limpieza vacía la clave del correo en la propia ficha: se guardan antes.
+        var oldDoneKey = oldDone.RawFileKey;
+        var attachmentKey = attachment.FileKey;
         var result = await Cleanup.RunAsync(db, store, now, default);
 
         Assert.True(result.AiAnswers >= 2);
         Assert.False(await db.AppSettings.AnyAsync(a => a.Key == oldQuestion));
         Assert.False(await db.AppSettings.AnyAsync(a => a.Key == oldReading));
         Assert.True(await db.AppSettings.AnyAsync(a => a.Key == recentReading));
-        Assert.Null(await store.OpenReadAsync(oldDone.RawFileKey, default));
-        Assert.Null(await store.OpenReadAsync(attachment.FileKey, default));
+        Assert.Null(await store.OpenReadAsync(oldDoneKey, default));
+        Assert.Null(await store.OpenReadAsync(attachmentKey, default));
+        Assert.Equal("", oldDone.RawFileKey);
         Assert.NotNull(await store.OpenReadAsync(oldPending.RawFileKey, default));
         Assert.NotNull(await store.OpenReadAsync(recentDone.RawFileKey, default));
         Assert.False(await db.InboxAttachments.AnyAsync(a => a.Id == attachment.Id));
