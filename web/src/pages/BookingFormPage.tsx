@@ -4,7 +4,7 @@ import { describeError } from '../api';
 import { BackLink } from '../app/Layout';
 import { useSession } from '../app/SessionContext';
 import { parseBoardingPass, prefillFromBoardingPass } from '../attachments/bcbp';
-import { splitQrCodes } from '../attachments/qrCodes';
+import { splitQrCodes } from '../attachments/qrText';
 import { extractWithAi, toSuggestion } from '../attachments/aiExtract';
 import { dictationSupported, MicButton } from '../components/MicButton';
 import { suggestFromText, type TextSuggestion } from '../attachments/extract';

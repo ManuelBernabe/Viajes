@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { parseBoardingPass } from '../attachments/bcbp';
 import { rescan } from '../attachments/rescan';
 import { drawQr } from '../attachments/qr';
-import { splitQrCodes } from '../attachments/qrCodes';
+import { splitQrCodes } from '../attachments/qrText';
 import { useWakeLock } from '../attachments/useWakeLock';
 import { getBooking, listAttachments } from '../data/repo';
 import type { Attachment } from '../data/types';
