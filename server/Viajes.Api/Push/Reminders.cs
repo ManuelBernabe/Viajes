@@ -174,7 +174,19 @@ public static class Reminders
         new($"Hoy a las {booking.StartLocal[11..16]}: {Label(booking)}", $"{booking.Title}{Place(booking)}. Toca para abrir la reserva y su QR.", $"/bookings/{booking.Id}", $"soon-{booking.Id}");
 
     public static PushMessage CheckInMessage(Booking booking) =>
-        new($"Check-in abierto: {booking.Title}", "Ya puedes hacer el check-in online y elegir o cambiar asiento. Toca para abrir la reserva.", $"/bookings/{booking.Id}", $"checkin-{booking.Id}");
+        new(
+            $"Check-in abierto: {booking.Title}",
+            "Ya puedes hacer el check-in online y elegir o cambiar asiento." + (BaggageOf(booking.Notes) is { } bags ? $" Equipaje: {bags}." : "") + " Toca para abrir la reserva.",
+            $"/bookings/{booking.Id}",
+            $"checkin-{booking.Id}");
+
+    /// <summary>El tramo «Equipaje: …» de las notas (lo pone la IA al leer la reserva, o se apunta en la app).</summary>
+    public static string? BaggageOf(string? notes) =>
+        (notes ?? "")
+            .Split([" · ", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(s => s.StartsWith("Equipaje:", StringComparison.OrdinalIgnoreCase))
+            .Select(s => s["Equipaje:".Length..].Trim().TrimEnd('.'))
+            .FirstOrDefault(s => s.Length > 0);
 
     public static PushMessage ChangeMessage(Booking booking) =>
         new($"Reserva modificada: {booking.Title}", (booking.ChangeNote ?? "Hay cambios en esta reserva.").Replace("\n", " "), $"/bookings/{booking.Id}", $"change-{booking.Id}");

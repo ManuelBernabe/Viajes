@@ -622,3 +622,5 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .share-url { width: 100%; font-size: 0.9rem; }
 .linklike { background: none; border: 0; padding: 0; color: var(--primary); font: inherit; cursor: pointer; text-decoration: underline; }
 .merge-hint { display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--warn); }
+.baggage { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--raise); }
+.pass-bag { margin-top: 10px; font-size: 0.95rem; }

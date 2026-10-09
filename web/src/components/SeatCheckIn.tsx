@@ -3,6 +3,7 @@ import { zoneLabel } from '../data/localTime';
 import type { Booking } from '../data/types';
 import { airlineOf, checkInOpensMs } from '../domain/airlines';
 import { lang, locale, t } from '../i18n';
+import { BaggageLine } from './BaggageLine';
 import { formatSeats, useSeats } from './useSeats';
 
 /**
@@ -45,7 +46,7 @@ export function SeatCheckIn({ booking }: { booking: Booking }) {
 
   return (
     <section className="card">
-      <h3>💺 {t('Asiento y check-in')}</h3>
+      <h3>💺 {t('Asiento, equipaje y check-in')}</h3>
       <div>
         {seats.length > 0 ? (
           <>
@@ -55,6 +56,7 @@ export function SeatCheckIn({ booking }: { booking: Booking }) {
           <span className="muted">{t('La reserva no dice el asiento.')}</span>
         )}
       </div>
+      <BaggageLine booking={booking} />
       <div className="small" style={{ marginTop: 6 }}>
         {booking.startUtcMs < now
           ? t('El vuelo ya ha salido.')

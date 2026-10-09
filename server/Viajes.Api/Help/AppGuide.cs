@@ -58,6 +58,9 @@ public static class AppGuide
           amplía sus fechas, y borra este. Si un viaje parece parte de otro («Brasil» junto a «Argentina Brasil»), arriba
           sale «¿Es parte de…?» con el botón para unirlos. Al añadir una reserva, las fechas del viaje se amplían solas, y una
           etapa que sale de un sitio del viaje pocos días después se reconoce como del mismo viaje.
+        - Equipaje de un vuelo (en «Asiento, equipaje y check-in» de la reserva y en la tarjeta de «Hoy»): la IA lo apunta al
+          leer el correo o el billete («Equipaje: 1 × 23 kg por pasajero»); si no sale, «Leer del billete» lo busca en el PDF
+          adjunto y «Apuntar» deja escribirlo a mano. El aviso de check-in abierto lo recuerda.
         - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
           aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.

@@ -42,7 +42,9 @@ public sealed class DeepSeekBookingExtractor(HttpClient http, ILogger<DeepSeekBo
         - startPlace y endPlace: aeropuerto (código IATA si aparece), estación, hotel o lugar. Para un hotel, su nombre.
         - address: dirección postal completa si aparece.
         - notes: lo útil sin campo propio, separado por « · »: pasajeros con asiento, coche y plazas de tren, números de
-          billete, terminal, puerta, clase, compañía operadora, teléfono. Nada de texto legal ni publicidad.
+          billete, terminal, puerta, clase, compañía operadora, teléfono. Nada de texto legal ni publicidad. En vuelos y
+          trenes, el equipaje como tramo propio: «Equipaje: 2 × 23 kg por pasajero» (con mano si lo dice), o «Equipaje: sin
+          maleta facturada» si la tarifa no la incluye.
         - Textos en español. Responde únicamente con el JSON, sin explicaciones ni marcas de código.
         """;
 
