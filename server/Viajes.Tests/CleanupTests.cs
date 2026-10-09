@@ -11,6 +11,21 @@ public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
     [Fact]
     public async Task The_cleanup_removes_only_what_is_no_longer_needed()
     {
+        try
+        {
+            await Run();
+        }
+        catch (Exception e)
+        {
+            // Para verlo en GitHub sin abrir el registro.
+            Console.WriteLine($"::error title=CleanupTests::{e.GetType().Name}: {e.Message.Replace("\n", " ")}");
+            Console.Error.WriteLine($"::error title=CleanupTests::{e.GetType().Name}: {e.Message.Replace("\n", " ")}");
+            throw;
+        }
+    }
+
+    private async Task Run()
+    {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var store = scope.ServiceProvider.GetRequiredService<IFileStore>();
