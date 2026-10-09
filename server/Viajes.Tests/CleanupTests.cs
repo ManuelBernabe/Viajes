@@ -44,6 +44,7 @@ public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
             new AppSetting { Key = recentReading, Value = "{}", UpdatedMs = Ago(10) },
             new AppSetting { Key = oldReading, Value = "{}", UpdatedMs = Ago(100) });
         db.ReminderLogs.Add(new ReminderLog { BookingId = Guid.NewGuid(), Kind = "eve", StartUtcMs = Ago(90), SentMs = Ago(91) });
+        // (Ago() no se puede usar dentro de una consulta: se calcula antes.)
         await db.SaveChangesAsync();
 
         var result = await Cleanup.RunAsync(db, store, now, default);
@@ -60,6 +61,7 @@ public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
         // La ficha del correo se queda (evita importarlo dos veces), sin el texto.
         var kept = await db.InboxItems.AsNoTracking().SingleAsync(i => i.Id == oldDone.Id);
         Assert.Null(kept.BodyText);
-        Assert.False(await db.ReminderLogs.AnyAsync(r => r.StartUtcMs == Ago(90)));
+        var oldLog = Ago(90);
+        Assert.False(await db.ReminderLogs.AnyAsync(r => r.StartUtcMs == oldLog));
     }
 }
