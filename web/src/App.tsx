@@ -18,6 +18,7 @@ import { InboxItemPage } from './pages/InboxItemPage';
 import { InboxPage } from './pages/InboxPage';
 import { InvitationPage } from './pages/InvitationPage';
 import { DestinationPage } from './pages/DestinationPage';
+import { EmergencyPage } from './pages/EmergencyPage';
 import { PackingPage } from './pages/PackingPage';
 import { SharePage } from './pages/SharePage';
 import { PlacesPage } from './pages/PlacesPage';
@@ -72,6 +73,7 @@ function Gate() {
         <Route element={<Layout />}>
           <Route path="/" element={<TodayPage />} />
           <Route path="/trips" element={<TripsPage />} />
+          <Route path="/emergency" element={<EmergencyPage />} />
           <Route path="/trips/new" element={<TripFormPage />} />
           <Route path="/trips/:tripId" element={<TripPage />} />
           <Route path="/trips/:tripId/edit" element={<TripFormPage />} />

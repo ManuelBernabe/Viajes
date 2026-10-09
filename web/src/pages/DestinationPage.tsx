@@ -69,6 +69,7 @@ function CountryCard({ country }: { country: CountryInfo }) {
     ['💶', t('Propinas'), country.tipping],
     ['🗣️', t('Idioma'), country.language],
     ['🛂', t('Visado'), country.visa],
+    ['🏛️', t('Embajada o consulado'), country.embassy],
   ];
   return (
     <section className="card dest-card">

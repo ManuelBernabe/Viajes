@@ -624,3 +624,14 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .merge-hint { display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--warn); }
 .baggage { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--raise); }
 .pass-bag { margin-top: 10px; font-size: 0.95rem; }
+
+/* Emergencia */
+.emergency-country { border-left: 4px solid var(--danger); }
+.emergency-call { font-size: 1.15rem; font-weight: 700; }
+.emergency-form { display: flex; flex-direction: column; gap: 8px; }
+.emergency-form input, .emergency-form textarea { width: 100%; box-sizing: border-box; min-width: 0; }
+.emergency-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.emergency-grid > :last-child { grid-column: 1 / -1; }
+.emergency-person { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.emergency-person > :nth-child(3), .emergency-person > :nth-child(4) { grid-column: 1 / -1; }
+.teaser.emergency { border-left: 4px solid var(--danger); }

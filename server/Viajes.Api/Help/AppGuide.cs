@@ -61,6 +61,9 @@ public static class AppGuide
         - Equipaje de un vuelo (en «Asiento, equipaje y check-in» de la reserva y en la tarjeta de «Hoy»): la IA lo apunta al
           leer el correo o el billete («Equipaje: 1 × 23 kg por pasajero»); si no sale, «Leer del billete» lo busca en el PDF
           adjunto y «Apuntar» deja escribirlo a mano. El aviso de check-in abierto lo recuerda.
+        - «🆘 Emergencia» (en «Hoy», abajo): en el país donde estáis, el teléfono de emergencias con botones para llamar y
+          la embajada o consulado (de «🌍 Destino»); y la tarjeta del hogar: seguro de viaje, a quién llamar en casa,
+          datos médicos opcionales y notas. La ven y editan todos, y se abre sin conexión.
         - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
           aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.
