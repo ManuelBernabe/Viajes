@@ -23,6 +23,18 @@ public sealed class CachedAi(IBookingExtractor inner, IServiceScopeFactory scope
     private static readonly AsyncLocal<bool> Bypass = new();
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    private static long _hits;
+    private static long _misses;
+
+    /// <summary>Respuestas servidas desde la caché desde que arrancó el servidor.</summary>
+    public static long Hits => Interlocked.Read(ref _hits);
+
+    /// <summary>Preguntas que han ido a la IA desde que arrancó el servidor.</summary>
+    public static long Misses => Interlocked.Read(ref _misses);
+
+    /// <summary>El proveedor de verdad (para decir cuál es en Ajustes).</summary>
+    public IBookingExtractor Inner => inner;
+
     private IJsonAsker? Asker => inner as IJsonAsker;
 
     public bool IsAvailable => inner.IsAvailable;
@@ -110,7 +122,12 @@ public sealed class CachedAi(IBookingExtractor inner, IServiceScopeFactory scope
             var row = await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(a => a.Key == key && a.UpdatedMs >= since, ct);
             if (row is not null)
             {
+                Interlocked.Increment(ref _hits);
                 log.LogInformation("Respuesta de IA desde la caché ({Key}).", key[..12]);
+            }
+            else
+            {
+                Interlocked.Increment(ref _misses);
             }
 
             return row?.Value;

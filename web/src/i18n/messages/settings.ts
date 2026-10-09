@@ -626,4 +626,10 @@ export const settings: Messages = {
     fr: 'Cet iPhone ne permet pas d’utiliser Face ID dans l’app pour le moment. Vérifiez dans Réglages → Face ID et code qu’un code est défini, et dans Réglages → Général → Remplissage automatique et mots de passe que « Mots de passe » est activé. Puis rouvrez Viajes.',
     it: 'Questo iPhone non permette di usare Face ID nell’app al momento. Controlla in Impostazioni → Face ID e codice che ci sia un codice, e in Impostazioni → Generali → Riempimento automatico e password che «Password» sia attivo. Poi riapri Viajes.',
   },
+  'IA del servidor': { en: 'Server AI', fr: 'IA du serveur', it: 'IA del server' },
+  Modelo: { en: 'Model', fr: 'Modèle', it: 'Modello' },
+  'preguntas sencillas: {model}': { en: 'simple questions: {model}', fr: 'questions simples : {model}', it: 'domande semplici: {model}' },
+  Caché: { en: 'Cache', fr: 'Cache', it: 'Cache' },
+  '{n} respuestas guardadas': { en: '{n} saved answers', fr: '{n} réponses enregistrées', it: '{n} risposte salvate' },
+  '{hits} de {total} desde la caché': { en: '{hits} of {total} from the cache', fr: '{hits} sur {total} depuis le cache', it: '{hits} su {total} dalla cache' },
 };

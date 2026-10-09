@@ -150,7 +150,7 @@ export function SettingsPage() {
 
       <ImportTokens admin={admin} />
 
-      <AiSettings />
+      <AiSettings admin={admin === true} />
 
       <FlightKeySettings admin={admin} />
 

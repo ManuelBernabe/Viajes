@@ -29,7 +29,9 @@ public static class ExtractionEndpoints
         if (!string.IsNullOrWhiteSpace(anthropicKey))
         {
             services.AddSingleton(new AnthropicClient { ApiKey = anthropicKey });
-            services.AddSingleton<IBookingExtractor, ClaudeBookingExtractor>();
+            services.AddSingleton<IBookingExtractor>(provider => new ClaudeBookingExtractor(
+                provider.GetRequiredService<AnthropicClient>(), provider.GetRequiredService<ILogger<ClaudeBookingExtractor>>(),
+                config["CLAUDE_MODEL"], config["CLAUDE_LIGHT_MODEL"]));
             return services;
         }
 

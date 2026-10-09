@@ -55,3 +55,15 @@ public sealed class AiCacheTests(TestApp app) : IClassFixture<TestApp>
         Assert.Equal(4, inner.Calls);
     }
 }
+
+public sealed class AiStatusTests(TestApp app) : IClassFixture<TestApp>
+{
+    [Fact]
+    public async Task The_admin_sees_which_ai_the_server_uses()
+    {
+        var ana = await TripsApi.SignUp(app, "estado-ia@example.com");
+        var status = await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<JsonElement>(ana.Client, "/api/settings/ai");
+        Assert.Equal("Sin IA", status.GetProperty("provider").GetString());
+        Assert.True(status.GetProperty("cachedAnswers").GetInt32() >= 0);
+    }
+}
