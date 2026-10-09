@@ -70,9 +70,23 @@ public static class TripProposals
         var trips = await access.VisibleTrips(userId).Where(t => t.DeletedAtMs == null)
             .Select(t => new { t.Id, t.Title, t.Destination, t.StartDate, t.EndDate })
             .ToListAsync(ct);
+        var tripIds = trips.Select(t => t.Id).ToList();
+        var placeRows = await access.VisibleBookings(userId)
+            .Where(b => tripIds.Contains(b.TripId) && b.DeletedAtMs == null)
+            .Select(b => new { b.TripId, b.Type, b.StartPlace, b.EndPlace })
+            .ToListAsync(ct);
+        var placesByTrip = placeRows
+            .GroupBy(b => b.TripId)
+            .ToDictionary(g => g.Key, g => string.Join(", ", g
+                .SelectMany(b => b.Type is "flight" or "train" ? new[] { b.StartPlace, b.EndPlace } : new[] { b.StartPlace })
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(15)));
         var tripList = trips.Count == 0
             ? "(ninguno)"
-            : string.Join("\n", trips.Select(t => $"- {t.Id} | {t.Title} | destino: {t.Destination ?? "?"} | fechas: {t.StartDate ?? "?"} a {t.EndDate ?? t.StartDate ?? "?"}"));
+            : string.Join("\n", trips.Select(t =>
+                $"- {t.Id} | {t.Title} | destino: {t.Destination ?? "?"} | fechas: {t.StartDate ?? "?"} a {t.EndDate ?? t.StartDate ?? "?"} | sitios: {placesByTrip.GetValueOrDefault(t.Id) ?? "?"}"));
         var text = item.BodyText is null ? "" : item.BodyText[..Math.Min(item.BodyText.Length, 2000)];
         var prompt = $"""
             Reserva:
@@ -90,8 +104,11 @@ public static class TripProposals
             {tripList}
 
             Responde en {language}:
-            - tripId: el id del viaje al que pertenece esta reserva, si encaja claramente en uno por lugar y fechas (un vuelo
-              de ida o de vuelta puede ser uno o dos días antes o después). Si es otro destino u otras fechas, null.
+            - tripId: el id del viaje al que pertenece esta reserva, si encaja en uno por lugar y fechas (un vuelo de ida o
+              de vuelta puede ser uno o dos días antes o después). Las fechas de un viaje se amplían solas: una etapa más que
+              sale de uno de sus sitios o va a un país o ciudad de su nombre o destino, unos días después de su fin, es de ese
+              viaje (un vuelo Buenos Aires → Río tras «Argentina Brasil» es de ese viaje, no uno nuevo «Brasil»). Null solo si
+              es claramente otro viaje: sale de casa, o es otro destino en otras fechas.
             - title: si tripId es null, nombre corto del viaje nuevo (2-4 palabras). Para un vuelo o un tren, el destino, no el
               origen. Si tripId no es null, el nombre de ese viaje.
             - destination: la ciudad de destino (o del hotel); null si no se sabe.

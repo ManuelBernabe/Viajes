@@ -180,8 +180,28 @@ export async function saveBooking(body: BookingBody, createdBy: string, id = new
   };
   await database.put('bookings', booking);
   await enqueue({ kind: 'put-booking', id, body });
+  await widenTrip(body.tripId, booking.startLocal, booking.endLocal);
   emitChange();
   return booking;
+}
+
+/** Las fechas del viaje se amplían para que quepa la reserva (así la siguiente etapa también se reconoce como suya). */
+async function widenTrip(tripId: string, startLocal: string, endLocal: string | null): Promise<void> {
+  const trip = await (await openDb()).get('trips', tripId);
+  if (!trip || !trip.startDate) {
+    return;
+  }
+  const first = startLocal.slice(0, 10);
+  const last = endLocal && endLocal.slice(0, 10) > first ? endLocal.slice(0, 10) : first;
+  const end = trip.endDate ?? trip.startDate;
+  if (first >= trip.startDate && last <= end) {
+    return;
+  }
+  await saveTrip(
+    { title: trip.title, destination: trip.destination, startDate: first < trip.startDate ? first : trip.startDate, endDate: last > end ? last : end },
+    trip.createdBy,
+    trip.id,
+  );
 }
 
 export async function deleteBooking(id: string): Promise<void> {

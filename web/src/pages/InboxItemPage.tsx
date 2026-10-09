@@ -13,7 +13,7 @@ import type { Booking, InboxItem, TripBody } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { sortTrips, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { applyChanges, diffBooking, findExistingBooking, type Change } from '../domain/changes';
-import { draftTrip, matchTrip, type IncomingBooking } from '../domain/tripMatch';
+import { draftTrip, matchTrip, tripPlaces, type IncomingBooking } from '../domain/tripMatch';
 import { lang, t } from '../i18n';
 
 /** Valor del desplegable para «viaje nuevo». */
@@ -56,6 +56,7 @@ export function InboxItemPage() {
   const navigate = useNavigate();
   const item = useLiveQuery(() => getInboxItem(itemId), [itemId]);
   const trips = useLiveQuery(listTrips, []);
+  const allBookings = useLiveQuery(listAllBookings, []);
   const [tripId, setTripId] = useState('');
   const session = useSession();
   const [message, setMessage] = useState('');
@@ -142,10 +143,14 @@ export function InboxItemPage() {
   const sorted = sortTrips(trips, todayLocal());
   const options = [...sorted.active, ...sorted.past];
   const incoming = incomingOf(item);
-  const matched = matchTrip(trips, incoming);
+  const matched = matchTrip(trips, incoming, tripPlaces(allBookings ?? []));
   // Encaja en un viaje: ese. Si no, viaje nuevo cuando la reserva trae fecha (si no la trae, no se sabe: el primero).
-  // La IA sabe que «IGR» está en Argentina: si contesta, manda ella (un viaje del hogar o uno nuevo). Si no, fechas y destino.
-  const aiChoice = aiTrip === undefined ? undefined : aiTrip !== null && options.some((o) => o.id === aiTrip) ? aiTrip : null;
+  // La IA sabe que «IGR» está en Argentina: si propone un viaje del hogar, ese. Si propone uno nuevo, solo cuando las fechas
+  // y el destino tampoco encajan en ninguno.
+  // Si la IA dice «viaje nuevo» pero las fechas o el destino encajan con uno que ya existe, se queda ese: así no se crean
+  // viajes repetidos («Brasil» cuando ya está «Argentina Brasil»).
+  const aiChoice =
+    aiTrip === undefined ? undefined : aiTrip !== null && options.some((o) => o.id === aiTrip) ? aiTrip : (matched?.id ?? null);
   const suggested = aiChoice !== undefined ? aiChoice : (matched?.id ?? null);
   const chosen =
     tripId || (aiChoice !== undefined ? (aiChoice ?? NEW_TRIP) : matched?.id || (incoming.startLocal || options.length === 0 ? NEW_TRIP : options[0].id));

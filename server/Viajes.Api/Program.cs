@@ -85,6 +85,7 @@ app.MapPlaceSuggestions();
 app.MapPacking();
 app.MapDestinationInfo();
 app.MapItineraryShare();
+app.MapTripMerge();
 app.MapTripProposals();
 app.MapCalendarFeed();
 app.MapDocumentEndpoints();
