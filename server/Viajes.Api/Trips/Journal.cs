@@ -23,7 +23,7 @@ public static partial class Journal
 
     public sealed record DayRecord(string? Text, long UpdatedMs, string? UpdatedBy);
 
-    public sealed record PhotoRecord(string Date, string Mime, long Size, string? By, long Ms);
+    public sealed record PhotoRecord(string Date, string Mime, long Size, string? By, long Ms, bool Thumb = false);
 
     public sealed record PhotoDto(Guid Id, string Mime);
 
@@ -45,7 +45,9 @@ public static partial class Journal
 
     public static string PhotoKey(Guid tripId, Guid photoId) => $"jphoto:{tripId:N}:{photoId:N}";
 
-    public static string FileKey(Guid tripId, Guid photoId) => $"trips/{tripId}/journal/{photoId}";
+    public static string FileKey(Guid tripId, Guid photoId, bool thumb = false) => $"trips/{tripId}/journal/{photoId}{(thumb ? "-mini" : "")}";
+
+    public const long MaxThumbBytes = 300_000;
 
     [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}$")]
     private static partial Regex DatePattern();
@@ -57,6 +59,7 @@ public static partial class Journal
         group.MapPut("/{date}", PutText);
         group.MapPost("/{date}/photos", AddPhoto).DisableAntiforgery();
         group.MapGet("/photos/{photoId:guid}", GetPhoto);
+        group.MapPut("/photos/{photoId:guid}/thumb", PutThumb).DisableAntiforgery();
         group.MapDelete("/photos/{photoId:guid}", DeletePhoto);
     }
 
@@ -251,6 +254,19 @@ public static partial class Journal
     }
 
     private static async Task<IResult> GetPhoto(
+        Guid id, Guid photoId, string? size, HttpContext http, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db,
+        IFileStore store, CancellationToken ct)
+    {
+        if (await TripFor(id, principal, users, access) is null)
+        {
+            return Results.NotFound();
+        }
+
+        return await Serve(http, db, store, id, photoId, size == "thumb", ct);
+    }
+
+    /// <summary>La miniatura (unos 30 KB) que hace el móvil al subir la foto: es lo que se ve en la cuadrícula.</summary>
+    private static async Task<IResult> PutThumb(
         Guid id, Guid photoId, HttpContext http, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db,
         IFileStore store, CancellationToken ct)
     {
@@ -259,18 +275,36 @@ public static partial class Journal
             return Results.NotFound();
         }
 
-        return await Serve(http, db, store, id, photoId, ct);
-    }
-
-    /// <summary>Sirve una foto del diario de ese viaje (también para la página compartida).</summary>
-    public static async Task<IResult> Serve(HttpContext http, AppDbContext db, IFileStore store, Guid tripId, Guid photoId, CancellationToken ct)
-    {
-        if (!await db.AppSettings.AnyAsync(a => a.Key == PhotoKey(tripId, photoId), ct))
+        var row = await db.AppSettings.FirstOrDefaultAsync(a => a.Key == PhotoKey(id, photoId), ct);
+        if (row is null)
         {
             return Results.NotFound();
         }
 
-        var file = await store.OpenReadAsync(FileKey(tripId, photoId), ct);
+        var mime = (http.Request.ContentType ?? "").Split(';')[0].Trim().ToLowerInvariant();
+        if (mime is not ("image/jpeg" or "image/webp" or "image/png") || http.Request.ContentLength is not { } length || length > MaxThumbBytes)
+        {
+            return Results.Problem("La miniatura no es válida.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        await store.WriteAsync(FileKey(id, photoId, thumb: true), http.Request.Body, mime, ct);
+        var record = JsonSerializer.Deserialize<PhotoRecord>(row.Value, Json)!;
+        row.Value = JsonSerializer.Serialize(record with { Thumb = true }, Json);
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
+
+    /// <summary>Sirve una foto del diario de ese viaje (también para la página compartida); la miniatura si la hay y se pide.</summary>
+    public static async Task<IResult> Serve(HttpContext http, AppDbContext db, IFileStore store, Guid tripId, Guid photoId, bool thumb, CancellationToken ct)
+    {
+        var row = await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(a => a.Key == PhotoKey(tripId, photoId), ct);
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
+
+        var hasThumb = thumb && JsonSerializer.Deserialize<PhotoRecord>(row.Value, Json)?.Thumb == true;
+        var file = await store.OpenReadAsync(FileKey(tripId, photoId, hasThumb), ct);
         if (file is null)
         {
             return Results.NotFound();
@@ -295,6 +329,7 @@ public static partial class Journal
             db.AppSettings.Remove(row);
             await db.SaveChangesAsync(ct);
             await store.DeleteAsync(FileKey(id, photoId), ct);
+            await store.DeleteAsync(FileKey(id, photoId, thumb: true), ct);
         }
 
         return Results.NoContent();
