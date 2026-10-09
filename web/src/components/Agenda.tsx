@@ -9,6 +9,7 @@ import { t } from '../i18n';
 import { FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
 import { useAutoFix } from './useAutoFix';
 import { formatSeats, useSeats } from './useSeats';
+import { baggageOf } from '../domain/baggage';
 
 export function startsIn(ms: number): string {
   const { days, hours, minutes } = countdown(ms);
@@ -54,6 +55,7 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
   const expected = info && info.depActualMs === null ? clock(info.depEstimatedMs, booking.startTz) : null;
   const arrival = info ? clock(info.arrActualMs ?? info.arrEstimatedMs ?? info.arrScheduledMs, booking.endTz ?? booking.startTz) : null;
   const seats = useSeats(group);
+  const baggage = group.map((b) => baggageOf(b.notes)).find(Boolean) ?? null;
   const withQr = group.find((b) => qr.has(b.id));
   const destination = destinationOf(booking);
   const directions = destination ? directionsUrls(destination) : null;
@@ -121,6 +123,11 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
               <b>{fact.value}</b>
             </div>
           ))}
+        </div>
+      )}
+      {baggage && (
+        <div className="pass-bag">
+          🧳 <span className="muted">{t('Maletas')}:</span> {baggage}
         </div>
       )}
 

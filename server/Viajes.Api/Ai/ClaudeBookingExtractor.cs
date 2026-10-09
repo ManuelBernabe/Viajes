@@ -36,7 +36,9 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
         - `address`: dirección postal completa si aparece (hoteles, coches, eventos).
         - `notes`: lo que conviene tener a mano y no tiene campo propio, separado por « · »: pasajeros con asiento
           («Manuel Bernabe (23G)»), coche y plazas de tren, números de billete, terminal, puerta, clase, compañía operadora,
-          teléfono de contacto. Nada de texto legal ni publicidad.
+          teléfono de contacto. Nada de texto legal ni publicidad. En vuelos y trenes, el equipaje como tramo propio que
+          empieza por «Equipaje: »: maletas facturadas con peso y si es por pasajero («Equipaje: 2 × 23 kg por pasajero ·
+          …» o «Equipaje: 1 × 23 kg por pasajero, mano 10 kg»; «Equipaje: sin maleta facturada» si la tarifa no la incluye).
         - Textos en español, tal y como se escribirían en la app.
         """;
 

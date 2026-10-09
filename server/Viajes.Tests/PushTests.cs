@@ -195,6 +195,20 @@ public sealed class ReminderRuleTests
     private static long Utc(int y, int mo, int d, int h, int mi) => new DateTimeOffset(y, mo, d, h, mi, 0, TimeSpan.Zero).ToUnixTimeMilliseconds();
 
     [Fact]
+    public void The_check_in_message_says_the_baggage_when_the_booking_has_it()
+    {
+        var booking = Flight("2026-10-15T10:00", "America/Argentina/Buenos_Aires");
+        booking.Title = "G3 7671 AEP → GIG";
+        booking.Notes = "Pasajero: Manuel (12A) · Equipaje: 1 × 23 kg por pasajero · Terminal A";
+        Assert.Equal("1 × 23 kg por pasajero", Reminders.BaggageOf(booking.Notes));
+        Assert.Contains("Equipaje: 1 × 23 kg por pasajero.", Reminders.CheckInMessage(booking).Body);
+
+        booking.Notes = "Pasajero: Manuel (12A)";
+        Assert.Null(Reminders.BaggageOf(booking.Notes));
+        Assert.DoesNotContain("Equipaje", Reminders.CheckInMessage(booking).Body);
+    }
+
+    [Fact]
     public void The_eve_reminder_is_at_20h_local_of_the_day_before()
     {
         var booking = Flight("2026-10-12T10:05", "America/Argentina/Buenos_Aires");
