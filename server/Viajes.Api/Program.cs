@@ -34,6 +34,8 @@ builder.Services.AddForgotPassword();
 builder.Services.AddFileStore(builder.Configuration, dataDir);
 builder.Services.AddSingleton<VersionInfo>();
 builder.Services.AddBookingExtractor(builder.Configuration);
+// Misma pregunta, misma respuesta: lo ya preguntado a la IA sale de la base de datos.
+builder.Services.AddAiCache();
 // El mismo proveedor de IA responde también preguntas con JSON (sugerencias de lugares).
 builder.Services.AddSingleton<IJsonAsker>(provider => provider.GetRequiredService<IBookingExtractor>() as IJsonAsker ?? new NoBookingExtractor());
 builder.Services.AddPush();

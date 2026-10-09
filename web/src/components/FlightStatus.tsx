@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Booking } from '../data/types';
 import { cachedFlight, clock, departureHint, hasFlightNumber, loadFlight, statusLabel, type FlightStatusResponse } from '../domain/flightStatus';
 import { locale, t } from '../i18n';
@@ -8,12 +8,16 @@ export function useFlightStatus(booking: Booking | undefined): [FlightStatusResp
   const enabled = booking !== undefined && hasFlightNumber(booking);
   const [status, setStatus] = useState<FlightStatusResponse | null>(() => (enabled && booking ? cachedFlight(booking.id) : null));
   const [tick, setTick] = useState(0);
+  // «↻ Actualizar» pregunta aunque se acabe de preguntar.
+  const forced = useRef(false);
   useEffect(() => {
     if (!enabled || !booking) {
       return;
     }
     let alive = true;
-    void loadFlight(booking).then((result) => {
+    const force = forced.current;
+    forced.current = false;
+    void loadFlight(booking, Date.now(), force).then((result) => {
       if (alive) {
         setStatus(result);
       }
@@ -25,7 +29,13 @@ export function useFlightStatus(booking: Booking | undefined): [FlightStatusResp
     };
     // Se vuelve a pedir si cambia la reserva (hora o título) o pasa el rato.
   }, [enabled, booking?.id, booking?.startUtcMs, booking?.title, tick]);
-  return [status, () => setTick((n) => n + 1)];
+  return [
+    status,
+    () => {
+      forced.current = true;
+      setTick((n) => n + 1);
+    },
+  ];
 }
 
 function ago(ms: number): string {
