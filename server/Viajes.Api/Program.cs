@@ -36,6 +36,7 @@ builder.Services.AddSingleton<VersionInfo>();
 builder.Services.AddBookingExtractor(builder.Configuration);
 // Misma pregunta, misma respuesta: lo ya preguntado a la IA sale de la base de datos.
 builder.Services.AddAiCache();
+builder.Services.AddHostedService<Viajes.Api.Maintenance.CleanupService>();
 // El mismo proveedor de IA responde también preguntas con JSON (sugerencias de lugares).
 builder.Services.AddSingleton<IJsonAsker>(provider => provider.GetRequiredService<IBookingExtractor>() as IJsonAsker ?? new NoBookingExtractor());
 builder.Services.AddPush();
