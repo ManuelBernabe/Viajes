@@ -34,6 +34,7 @@ public static class ItineraryShare
         group.MapPost("", Create);
         group.MapDelete("", Revoke);
         app.MapGet("/i/{token}", Page).AllowAnonymous();
+        app.MapGet("/i/{token}/p/{photoId:guid}", Photo).AllowAnonymous();
     }
 
     private static string UrlFor(HttpRequest request, string token) => $"{request.Scheme}://{request.Host}/i/{token}";
@@ -121,7 +122,7 @@ public static class ItineraryShare
         var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(12));
         var headers = context.Response.Headers;
         headers["Content-Security-Policy"] =
-            $"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-{nonce}'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+            $"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-{nonce}'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
         headers["X-Robots-Tag"] = "noindex, nofollow";
         headers["Referrer-Policy"] = "no-referrer";
         headers.CacheControl = "no-store";
@@ -134,7 +135,23 @@ public static class ItineraryShare
             .Where(b => b.TripId == trip.Id && b.DeletedAtMs == null && b.Visibility == Booking.VisibleToHousehold)
             .OrderBy(b => b.StartUtcMs)
             .ToListAsync();
-        return Results.Content(Html.Render(trip, bookings, parts![1], nonce), "text/html; charset=utf-8", Encoding.UTF8);
+        var journal = await Journal.Load(db, trip.Id, bookings, context.RequestAborted);
+        return Results.Content(Html.Render(trip, bookings, parts![1], nonce, journal, token), "text/html; charset=utf-8", Encoding.UTF8);
+    }
+
+    /// <summary>Una foto del diario del viaje del enlace (solo de ese viaje y mientras el enlace exista).</summary>
+    private static async Task<IResult> Photo(string token, Guid photoId, HttpContext context, AppDbContext db, Storage.IFileStore store)
+    {
+        var row = token.Length is > 10 and < 64 ? await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(a => a.Key == TokenKey(token)) : null;
+        var parts = row?.Value.Split('|');
+        if (parts is not { Length: 2 } || !Guid.TryParseExact(parts[0], "N", out var tripId)
+            || !await db.Trips.AnyAsync(t => t.Id == tripId && t.DeletedAtMs == null))
+        {
+            return Results.NotFound();
+        }
+
+        context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+        return await Journal.Serve(context, db, store, tripId, photoId, context.RequestAborted);
     }
 
     /// <summary>La página, en HTML sencillo (sin la app): se ve en cualquier móvil y se imprime bien.</summary>
@@ -147,6 +164,80 @@ public static class ItineraryShare
             ["fr"] = new() { ["print"] = "Imprimer ou enregistrer en PDF", ["empty"] = "Il n’y a pas encore de réservations dans cet itinéraire.", ["gone"] = "Ce lien n’est plus disponible.", ["foot"] = "Itinéraire partagé depuis Viajes. Les heures sont locales à chaque lieu.", ["until"] = "jusqu’au", ["checkin"] = "Arrivée", ["checkout"] = "Départ" },
             ["it"] = new() { ["print"] = "Stampa o salva PDF", ["empty"] = "Non ci sono ancora prenotazioni in questo itinerario.", ["gone"] = "Questo link non è più disponibile.", ["foot"] = "Itinerario condiviso da Viajes. Gli orari sono locali di ogni luogo.", ["until"] = "fino al", ["checkin"] = "Check-in", ["checkout"] = "Check-out" },
         };
+
+        private static readonly Dictionary<string, Dictionary<string, string>> JournalTexts = new()
+        {
+            ["es"] = new() { ["title"] = "Diario del viaje", ["flights"] = "vuelos", ["km"] = "km volados", ["nights"] = "noches", ["trains"] = "trenes" },
+            ["en"] = new() { ["title"] = "Travel journal", ["flights"] = "flights", ["km"] = "km flown", ["nights"] = "nights", ["trains"] = "trains" },
+            ["fr"] = new() { ["title"] = "Journal de voyage", ["flights"] = "vols", ["km"] = "km en avion", ["nights"] = "nuits", ["trains"] = "trains" },
+            ["it"] = new() { ["title"] = "Diario di viaggio", ["flights"] = "voli", ["km"] = "km in volo", ["nights"] = "notti", ["trains"] = "treni" },
+        };
+
+        private static void AppendJournal(StringBuilder html, Journal.JournalDto journal, string lang, string? token)
+        {
+            var text = JournalTexts[L(lang)];
+            var stats = journal.Stats;
+            var figures = new List<string>();
+            if (stats.Flights > 0)
+            {
+                figures.Add($"<b>{stats.Flights}</b> {E(text["flights"])}");
+            }
+
+            if (stats.Km > 0)
+            {
+                figures.Add($"<b>{stats.Km.ToString("N0", System.Globalization.CultureInfo.InvariantCulture).Replace(",", ".")}</b> {E(text["km"])}");
+            }
+
+            if (stats.Trains > 0)
+            {
+                figures.Add($"<b>{stats.Trains}</b> {E(text["trains"])}");
+            }
+
+            if (stats.Nights > 0)
+            {
+                figures.Add($"<b>{stats.Nights}</b> {E(text["nights"])}");
+            }
+
+            if (journal.Days.Count == 0 && figures.Count == 0)
+            {
+                return;
+            }
+
+            html.Append($"<section class=\"j\"><h2 class=\"jt\">📔 {E(text["title"])}</h2>");
+            if (figures.Count > 0)
+            {
+                html.Append($"<div class=\"fig\">{string.Join(" · ", figures)}</div>");
+            }
+
+            var places = stats.Countries.Select(c => $"{c.Flag} {c.Country}".Trim()).Concat(stats.Cities).ToList();
+            if (places.Count > 0)
+            {
+                html.Append($"<div class=\"s\">{E(string.Join(" · ", places))}</div>");
+            }
+
+            foreach (var day in journal.Days)
+            {
+                var heading = LongDay(day.Date, lang);
+                html.Append($"<h3>{E(char.ToUpperInvariant(heading[0]) + heading[1..])}</h3>");
+                if (day.Text is not null)
+                {
+                    html.Append($"<p class=\"jx\">{E(day.Text)}</p>");
+                }
+
+                if (token is not null && day.Photos.Count > 0)
+                {
+                    html.Append("<div class=\"ph\">");
+                    foreach (var photo in day.Photos)
+                    {
+                        html.Append($"<img loading=\"lazy\" alt=\"\" src=\"/i/{E(token)}/p/{photo.Id}\">");
+                    }
+
+                    html.Append("</div>");
+                }
+            }
+
+            html.Append("</section>");
+        }
 
         private static readonly Dictionary<string, string[]> Days = new()
         {
@@ -216,6 +307,9 @@ public static class ItineraryShare
             .flight{border-left-color:#2f7ff0}.hotel{border-left-color:#8a5cf6}.train{border-left-color:#16a34a}.car{border-left-color:#ea8a0c}.ticket{border-left-color:#e0457b}
             button{font:inherit;padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);margin-top:12px}
             footer{margin-top:28px;font-size:.85rem;color:var(--muted)}
+            .j{margin-top:30px;padding-top:6px;border-top:2px solid var(--line)}.jt{color:var(--text);font-size:1.25rem}
+            .fig{font-size:1.05rem;margin:4px 0}.j h3{font-size:1rem;margin:18px 0 6px}.jx{white-space:pre-wrap;margin:0 0 8px}
+            .ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}.ph img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;break-inside:avoid}
             @media print{:root{--bg:#fff;--card:#fff;--text:#000;--muted:#444;--line:#bbb}button{display:none}main{padding:0}}
             """;
 
@@ -227,7 +321,7 @@ public static class ItineraryShare
 
         public static string NotFound(string lang) => Doc(lang, "Viajes", $"<p>{E(Texts[L(lang)]["gone"])}</p>", null);
 
-        public static string Render(Trip trip, IReadOnlyList<Booking> bookings, string lang, string nonce)
+        public static string Render(Trip trip, IReadOnlyList<Booking> bookings, string lang, string nonce, Journal.JournalDto? journal = null, string? token = null)
         {
             lang = L(lang);
             var text = Texts[lang];
@@ -282,6 +376,11 @@ public static class ItineraryShare
 
                     html.Append("</div></div>");
                 }
+            }
+
+            if (journal is not null)
+            {
+                AppendJournal(html, journal, lang, token);
             }
 
             html.Append($"<footer>{E(text["foot"])}</footer>");
