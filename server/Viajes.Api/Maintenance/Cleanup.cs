@@ -67,7 +67,7 @@ public static class Cleanup
         {
             await store.DeleteAsync(key, ct);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
         {
             // Un fichero que no se puede borrar no para la limpieza.
         }

@@ -21,7 +21,7 @@ public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
         InboxItem Email(string status, int days) => new()
         {
             Id = Guid.NewGuid(), HouseholdId = household, ImportedBy = "x", MessageId = Guid.NewGuid().ToString(), FromAddress = "a@b.c",
-            Subject = "Reserva", ReceivedMs = Ago(days), BodyText = "texto", RawFileKey = $"limpieza/{Guid.NewGuid()}.eml", Status = status,
+            Subject = "Reserva", ReceivedMs = Ago(days), BodyText = "texto", RawFileKey = $"limpieza/{Guid.NewGuid():N}/raw", Status = status,
         };
         var oldDone = Email(InboxItem.Confirmed, 90);
         var oldPending = Email(InboxItem.Pending, 90);
@@ -32,7 +32,7 @@ public sealed class CleanupTests(TestApp app) : IClassFixture<TestApp>
             await store.WriteAsync(item.RawFileKey, new MemoryStream([1, 2, 3]), "message/rfc822", default);
         }
 
-        var attachment = new InboxAttachment { Id = Guid.NewGuid(), InboxItemId = oldDone.Id, FileKey = $"limpieza/{Guid.NewGuid()}.pdf", Name = "b.pdf", Mime = "application/pdf", Size = 3 };
+        var attachment = new InboxAttachment { Id = Guid.NewGuid(), InboxItemId = oldDone.Id, FileKey = $"limpieza/{Guid.NewGuid():N}/adjunto", Name = "b.pdf", Mime = "application/pdf", Size = 3 };
         db.InboxAttachments.Add(attachment);
         await store.WriteAsync(attachment.FileKey, new MemoryStream([1, 2, 3]), "application/pdf", default);
 
