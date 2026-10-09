@@ -43,6 +43,15 @@ public sealed class JournalTests(TestApp app) : IClassFixture<TestApp>
         Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
         Assert.Equal(Png, await photo.Content.ReadAsByteArrayAsync());
 
+        // Sin miniatura, la cuadrícula recibe la foto; con ella, la miniatura.
+        Assert.Equal(Png, await ana.Client.GetByteArrayAsync($"/api/trips/{tripId}/journal/photos/{photoId}?size=thumb"));
+        var mini = new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 };
+        var thumb = new ByteArrayContent(mini);
+        thumb.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        Assert.Equal(HttpStatusCode.NoContent, (await ana.Client.PutAsync($"/api/trips/{tripId}/journal/photos/{photoId}/thumb", thumb)).StatusCode);
+        Assert.Equal(mini, await ana.Client.GetByteArrayAsync($"/api/trips/{tripId}/journal/photos/{photoId}?size=thumb"));
+        Assert.Equal(Png, await ana.Client.GetByteArrayAsync($"/api/trips/{tripId}/journal/photos/{photoId}"));
+
         // En el enlace compartido sale el diario con su foto.
         var token = (await (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/share", new { lang = "es" })).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
         var anonymous = app.CreateHttpsClient(handleCookies: false);
@@ -51,6 +60,7 @@ public sealed class JournalTests(TestApp app) : IClassFixture<TestApp>
         Assert.Contains("Llegamos a Buenos Aires.", html);
         Assert.Contains($"/i/{token}/p/{photoId}", html);
         Assert.Equal(HttpStatusCode.OK, (await anonymous.GetAsync($"/i/{token}/p/{photoId}")).StatusCode);
+        Assert.Equal(mini, await anonymous.GetByteArrayAsync($"/i/{token}/m/{photoId}"));
 
         // Otro hogar no.
         var luis = await TripsApi.SignUp(app, "diario2@example.com");

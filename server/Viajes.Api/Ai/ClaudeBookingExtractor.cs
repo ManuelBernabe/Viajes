@@ -9,9 +9,19 @@ namespace Viajes.Api.Ai;
 /// Lee billetes y confirmaciones (PDF, imágenes o texto) con Claude y devuelve los campos de la reserva
 /// como JSON validado contra un esquema. El modelo solo extrae: lo que no está en el documento queda a null.
 /// </summary>
-public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<ClaudeBookingExtractor> log) : IBookingExtractor, IJsonAsker
+public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<ClaudeBookingExtractor> log, string? model = null, string? lightModel = null)
+    : IBookingExtractor, IJsonAsker
 {
     public const string ModelId = "claude-opus-5";
+
+    /// <summary>Para preguntas sin ficheros (a qué viaje va una reserva, ideas, destino, ayuda): más barato y de sobra.</summary>
+    public const string LightModelId = "claude-sonnet-5-5";
+
+    /// <summary>El modelo para leer billetes y documentos (CLAUDE_MODEL lo cambia).</summary>
+    public string Model { get; } = string.IsNullOrWhiteSpace(model) ? ModelId : model.Trim();
+
+    /// <summary>El de las preguntas sin ficheros (CLAUDE_LIGHT_MODEL lo cambia).</summary>
+    public string LightModel { get; } = string.IsNullOrWhiteSpace(lightModel) ? LightModelId : lightModel.Trim();
 
     private const int MaxFiles = 6;
 
@@ -78,7 +88,7 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
         {
             var response = await client.Messages.Create(new MessageCreateParams
             {
-                Model = ModelId,
+                Model = Model,
                 MaxTokens = 2000,
                 System = new List<TextBlockParam> { new() { Text = SystemPrompt, CacheControl = new CacheControlEphemeral() } },
                 OutputConfig = new OutputConfig { Effort = Effort.Medium, Format = new JsonOutputFormat { Schema = Schema() } },
@@ -125,6 +135,38 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
     public async Task<string?> AskJsonWithFilesAsync(
         string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct)
     {
+        // Sin ficheros, el modelo ligero; si falla (no disponible en la cuenta, por ejemplo), el grande.
+        if (files.Count == 0 && LightModel != Model)
+        {
+            try
+            {
+                return await AskAsync(LightModel, system, user, files, schema, maxTokens, ct);
+            }
+            catch (AnthropicApiException e) when (e is not AnthropicRateLimitException)
+            {
+                log.LogWarning(e, "Claude: el modelo ligero {Modelo} ha fallado; se usa {Grande}.", LightModel, Model);
+            }
+        }
+
+        try
+        {
+            return await AskAsync(Model, system, user, files, schema, maxTokens, ct);
+        }
+        catch (AnthropicRateLimitException e)
+        {
+            log.LogWarning(e, "Claude: límite de peticiones.");
+            return null;
+        }
+        catch (AnthropicApiException e)
+        {
+            log.LogWarning(e, "Claude: error de la API.");
+            return null;
+        }
+    }
+
+    private async Task<string?> AskAsync(
+        string modelId, string system, string user, IReadOnlyList<ExtractionFile> files, JsonElement schema, int maxTokens, CancellationToken ct)
+    {
         var content = new List<ContentBlockParam>();
         foreach (var file in files.Take(MaxFiles))
         {
@@ -139,11 +181,10 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
         }
 
         content.Add(new TextBlockParam { Text = user });
-        try
         {
             var response = await client.Messages.Create(new MessageCreateParams
             {
-                Model = ModelId,
+                Model = modelId,
                 MaxTokens = maxTokens,
                 System = new List<TextBlockParam> { new() { Text = system } },
                 OutputConfig = new OutputConfig
@@ -162,16 +203,6 @@ public sealed class ClaudeBookingExtractor(AnthropicClient client, ILogger<Claud
 
             var json = string.Concat(response.Content.Select(b => b.Value).OfType<TextBlock>().Select(t => t.Text));
             return string.IsNullOrWhiteSpace(json) ? null : json;
-        }
-        catch (AnthropicRateLimitException e)
-        {
-            log.LogWarning(e, "Claude: límite de peticiones.");
-            return null;
-        }
-        catch (AnthropicApiException e)
-        {
-            log.LogWarning(e, "Claude: error de la API.");
-            return null;
         }
     }
 

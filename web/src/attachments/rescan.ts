@@ -2,8 +2,7 @@ import { downloadAttachment } from '../data/syncClient';
 import { getBlob, updateAttachment } from '../data/repo';
 import type { Attachment } from '../data/types';
 import { isImage, isPdf } from './files';
-import { readQr } from './qr';
-import { splitQrCodes } from './qrCodes';
+import { splitQrCodes } from './qrText';
 
 /** Adjuntos ya releídos en esta sesión: la relectura de lo guardado con la versión anterior se hace una sola vez. */
 const rescanned = new Set<string>();
@@ -24,7 +23,7 @@ export async function rescan(attachments: readonly Attachment[]): Promise<void> 
     if (!bytes) {
       continue;
     }
-    const text = await readQr(bytes, stored?.mime || attachment.mime);
+    const text = await (await import('./qr')).readQr(bytes, stored?.mime || attachment.mime);
     if (text && splitQrCodes(text).length > splitQrCodes(attachment.qrText).length) {
       await updateAttachment(attachment.id, { qrText: text });
     }

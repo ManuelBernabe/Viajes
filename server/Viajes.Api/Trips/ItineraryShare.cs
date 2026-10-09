@@ -35,6 +35,7 @@ public static class ItineraryShare
         group.MapDelete("", Revoke);
         app.MapGet("/i/{token}", Page).AllowAnonymous();
         app.MapGet("/i/{token}/p/{photoId:guid}", Photo).AllowAnonymous();
+        app.MapGet("/i/{token}/m/{photoId:guid}", Thumb).AllowAnonymous();
     }
 
     private static string UrlFor(HttpRequest request, string token) => $"{request.Scheme}://{request.Host}/i/{token}";
@@ -140,7 +141,13 @@ public static class ItineraryShare
     }
 
     /// <summary>Una foto del diario del viaje del enlace (solo de ese viaje y mientras el enlace exista).</summary>
-    private static async Task<IResult> Photo(string token, Guid photoId, HttpContext context, AppDbContext db, Storage.IFileStore store)
+    private static Task<IResult> Photo(string token, Guid photoId, HttpContext context, AppDbContext db, Storage.IFileStore store) =>
+        SharedPhoto(token, photoId, false, context, db, store);
+
+    private static Task<IResult> Thumb(string token, Guid photoId, HttpContext context, AppDbContext db, Storage.IFileStore store) =>
+        SharedPhoto(token, photoId, true, context, db, store);
+
+    private static async Task<IResult> SharedPhoto(string token, Guid photoId, bool thumb, HttpContext context, AppDbContext db, Storage.IFileStore store)
     {
         var row = token.Length is > 10 and < 64 ? await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(a => a.Key == TokenKey(token)) : null;
         var parts = row?.Value.Split('|');
@@ -151,7 +158,7 @@ public static class ItineraryShare
         }
 
         context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
-        return await Journal.Serve(context, db, store, tripId, photoId, context.RequestAborted);
+        return await Journal.Serve(context, db, store, tripId, photoId, thumb, context.RequestAborted);
     }
 
     /// <summary>La página, en HTML sencillo (sin la app): se ve en cualquier móvil y se imprime bien.</summary>
@@ -229,7 +236,7 @@ public static class ItineraryShare
                     html.Append("<div class=\"ph\">");
                     foreach (var photo in day.Photos)
                     {
-                        html.Append($"<img loading=\"lazy\" alt=\"\" src=\"/i/{E(token)}/p/{photo.Id}\">");
+                        html.Append($"<a href=\"/i/{E(token)}/p/{photo.Id}\"><img loading=\"lazy\" alt=\"\" src=\"/i/{E(token)}/m/{photo.Id}\"></a>");
                     }
 
                     html.Append("</div>");

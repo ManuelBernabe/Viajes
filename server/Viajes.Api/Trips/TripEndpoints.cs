@@ -543,20 +543,22 @@ public static partial class TripEndpoints
     // ---- Sincronización ----
 
     private static async Task<IResult> Sync(
-        long? since, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, CancellationToken ct)
+        long? since, bool? lists, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, CancellationToken ct)
     {
         var userId = users.GetUserId(principal)!;
         var from = since ?? 0;
+        // Las listas completas (para purgar lo que ya no se ve) solo cuando el móvil las pide; por defecto, sí.
+        var withLists = lists != false || from == 0;
 
         // Una transacción de lectura: en modo WAL todas las consultas ven la misma instantánea, así que la
         // «version» devuelta no puede saltarse una fila que se confirmara entre dos consultas.
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var version = await db.ChangeCounter.Select(c => c.Value).SingleAsync(ct);
         var visibleTrips = access.VisibleTrips(userId);
-        var tripIds = await visibleTrips.Where(t => t.DeletedAtMs == null).Select(t => t.Id).ToListAsync(ct);
+        var tripIds = withLists ? await visibleTrips.Where(t => t.DeletedAtMs == null).Select(t => t.Id).ToListAsync(ct) : null;
         var trips = await visibleTrips.Where(t => t.Version > from).OrderBy(t => t.Version).ToListAsync(ct);
         var bookings = await access.VisibleBookings(userId).Where(b => b.Version > from).OrderBy(b => b.Version).ToListAsync(ct);
-        var visibleBookingIds = await access.VisibleBookings(userId).Where(b => b.DeletedAtMs == null).Select(b => b.Id).ToListAsync(ct);
+        var visibleBookingIds = withLists ? await access.VisibleBookings(userId).Where(b => b.DeletedAtMs == null).Select(b => b.Id).ToListAsync(ct) : null;
         var attachments = await access.VisibleAttachments(userId).Where(a => a.Version > from).OrderBy(a => a.Version).ToListAsync(ct);
         var bookingIds = bookings.Select(b => b.Id).ToList();
         var shares = (await db.BookingShares.Where(s => bookingIds.Contains(s.BookingId)).ToListAsync(ct))
@@ -567,7 +569,7 @@ public static partial class TripEndpoints
         var inboxAttachments = await db.InboxAttachments.Where(a => inboxIds.Contains(a.InboxItemId)).ToListAsync(ct);
         var places = await access.VisiblePlaces(userId).Where(p => p.Version > from).OrderBy(p => p.Version).ToListAsync(ct);
         var documents = await access.VisibleDocuments(userId).Where(d => d.Version > from).OrderBy(d => d.Version).ToListAsync(ct);
-        var documentIds = await access.VisibleDocuments(userId).Where(d => d.DeletedAtMs == null).Select(d => d.Id).ToListAsync(ct);
+        var documentIds = withLists ? await access.VisibleDocuments(userId).Where(d => d.DeletedAtMs == null).Select(d => d.Id).ToListAsync(ct) : null;
         var hiddenBookingIds = await db.BookingHides.Where(h => h.UserId == userId).Select(h => h.BookingId).ToListAsync(ct);
         await transaction.CommitAsync(ct);
 

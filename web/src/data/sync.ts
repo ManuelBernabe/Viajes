@@ -5,10 +5,13 @@ import { HIDDEN_KEY, markUploaded } from './repo';
 import type { Attachment, Op, StoredBlob, SyncResponse } from './types';
 
 export const VERSION_KEY = 'sync.version';
+/** Cuándo se pidieron por última vez las listas completas. */
+export const LISTS_KEY = 'sync.listsAt';
+const LISTS_EVERY_MS = 30 * 60_000;
 export const LAST_SYNC_KEY = 'sync.lastAt';
 
 export interface SyncDeps {
-  fetchSync(since: number): Promise<SyncResponse>;
+  fetchSync(since: number, lists?: boolean): Promise<SyncResponse>;
   send(op: Op): Promise<SendResult>;
   upload(attachment: Attachment, blob: StoredBlob): Promise<SendResult>;
 }
@@ -25,9 +28,12 @@ export interface SyncOutcome {
 /** Baja los cambios del servidor y los aplica; las filas borradas se quitan junto con lo que cuelga de ellas. */
 export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
   const since = (await getMeta<number>(VERSION_KEY)) ?? 0;
-  const response = await deps.fetchSync(since);
+  // Las listas completas (para purgar lo que ya no se ve) cada media hora; entre medias, solo los cambios.
+  const lastLists = (await getMeta<number>(LISTS_KEY)) ?? 0;
+  const lists = since === 0 || Date.now() - lastLists > LISTS_EVERY_MS;
+  const response = await deps.fetchSync(since, lists);
   const database = await openDb();
-  const keep = new Set(response.tripIds);
+  const keep = response.tripIds ? new Set(response.tripIds) : null;
   let applied = 0;
 
   // Los viajes borrados se quitan al final: antes llegan las reservas y lugares que se han pasado a otro viaje (al unir dos
@@ -35,7 +41,7 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
   const gone: string[] = [];
   for (const trip of response.trips) {
     applied++;
-    if (trip.deletedAtMs !== null || !keep.has(trip.id)) {
+    if (trip.deletedAtMs !== null || (keep && !keep.has(trip.id))) {
       gone.push(trip.id);
     } else {
       await database.put('trips', trip);
@@ -46,7 +52,7 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     applied++;
     if (booking.deletedAtMs !== null) {
       await removeBooking(booking.id);
-    } else if (keep.has(booking.tripId)) {
+    } else if (!keep || keep.has(booking.tripId)) {
       await database.put('bookings', { ...booking, visibility: booking.visibility ?? 'household', sharedWith: booking.sharedWith ?? [] });
     }
   }
@@ -86,7 +92,7 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
     applied++;
     if (place.deletedAtMs !== null) {
       await database.delete('places', place.id);
-    } else if (keep.has(place.tripId)) {
+    } else if (!keep || keep.has(place.tripId)) {
       await database.put('places', place);
     }
   }
@@ -100,8 +106,8 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
   const waiting = new Set((await database.getAll('outbox')).map((op) => op.id));
 
   // Un viaje que ya no está en la lista (acceso retirado) se purga aunque no llegue ninguna fila suya.
-  for (const trip of await database.getAll('trips')) {
-    if (!keep.has(trip.id) && !waiting.has(trip.id)) {
+  for (const trip of keep ? await database.getAll('trips') : []) {
+    if (!keep?.has(trip.id) && !waiting.has(trip.id)) {
       await removeTrip(trip.id);
       applied++;
     }
@@ -147,6 +153,9 @@ export async function pull(deps: Pick<SyncDeps, 'fetchSync'>): Promise<number> {
   }
 
   await setMeta(VERSION_KEY, response.version);
+  if (response.tripIds) {
+    await setMeta(LISTS_KEY, Date.now());
+  }
   await setMeta(LAST_SYNC_KEY, Date.now());
   if (applied > 0) {
     emitChange();

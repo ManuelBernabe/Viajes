@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { addAttachment } from '../data/repo';
 import { formatSize, mimeOf, tooBig } from './files';
-import { readQr } from './qr';
 import { t } from '../i18n';
 
 export interface AttachProgress {
@@ -33,7 +32,7 @@ export async function readFiles(files: FileList | File[], onProgress?: (message:
         continue;
       }
       onProgress?.(t('Buscando QR en {name}…', { name: file.name }));
-      result.push({ file, bytes, mime, qrText: await readQr(bytes, mime), error: null });
+      result.push({ file, bytes, mime, qrText: await (await import('./qr')).readQr(bytes, mime), error: null });
     } catch (error) {
       result.push({ file, bytes: new ArrayBuffer(0), mime, qrText: null, error: `${file.name}: ${error instanceof Error ? error.message : t('no se ha podido leer.')}` });
     }

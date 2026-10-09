@@ -151,7 +151,12 @@ function DayEntry({
     setMessage('');
     try {
       for (const file of Array.from(files)) {
-        await journalApi.addPhoto(tripId, date, await shrinkPhoto(file));
+        const photo = await journalApi.addPhoto(tripId, date, await shrinkPhoto(file));
+        // La miniatura de la cuadrícula; si falla, se ve la foto entera.
+        const thumb = await shrinkPhoto(file, 400, 0.7);
+        if (thumb !== file && thumb.size < 300_000) {
+          await journalApi.putThumb(tripId, photo.id, thumb).catch(() => undefined);
+        }
       }
       await onChanged();
     } catch (error) {
@@ -197,7 +202,7 @@ function DayEntry({
         <div className="journal-photos">
           {photos.map((photo) => (
             <button key={photo.id} type="button" onClick={() => onView(photo.id)} aria-label={t('Ver foto')}>
-              <img src={journalApi.photoUrl(tripId, photo.id)} alt="" loading="lazy" />
+              <img src={journalApi.thumbUrl(tripId, photo.id)} alt="" loading="lazy" />
             </button>
           ))}
         </div>

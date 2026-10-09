@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { isImage, isPdf } from '../attachments/files';
 import { getBlob } from '../data/repo';
 import type { Attachment } from '../data/types';
-import { splitQrCodes } from '../attachments/qrCodes';
+import { splitQrCodes } from '../attachments/qrText';
 
 const qrCount = (text: string) => splitQrCodes(text).length;
 

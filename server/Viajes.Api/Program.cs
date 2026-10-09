@@ -90,6 +90,7 @@ app.MapItineraryShare();
 app.MapTripMerge();
 app.MapJournal();
 app.MapEmergencyCard();
+app.MapAiStatus();
 app.MapTripProposals();
 app.MapCalendarFeed();
 app.MapDocumentEndpoints();

@@ -1,5 +1,5 @@
 import { seatsFromCodes } from '../attachments/bcbp';
-import { splitQrCodes } from '../attachments/qrCodes';
+import { splitQrCodes } from '../attachments/qrText';
 import { rescan } from '../attachments/rescan';
 import { listAllBookings, listAttachments } from '../data/repo';
 import type { Booking } from '../data/types';

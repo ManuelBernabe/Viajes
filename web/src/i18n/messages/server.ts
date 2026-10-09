@@ -154,6 +154,8 @@ export const server: Messages = {
   'Solo fotos (JPEG, PNG, WebP o HEIC).': { en: 'Photos only (JPEG, PNG, WebP or HEIC).', fr: 'Photos uniquement (JPEG, PNG, WebP ou HEIC).', it: 'Solo foto (JPEG, PNG, WebP o HEIC).' },
   'La foto supera los 8 MB.': { en: 'The photo is over 8 MB.', fr: 'La photo dépasse 8 Mo.', it: 'La foto supera gli 8 MB.' },
   'Como mucho 12 fotos por día.': { en: 'At most 12 photos per day.', fr: '12 photos par jour au maximum.', it: 'Al massimo 12 foto al giorno.' },
+  'Solo quien administra el hogar puede ver esto.': { en: 'Only the household admin can see this.', fr: 'Seul l’administrateur du foyer peut voir ceci.', it: 'Solo chi amministra la famiglia può vederlo.' },
+  'La miniatura no es válida.': { en: 'The thumbnail isn’t valid.', fr: 'La miniature n’est pas valide.', it: 'La miniatura non è valida.' },
   'La lectura con IA no está configurada en el servidor.': {
     en: 'AI reading isn’t set up on the server.',
     fr: 'La lecture par IA n’est pas configurée sur le serveur.',

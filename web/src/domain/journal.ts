@@ -54,6 +54,9 @@ export const journalApi = {
     api<void>(`/api/trips/${tripId}/journal/${date}`, { method: 'PUT', body: JSON.stringify({ text }) }),
   addPhoto: (tripId: string, date: string, photo: Blob) =>
     api<JournalPhoto>(`/api/trips/${tripId}/journal/${date}/photos`, { method: 'POST', body: photo, headers: { 'Content-Type': photo.type || 'image/jpeg' } }),
+  putThumb: (tripId: string, photoId: string, thumb: Blob) =>
+    api<void>(`/api/trips/${tripId}/journal/photos/${photoId}/thumb`, { method: 'PUT', body: thumb, headers: { 'Content-Type': thumb.type || 'image/jpeg' } }),
+  thumbUrl: (tripId: string, photoId: string) => `/api/trips/${tripId}/journal/photos/${photoId}?size=thumb`,
   removePhoto: (tripId: string, photoId: string) => api<void>(`/api/trips/${tripId}/journal/photos/${photoId}`, { method: 'DELETE' }),
   photoUrl: (tripId: string, photoId: string) => `/api/trips/${tripId}/journal/photos/${photoId}`,
 };
@@ -76,8 +79,11 @@ export function journalDates(startDate: string | null, endDate: string | null, t
   return [...dates].sort().reverse();
 }
 
-/** La foto reducida a 1600 px de lado y JPEG (unos 300 KB): sube rápido con datos móviles. Si no se puede, la original. */
-export async function shrinkPhoto(file: File, max = 1600): Promise<Blob> {
+/**
+ * La foto reducida a 1600 px de lado y JPEG (unos 300 KB): sube rápido con datos móviles. Si no se puede, la original.
+ * Con max = 400 y menos calidad sale la miniatura de la cuadrícula (unos 30 KB).
+ */
+export async function shrinkPhoto(file: Blob, max = 1600, quality = 0.82): Promise<Blob> {
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
@@ -86,7 +92,7 @@ export async function shrinkPhoto(file: File, max = 1600): Promise<Blob> {
     canvas.height = Math.round(bitmap.height * scale);
     canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
     return blob ?? file;
   } catch {
     return file;
