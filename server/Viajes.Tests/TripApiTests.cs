@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 
 namespace Viajes.Tests;
 
@@ -127,5 +128,19 @@ public sealed class TripApiTests(TestApp app) : IClassFixture<TestApp>
         var response = await app.CreateHttpsClient(handleCookies: false).GetAsync("/api/sync");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_light_sync_skips_the_full_lists_but_a_first_sync_always_has_them()
+    {
+        var api = await TripsApi.SignUp(app, "sync-ligera@example.com");
+        (await api.PutTrip(Guid.NewGuid(), "Ligero")).EnsureSuccessStatusCode();
+
+        var light = await api.Client.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/sync?since=1&lists=false");
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, light.GetProperty("tripIds").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, light.GetProperty("bookingIds").ValueKind);
+
+        var first = await api.Client.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/sync?since=0&lists=false");
+        Assert.Equal(1, first.GetProperty("tripIds").GetArrayLength());
     }
 }

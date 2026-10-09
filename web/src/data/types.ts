@@ -134,9 +134,10 @@ export interface PlaceBody {
 
 export interface SyncResponse {
   version: number;
-  tripIds: string[];
+  /** Todos los viajes visibles ahora; null en una sincronización ligera (sin listas): entonces no se purga nada. */
+  tripIds: string[] | null;
   /** Todas las reservas visibles ahora; las locales que no estén aquí se purgan (visibilidad retirada). */
-  bookingIds?: string[];
+  bookingIds?: string[] | null;
   trips: Trip[];
   bookings: Booking[];
   attachments: Attachment[];
@@ -144,7 +145,7 @@ export interface SyncResponse {
   places?: Place[];
   documents?: TravelDocument[];
   /** Todos los documentos visibles ahora; los locales que no estén aquí se purgan (pasados a privados). */
-  documentIds?: string[];
+  documentIds?: string[] | null;
   /** Reservas que esta persona ha ocultado de sus listas. */
   hiddenBookingIds?: string[];
 }

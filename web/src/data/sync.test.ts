@@ -75,6 +75,24 @@ describe('pull', () => {
     expect(await getBlob('a1')).toBeDefined();
   });
 
+  it('una sincronización ligera (sin listas) aplica cambios pero no purga nada, y las listas se piden cada media hora', async () => {
+    const database = await openDb();
+    await database.put('trips', trip('t1'));
+    await database.put('bookings', booking('b1', 't1'));
+    const asked: boolean[] = [];
+    await pull({ fetchSync: async (_since, lists) => { asked.push(lists ?? true); return response({ version: 3, tripIds: ['t1'], bookingIds: ['b1'] }); } });
+    await pull({
+      fetchSync: async (_since, lists) => {
+        asked.push(lists ?? true);
+        return response({ version: 4, tripIds: null, bookingIds: null, bookings: [booking('b2', 't1')] });
+      },
+    });
+
+    expect(asked).toEqual([true, false]);
+    expect((await listTrips()).map((t) => t.id)).toEqual(['t1']);
+    expect((await listBookings('t1')).map((b) => b.id).sort()).toEqual(['b1', 'b2']);
+  });
+
   it('purga un viaje que ya no está en la lista aunque no llegue ninguna fila suya', async () => {
     const database = await openDb();
     await database.put('trips', trip('retirado'));

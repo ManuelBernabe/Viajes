@@ -148,9 +148,10 @@ public sealed record PlaceDto(
 
 public sealed record SyncResponse(
     long Version,
-    IReadOnlyList<Guid> TripIds,
+    /// <summary>Todos los viajes visibles ahora; null si el móvil no las ha pedido (?lists=false): entonces no purga nada.</summary>
+    IReadOnlyList<Guid>? TripIds,
     /// <summary>Todas las reservas que la persona puede ver ahora: el móvil purga las que tenga y ya no estén (visibilidad retirada).</summary>
-    IReadOnlyList<Guid> BookingIds,
+    IReadOnlyList<Guid>? BookingIds,
     IReadOnlyList<TripDto> Trips,
     IReadOnlyList<BookingDto> Bookings,
     IReadOnlyList<AttachmentDto> Attachments,
@@ -160,6 +161,6 @@ public sealed record SyncResponse(
     /// <summary>Documentos de viaje cambiados (con los borrados).</summary>
     IReadOnlyList<DocumentDto> Documents,
     /// <summary>Todos los documentos que la persona ve ahora: el móvil purga los que ya no estén (pasados a privados).</summary>
-    IReadOnlyList<Guid> DocumentIds,
+    IReadOnlyList<Guid>? DocumentIds,
     /// <summary>Reservas que esta persona ha ocultado de sus listas (siempre la lista entera; es pequeña).</summary>
     IReadOnlyList<Guid> HiddenBookingIds);

@@ -116,9 +116,9 @@ async function upload(attachment: Attachment, blob: StoredBlob): Promise<SendRes
 }
 
 const deps: SyncDeps = {
-  fetchSync: async (since) => {
+  fetchSync: async (since, lists = true) => {
     try {
-      return await api(`/api/sync?since=${since}`);
+      return await api(`/api/sync?since=${since}${lists ? '' : '&lists=false'}`);
     } catch (error) {
       noteExpired(error);
       throw error;
@@ -230,9 +230,41 @@ async function hasLocalWork(): Promise<boolean> {
   return false;
 }
 
-/** Sincroniza al abrir, al volver la red, al volver a primer plano, cada 2 minutos y poco después de cada cambio local. */
+/** ¿Hay un viaje en curso o a punto (de ayer a mañana)? Entonces conviene sincronizar a menudo. */
+async function travelling(): Promise<boolean> {
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toLocaleDateString('sv-SE');
+  const from = day(-1);
+  const to = day(1);
+  const trips = await (await openDb()).getAll('trips');
+  return trips.some((trip) => {
+    const start = trip.startDate ?? trip.endDate;
+    const end = trip.endDate ?? trip.startDate;
+    return !!start && !!end && start <= to && end >= from;
+  });
+}
+
+/** Sin viaje en curso, cada cuánto como mucho se sincroniza solo (al abrir o volver a la app siempre se hace). */
+const QUIET_EVERY_MS = 10 * 60_000;
+
+/**
+ * Sincroniza al abrir, al volver la red, al volver a primer plano y poco después de cada cambio local; además, con la app
+ * a la vista, cada 2 minutos si hay viaje en curso y cada 10 si no.
+ */
 export function startSyncLoop(): () => void {
-  const run = () => void syncNow();
+  let lastRun = 0;
+  const run = () => {
+    lastRun = Date.now();
+    void syncNow();
+  };
+  const tick = async () => {
+    if (document.visibilityState !== 'visible') {
+      return;
+    }
+    if (Date.now() - lastRun < QUIET_EVERY_MS && !(await travelling().catch(() => true))) {
+      return;
+    }
+    run();
+  };
   const onVisible = () => {
     if (document.visibilityState === 'visible') {
       run();
@@ -240,7 +272,7 @@ export function startSyncLoop(): () => void {
   };
   window.addEventListener('online', run);
   document.addEventListener('visibilitychange', onVisible);
-  const timer = setInterval(run, 120_000);
+  const timer = setInterval(() => void tick(), 120_000);
 
   let scheduled: ReturnType<typeof setTimeout> | null = null;
   const unsubscribe = subscribe(() => {
