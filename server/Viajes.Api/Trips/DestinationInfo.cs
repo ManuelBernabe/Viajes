@@ -123,6 +123,8 @@ public static class DestinationInfo
                 «embassy»: la embajada o el consulado del país de esos pasaportes más cercano a los sitios del viaje, con la ciudad
                 y el teléfono (y el de emergencia consular si lo tiene). Si no estás seguro del teléfono, pon solo el nombre y la ciudad.
                 """;
+            // «Actualizar» quiere una respuesta nueva, no la de la caché.
+            using var fresh = refresh == true ? CachedAi.Fresh() : null;
             var json = await ai.AskJsonAsync(SystemPrompt, prompt, Schema, 3000, ct);
             var countries = Parse(json);
             if (countries is null || countries.Count == 0)

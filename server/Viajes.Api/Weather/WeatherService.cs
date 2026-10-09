@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using Viajes.Api.Data;
 
 namespace Viajes.Api.Weather;
@@ -12,7 +13,7 @@ public sealed record DayWeather(string Date, string Place, int? Code, double? Ma
 /// nombre); si no hay hotel, el de la mañana; si tampoco, el destino del viaje. Guarda en memoria las coordenadas y la
 /// previsión (una hora) para no repetir consultas.
 /// </summary>
-public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService> log)
+public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService> log, IServiceScopeFactory? scopes = null)
 {
     /// <summary>Open-Meteo da 16 días por delante.</summary>
     public const int ForecastDays = 16;
@@ -140,7 +141,25 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
                 continue;
             }
 
-            var point = query.StartsWith(AirportPrefix, StringComparison.Ordinal) ? Airports.Find(query[AirportPrefix.Length..]) : await source.GeocodeAsync(query, ct);
+            GeoPoint? point;
+            if (query.StartsWith(AirportPrefix, StringComparison.Ordinal))
+            {
+                point = Airports.Find(query[AirportPrefix.Length..]);
+            }
+            else
+            {
+                // Lo que ya se encontró antes (aunque el servidor se haya reiniciado) no se vuelve a buscar.
+                point = await StoredPointAsync(query, ct);
+                if (point is null)
+                {
+                    point = await source.GeocodeAsync(query, ct);
+                    if (point is not null)
+                    {
+                        await StorePointAsync(query, point, ct);
+                    }
+                }
+            }
+
             _places[query] = (point, point is null ? now + MissTtl : DateTimeOffset.MaxValue);
             if (point is not null)
             {
@@ -149,6 +168,54 @@ public sealed class WeatherService(IWeatherSource source, ILogger<WeatherService
         }
 
         return null;
+    }
+
+    private static string GeoKey(string query) => $"geo:{query.Trim().ToLowerInvariant()}";
+
+    private async Task<GeoPoint?> StoredPointAsync(string query, CancellationToken ct)
+    {
+        if (scopes is null || query.Length > 400)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var key = GeoKey(query);
+            var row = await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(a => a.Key == key, ct);
+            return row is null ? null : System.Text.Json.JsonSerializer.Deserialize<GeoPoint>(row.Value);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            log.LogWarning("Sin caché de sitios: {Error}", e.Message);
+            return null;
+        }
+    }
+
+    private async Task StorePointAsync(string query, GeoPoint point, CancellationToken ct)
+    {
+        if (scopes is null || query.Length > 400)
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var key = GeoKey(query);
+            if (!await db.AppSettings.AnyAsync(a => a.Key == key, ct))
+            {
+                db.AppSettings.Add(new AppSetting { Key = key, Value = System.Text.Json.JsonSerializer.Serialize(point), UpdatedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+                await db.SaveChangesAsync(ct);
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            log.LogWarning("No se ha podido guardar el sitio: {Error}", e.Message);
+        }
     }
 
     private async Task<IReadOnlyList<DayForecast>> ForecastAsync(GeoPoint point, CancellationToken ct)

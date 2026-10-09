@@ -123,9 +123,18 @@ export function cachedFlight(bookingId: string): FlightStatusResponse | null {
 }
 
 /** Pide el estado; dentro de la ventana de seguimiento, pide además que se vuelva a consultar (el servidor limita cada cuánto). */
-export async function loadFlight(booking: Booking, now = Date.now()): Promise<FlightStatusResponse | null> {
+/** Cuándo se preguntó por última vez al servidor por cada reserva, en esta sesión de la app. */
+const lastAsked = new Map<string, number>();
+
+export async function loadFlight(booking: Booking, now = Date.now(), force = false): Promise<FlightStatusResponse | null> {
   const cached = cachedFlight(booking.id);
   const tracking = now >= booking.startUtcMs - 24 * 3_600_000 && now <= booking.startUtcMs + 20 * 3_600_000;
+  // Varias tarjetas del mismo vuelo en pantalla (o volver a la misma página) no vuelven a preguntar en 2 minutos.
+  const last = lastAsked.get(booking.id);
+  if (!force && cached && last !== undefined && now - last < 2 * 60_000) {
+    return cached;
+  }
+  lastAsked.set(booking.id, now);
   try {
     const result = await api<FlightStatusResponse>(`/api/bookings/${booking.id}/flight-status${tracking ? '?refresh=true' : ''}`);
     try {
