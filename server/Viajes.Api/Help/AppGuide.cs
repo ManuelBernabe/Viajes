@@ -64,6 +64,9 @@ public static class AppGuide
         - «🆘 Emergencia» (en «Hoy», abajo): en el país donde estáis, el teléfono de emergencias con botones para llamar y
           la embajada o consulado (de «🌍 Destino»); y la tarjeta del hogar: seguro de viaje, a quién llamar en casa,
           datos médicos opcionales y notas. La ven y editan todos, y se abre sin conexión.
+        - «📔 Diario»: una nota y fotos por día (las escribe cualquiera del hogar) y arriba el resumen del viaje: vuelos,
+          kilómetros volados, trenes, noches, países y ciudades. Si el viaje tiene enlace «🔗 Compartir», el diario y sus
+          fotos salen también en esa página.
         - «🔎 Revisión del viaje»: avisa de noches sin alojamiento, trayectos que se solapan, escalas cortas o cambios de
           aeropuerto con poco margen, llegadas antes de la salida y reservas fuera de las fechas del viaje.
         - Reservas por días, con filtros por tipo; al final el «Histórico» con las ya pasadas.
