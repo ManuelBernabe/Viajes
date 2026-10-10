@@ -58,11 +58,15 @@ export function sortPlaces(places: readonly Place[]): { pending: Place[]; visite
 const plain = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 /**
- * Agrupa las ideas por país («Argentina», «Brasil»), en el orden en que aparecen en el nombre o el destino del viaje
- * («Argentina Brasil» → primero Argentina). Los países que no salen ahí van después, por orden alfabético; las ideas sin
- * país, al final (área null).
+ * Agrupa las ideas por ciudad del viaje, en el orden del viaje (`order`), o, en viajes sin ciudades, por país en el orden
+ * en que aparecen en el nombre o el destino («Argentina Brasil» → primero Argentina). Lo demás va después, por orden
+ * alfabético; las ideas sin área, al final (área null).
  */
-export function groupByArea<T extends { area?: string | null }>(items: readonly T[], tripText: string): { area: string | null; items: T[] }[] {
+export function groupByArea<T extends { area?: string | null }>(
+  items: readonly T[],
+  tripText: string,
+  order: readonly string[] = [],
+): { area: string | null; items: T[] }[] {
   const groups = new Map<string | null, T[]>();
   for (const item of items) {
     const area = item.area?.trim() || null;
@@ -78,6 +82,10 @@ export function groupByArea<T extends { area?: string | null }>(items: readonly 
   const rank = (area: string | null) => {
     if (area === null) {
       return Number.MAX_SAFE_INTEGER;
+    }
+    const position = order.findIndex((city) => plain(city) === plain(area));
+    if (position >= 0) {
+      return -1_000_000 + position;
     }
     const at = text.indexOf(plain(area));
     return at < 0 ? Number.MAX_SAFE_INTEGER - 1 : at;

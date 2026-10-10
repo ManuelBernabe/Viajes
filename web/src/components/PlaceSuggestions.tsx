@@ -12,13 +12,25 @@ interface Suggestion {
   category: PlaceCategory;
   description: string;
   address: string | null;
-  /** País del sitio, para agruparlas («Argentina», «Brasil»). */
+  /** Ciudad del viaje donde está (o, en viajes sin vuelos ni trenes, el país), para agruparlas. */
   area?: string | null;
 }
 
 interface SuggestionsResponse {
   suggestions: Suggestion[];
   added: number;
+  /** Las ciudades donde se está, en el orden del viaje (sin escalas). */
+  cities?: string[];
+}
+
+const citiesKey = (tripId: string) => `viajes:ideas-ciudades:${tripId}`;
+
+function readCities(tripId: string): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(citiesKey(tripId)) ?? '[]') as string[];
+  } catch {
+    return [];
+  }
 }
 
 /** Copia local de las ideas del viaje, para verlas al momento (y sin conexión) mientras llega la lista del servidor. */
@@ -49,12 +61,25 @@ function writeCache(tripId: string, suggestions: Suggestion[]) {
 export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: readonly Place[] }) {
   const session = useSession();
   const [suggestions, setSuggestionsState] = useState<Suggestion[] | null>(() => readCache(trip.id));
-  const [busy, setBusy] = useState(false);
+  const [cities, setCitiesState] = useState<string[]>(() => readCities(trip.id));
+  const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   function setSuggestions(next: Suggestion[]) {
     setSuggestionsState(next);
     writeCache(trip.id, next);
+  }
+
+  function setCities(next: string[] | undefined) {
+    if (!next) {
+      return;
+    }
+    setCitiesState(next);
+    try {
+      localStorage.setItem(citiesKey(trip.id), JSON.stringify(next));
+    } catch {
+      // Sin almacenamiento.
+    }
   }
 
   useEffect(() => {
@@ -63,6 +88,7 @@ export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: rea
       .then((result) => {
         if (alive) {
           setSuggestions(result.suggestions);
+          setCities(result.cities);
         }
       })
       .catch(() => {
@@ -73,22 +99,24 @@ export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: rea
     };
   }, [trip.id]);
 
-  async function ask() {
-    setBusy(true);
+  /** Pide ideas nuevas: de todo el viaje o de una de sus ciudades. */
+  async function ask(area?: string) {
+    setBusy(area ?? '');
     setMessage('');
     try {
       const result = await api<SuggestionsResponse>(`/api/trips/${trip.id}/place-suggestions`, {
         method: 'POST',
-        body: JSON.stringify({ lang: lang() }),
+        body: JSON.stringify({ lang: lang(), area: area ?? null }),
       });
       setSuggestions(result.suggestions);
+      setCities(result.cities);
       if (result.added === 0) {
         setMessage(t('No hay sugerencias nuevas: ya tenéis apuntados los sitios que se le ocurren.'));
       }
     } catch (error) {
       setMessage(describeError(error));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -125,11 +153,11 @@ export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: rea
 
   const names = new Set(existing.filter((p) => p.deletedAtMs === null).map((p) => p.name.trim().toLowerCase()));
   const pending = suggestions?.filter((s) => !names.has(s.name.trim().toLowerCase())) ?? [];
-  const groups = groupByArea(pending, `${trip.title} ${trip.destination ?? ''}`);
+  const groups = groupByArea(pending, `${trip.title} ${trip.destination ?? ''}`, cities);
 
   return (
     <section className="card">
-      <h3>✨ {t('Ideas para {place}', { place: trip.destination || trip.title })}</h3>
+      <h3>✨ {t('Ideas para {place}', { place: cities.length > 1 ? trip.title : cities[0] || trip.destination || trip.title })}</h3>
       <div className="small muted">
         {pending.length > 0
           ? t('Propuestas con IA y guardadas en el viaje. Añade las que te gusten a la lista; las demás puedes quitarlas.')
@@ -184,10 +212,20 @@ export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: rea
             {t('Añadir todas ({n})', { n: pending.length })}
           </button>
         )}
-        <button className={`btn${pending.length === 0 ? ' block' : ''}`} type="button" disabled={busy} onClick={() => void ask()}>
-          {busy ? t('Buscando sitios…') : (suggestions?.length ?? 0) === 0 ? t('Sugerir sitios') : t('Sugerir más')}
+        <button className={`btn${pending.length === 0 ? ' block' : ''}`} type="button" disabled={busy !== null} onClick={() => void ask()}>
+          {busy === '' ? t('Buscando sitios…') : (suggestions?.length ?? 0) === 0 ? t('Sugerir sitios') : t('Sugerir más')}
         </button>
       </div>
+      {cities.length > 1 && (
+        <div className="idea-cities">
+          <span className="small muted">{t('Más ideas de:')}</span>
+          {cities.map((city) => (
+            <button key={city} className="btn small" type="button" disabled={busy !== null} onClick={() => void ask(city)}>
+              {busy === city ? t('Buscando sitios…') : `✨ ${city}`}
+            </button>
+          ))}
+        </div>
+      )}
       {message && <p className="small muted">{message}</p>}
     </section>
   );

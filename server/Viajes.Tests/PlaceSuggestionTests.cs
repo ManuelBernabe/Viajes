@@ -180,3 +180,73 @@ public sealed class NoAiPlaceTests(TestApp app) : IClassFixture<TestApp>
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 }
+
+public sealed class TripCitiesTests
+{
+    private static Booking Leg(string from, string to, string start, string end, string tz = "America/Sao_Paulo") => new()
+    {
+        Id = Guid.NewGuid(), TripId = Guid.NewGuid(), Type = "flight", Title = $"{from} → {to}", StartLocal = start, StartTz = tz, StartPlace = from,
+        EndLocal = end, EndTz = tz, EndPlace = to, StartUtcMs = LocalTime.ToUtcMs(start, tz), CreatedBy = "x",
+    };
+
+    [Fact]
+    public void The_trip_cities_skip_layovers_and_the_flight_home()
+    {
+        var cities = PlaceSuggestions.TripCities(
+        [
+            Leg("MAD", "EZE", "2026-10-01T23:00", "2026-10-02T08:00", "America/Argentina/Buenos_Aires"),
+            Leg("AEP", "IGR", "2026-10-06T10:00", "2026-10-06T12:00", "America/Argentina/Buenos_Aires"),
+            // Escala en São Paulo: llega a las 14:00 y sale a las 16:00.
+            Leg("IGR", "GRU", "2026-10-10T12:00", "2026-10-10T14:00"),
+            Leg("GRU", "GIG", "2026-10-10T16:00", "2026-10-10T17:00"),
+            Leg("GIG", "FLN", "2026-10-14T10:00", "2026-10-14T11:30"),
+            Leg("FLN", "MAD", "2026-10-19T20:00", "2026-10-20T12:00"),
+        ]);
+        Assert.Equal(["Buenos Aires", "Puerto Iguazú", "Río de Janeiro", "Florianópolis"], cities);
+        Assert.Equal("Río de Janeiro", PlaceSuggestions.MatchCity("Rio De Janeiro", cities));
+        Assert.Null(PlaceSuggestions.MatchCity("São Paulo", cities));
+    }
+}
+
+public sealed class PlaceCitiesApiTests(PlaceAiApp app) : IClassFixture<PlaceAiApp>
+{
+    [Fact]
+    public async Task With_bookings_the_ideas_are_by_city_and_old_ones_outside_the_trip_are_removed()
+    {
+        var ana = await TripsApi.SignUp(app, "ciudades1@example.com");
+        var tripId = Guid.NewGuid();
+        (await ana.PutTrip(tripId, "Argentina Brasil", "Buenos Aires")).EnsureSuccessStatusCode();
+        (await ana.PutBooking(Guid.NewGuid(), tripId, new { title = "MAD → EZE", startPlace = "MAD", endPlace = "EZE", endTz = "America/Argentina/Buenos_Aires" })).EnsureSuccessStatusCode();
+        (await ana.PutBooking(Guid.NewGuid(), tripId, new { title = "AEP → GIG", startLocal = "2026-10-14T10:00", startTz = "America/Argentina/Buenos_Aires", startPlace = "AEP", endLocal = "2026-10-14T13:00", endTz = "America/Sao_Paulo", endPlace = "GIG" })).EnsureSuccessStatusCode();
+
+        // Ideas de antes: una de Río (como país) y otra de São Paulo.
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.PlaceIdeas.AddRange(
+                new PlaceIdea { Id = Guid.NewGuid(), TripId = tripId, Name = "Escadaria Selarón", Category = "see", Description = "Escalera.", Area = "Brasil", CreatedAtMs = 2 },
+                new PlaceIdea { Id = Guid.NewGuid(), TripId = tripId, Name = "Avenida Paulista", Category = "see", Description = "São Paulo.", Area = "Brasil", CreatedAtMs = 1 });
+            await db.SaveChangesAsync();
+        }
+
+        var previous = app.Fake.Answer;
+        app.Fake.Answer = """{"areas": [{"name": "Escadaria Selarón", "area": "Río de Janeiro"}, {"name": "Avenida Paulista", "area": "fuera"}]}""";
+        try
+        {
+            var body = await ana.Client.GetFromJsonAsync<JsonElement>($"/api/trips/{tripId}/place-suggestions?lang=es");
+            Assert.Equal(["Buenos Aires", "Río de Janeiro"], body.GetProperty("cities").EnumerateArray().Select(c => c.GetString()));
+            var ideas = body.GetProperty("suggestions").EnumerateArray().ToArray();
+            Assert.Equal(["Escadaria Selarón"], ideas.Select(i => i.GetProperty("name").GetString()));
+            Assert.Equal("Río de Janeiro", ideas[0].GetProperty("area").GetString());
+            Assert.Contains("Ciudades del viaje: Buenos Aires | Río de Janeiro", app.Fake.Prompts.Last());
+        }
+        finally
+        {
+            app.Fake.Answer = previous;
+        }
+
+        // Pedir ideas de una ciudad: el aviso lo dice y las ciudades van en el prompt.
+        (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/place-suggestions", new { lang = "es", area = "Río de Janeiro" })).EnsureSuccessStatusCode();
+        Assert.Contains("Todos en Río de Janeiro", app.Fake.Prompts.Last());
+    }
+}

@@ -103,4 +103,5 @@ export const places: Messages = {
     fr: 'Impossible d’obtenir des suggestions. Réessaie dans un moment.',
     it: 'Non è stato possibile ottenere suggerimenti. Riprova tra un po’.',
   },
+  'Más ideas de:': { en: 'More ideas for:', fr: 'Plus d’idées pour :', it: 'Altre idee per:' },
 };
