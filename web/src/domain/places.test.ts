@@ -75,5 +75,9 @@ describe('groupByArea', () => {
 
   it('sin acentos ni mayúsculas', () => {
     expect(groupByArea([{ area: 'Perú' }, { area: 'méxico' }], 'Mexico y Peru').map((g) => g.area)).toEqual(['méxico', 'Perú']);
+    // Con ciudades, en el orden del viaje.
+    expect(
+      groupByArea([{ area: 'Rio De Janeiro' }, { area: 'Buenos Aires' }, { area: null }], 'Argentina Brasil', ['Buenos Aires', 'Rio De Janeiro']).map((g) => g.area),
+    ).toEqual(['Buenos Aires', 'Rio De Janeiro', null]);
   });
 });
