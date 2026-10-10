@@ -137,14 +137,14 @@ public static class PlaceSuggestions
 
     /// <summary>
     /// Las ciudades donde se está de verdad, en el orden del viaje: los destinos de vuelos y trenes, sin la vuelta a casa ni
-    /// las escalas (llegar y volver a salir de la misma ciudad en menos de 8 horas). Así las ideas son de Río y no de São
+    /// las escalas (llegar y volver a salir de la misma ciudad en menos de 20 horas sin hotel). Así las ideas son de Río y no de São
     /// Paulo si solo se pasa por su aeropuerto.
     /// </summary>
     public static List<string> TripCities(IEnumerable<Booking> bookings)
     {
-        var moves = bookings.Where(b => b.DeletedAtMs is null && b.Type is "flight" or "train" && b.DeletedAtMs is null)
-            .OrderBy(b => b.StartUtcMs)
-            .ToList();
+        var alive = bookings.Where(b => b.DeletedAtMs is null).ToList();
+        var moves = alive.Where(b => b.Type is "flight" or "train").OrderBy(b => b.StartUtcMs).ToList();
+        var hotels = alive.Where(b => b.Type == "hotel").ToList();
         string? City(string? place) => string.IsNullOrWhiteSpace(place) ? null : CityName(Airports.Find(place.Trim())?.Label ?? place.Trim());
         var home = City(moves.FirstOrDefault()?.StartPlace);
         var cities = new List<string>();
@@ -167,9 +167,12 @@ public static class PlaceSuggestions
                 arrival = leg.StartUtcMs;
             }
 
+            // Una escala no es una ciudad del viaje: se llega y se vuelve a salir de allí sin dormir en un hotel y en menos de
+            // 20 horas (una conexión larga en São Paulo camino de Río no hace que salgan ideas de São Paulo).
             var next = moves.Skip(i + 1).FirstOrDefault(n => n.StartUtcMs > leg.StartUtcMs && !SameLeg(n, leg));
             if (next is not null && string.Equals(City(next.StartPlace), to, StringComparison.OrdinalIgnoreCase)
-                && next.StartUtcMs - arrival < 8 * 3_600_000L)
+                && next.StartUtcMs - arrival < 20 * 3_600_000L
+                && !hotels.Any(h => h.StartUtcMs >= arrival - 3_600_000L && h.StartUtcMs < next.StartUtcMs))
             {
                 continue;
             }
@@ -259,6 +262,8 @@ public static class PlaceSuggestions
 
     private static string CitiesKey(Guid tripId) => $"ideas-cities:{tripId:N}";
 
+    private const string CitiesRevision = "2";
+
     private static async Task<List<string>> CitiesFor(AccessService access, string userId, Guid tripId, CancellationToken ct) =>
         TripCities(await access.VisibleBookings(userId).Where(b => b.TripId == tripId && b.DeletedAtMs == null).ToListAsync(ct));
 
@@ -268,16 +273,16 @@ public static class PlaceSuggestions
     /// </summary>
     private static async Task FillCities(AppDbContext db, IJsonAsker ai, Guid tripId, IReadOnlyList<string> cities, ILoggerFactory loggers, CancellationToken ct)
     {
-        var flag = string.Join("|", cities);
+        // Con la revisión en la marca, un cambio de reglas vuelve a repasar todas las ideas una vez (la 2: ideas de São Paulo que
+        // se habían guardado como de Río).
+        var flag = $"{CitiesRevision}:{string.Join("|", cities)}";
         var row = await db.AppSettings.FirstOrDefaultAsync(a => a.Key == CitiesKey(tripId), ct);
         if (row?.Value == flag || !ai.IsAvailable)
         {
             return;
         }
 
-        var ideas = (await db.PlaceIdeas.Where(i => i.TripId == tripId && i.DismissedAtMs == null).ToListAsync(ct))
-            .Where(i => MatchCity(i.Area, cities) is null || MatchCity(i.Area, cities) != i.Area)
-            .ToList();
+        var ideas = await db.PlaceIdeas.Where(i => i.TripId == tripId && i.DismissedAtMs == null).ToListAsync(ct);
         if (ideas.Count > 0)
         {
             var list = string.Join("\n", ideas.Select(i => $"- {i.Name}{(i.Address is null ? "" : $" ({i.Address})")}"));
@@ -464,6 +469,17 @@ public static class PlaceSuggestions
             return Results.Problem("No se han podido conseguir sugerencias. Inténtalo dentro de un rato.", statusCode: StatusCodes.Status502BadGateway);
         }
 
+        // Con ciudades conocidas, lo que la IA dice que está en otra (São Paulo al pedir Río) no se guarda: antes se le ponía
+        // la ciudad pedida y salía mezclado.
+        if (cities.Count > 0)
+        {
+            suggestions = suggestions.Where(s => MatchCity(s.Area, cities) is not null || (focus is not null && string.IsNullOrWhiteSpace(s.Area))).ToList();
+            if (focus is not null)
+            {
+                suggestions = suggestions.Where(s => MatchCity(s.Area, cities) is null || MatchCity(s.Area, cities) == focus).ToList();
+            }
+        }
+
         // Se guardan: la próxima vez que se abra el viaje siguen ahí. La primera de la tanda queda la más reciente.
         var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         db.PlaceIdeas.AddRange(suggestions.Select((s, index) => new PlaceIdea
@@ -474,7 +490,7 @@ public static class PlaceSuggestions
             Category = s.Category,
             Description = s.Description,
             Address = s.Address,
-            Area = cities.Count == 0 ? s.Area ?? "" : MatchCity(s.Area, cities) ?? focus ?? s.Area ?? "",
+            Area = cities.Count == 0 ? s.Area ?? "" : MatchCity(s.Area, cities) ?? focus ?? "",
             CreatedAtMs = nowMs - index,
         }));
         await db.SaveChangesAsync(ct);
