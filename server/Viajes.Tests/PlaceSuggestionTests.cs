@@ -206,6 +206,27 @@ public sealed class TripCitiesTests
         Assert.Equal("Río de Janeiro", PlaceSuggestions.MatchCity("Rio De Janeiro", cities));
         Assert.Null(PlaceSuggestions.MatchCity("São Paulo", cities));
     }
+
+    [Fact]
+    public void A_long_connection_without_hotel_is_not_a_trip_city_but_a_night_in_a_hotel_is()
+    {
+        var legs = new List<Booking>
+        {
+            Leg("MAD", "EZE", "2026-10-01T23:00", "2026-10-02T08:00", "America/Argentina/Buenos_Aires"),
+            // Llega a São Paulo a las 08:00 y sigue a Río a las 21:00: 13 horas, sin hotel.
+            Leg("AEP", "GRU", "2026-10-10T05:00", "2026-10-10T08:00"),
+            Leg("GRU", "GIG", "2026-10-10T21:00", "2026-10-10T22:00"),
+            Leg("GIG", "MAD", "2026-10-19T20:00", "2026-10-20T12:00"),
+        };
+        Assert.Equal(["Buenos Aires", "Río de Janeiro"], PlaceSuggestions.TripCities(legs));
+
+        var hotel = new Booking
+        {
+            Id = Guid.NewGuid(), TripId = Guid.NewGuid(), Type = "hotel", Title = "Hotel en São Paulo", StartLocal = "2026-10-10T10:00", StartTz = "America/Sao_Paulo",
+            StartUtcMs = LocalTime.ToUtcMs("2026-10-10T10:00", "America/Sao_Paulo"), CreatedBy = "x",
+        };
+        Assert.Equal(["Buenos Aires", "São Paulo", "Río de Janeiro"], PlaceSuggestions.TripCities([.. legs, hotel]));
+    }
 }
 
 public sealed class PlaceCitiesApiTests(PlaceAiApp app) : IClassFixture<PlaceAiApp>
@@ -245,8 +266,27 @@ public sealed class PlaceCitiesApiTests(PlaceAiApp app) : IClassFixture<PlaceAiA
             app.Fake.Answer = previous;
         }
 
-        // Pedir ideas de una ciudad: el aviso lo dice y las ciudades van en el prompt.
-        (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/place-suggestions", new { lang = "es", area = "Río de Janeiro" })).EnsureSuccessStatusCode();
-        Assert.Contains("Todos en Río de Janeiro", app.Fake.Prompts.Last());
+        // Pedir ideas de una ciudad: el aviso lo dice y las ciudades van en el prompt; lo que la IA mete de otra ciudad
+        // (São Paulo) no se guarda con la etiqueta de Río.
+        app.Fake.Answer = """
+            {"places": [
+              {"name": "Pão de Açúcar", "category": "see", "description": "Teleférico.", "address": null, "area": "Rio de Janeiro"},
+              {"name": "MASP", "category": "see", "description": "Museo.", "address": "Avenida Paulista", "area": "São Paulo"},
+              {"name": "Feria de San Telmo", "category": "shop", "description": "Domingos.", "address": null, "area": "Buenos Aires"}
+            ]}
+            """;
+        try
+        {
+            var asked = await (await ana.Client.PostAsJsonAsync($"/api/trips/{tripId}/place-suggestions", new { lang = "es", area = "Río de Janeiro" })).Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Contains("Todos en Río de Janeiro", app.Fake.Prompts.Last());
+            var names = asked.GetProperty("suggestions").EnumerateArray().Select(i => i.GetProperty("name").GetString()).ToArray();
+            Assert.Contains("Pão de Açúcar", names);
+            Assert.DoesNotContain("MASP", names);
+            Assert.DoesNotContain("Feria de San Telmo", names);
+        }
+        finally
+        {
+            app.Fake.Answer = previous;
+        }
     }
 }
