@@ -46,7 +46,7 @@ export default defineConfig({
         lang: 'es',
         display: 'standalone',
         start_url: '/',
-        background_color: '#0f1d3a',
+        background_color: '#1c1640',
         theme_color: '#0f1d3a',
       },
       injectManifest: {
