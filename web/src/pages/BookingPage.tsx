@@ -12,6 +12,7 @@ import { formatLongDay } from '../data/localTime';
 import { deleteBooking, getBooking, hiddenBookings, listAttachments, saveBooking, setBookingHidden } from '../data/repo';
 import { useLiveQuery } from '../data/useLive';
 import { TYPE_INFO } from '../domain/agenda';
+import { withBaggage } from '../domain/baggage';
 import { t } from '../i18n';
 import { TimeAt } from '../components/TimeAt';
 import { applyFixes as saveFixes, useAutoFix } from '../components/useAutoFix';
@@ -79,6 +80,9 @@ export function BookingPage() {
     await deleteBooking(bookingId);
     navigate(`/trips/${tripId}`, { replace: true });
   }
+
+  // En los vuelos el equipaje ya sale en «Asiento, equipaje y check-in»: no se repite en las notas.
+  const shownNotes = booking.type === 'flight' ? withBaggage(booking.notes, null) : booking.notes;
 
   return (
     <main className="page">
@@ -164,10 +168,10 @@ export function BookingPage() {
             </dd>
           </>
         )}
-        {booking.notes && (
+        {shownNotes && (
           <>
             <dt>{t('Notas')}</dt>
-            <dd>{booking.notes}</dd>
+            <dd>{shownNotes}</dd>
           </>
         )}
       </dl>

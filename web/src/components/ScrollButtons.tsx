@@ -12,6 +12,8 @@ const MARGIN = 400;
 export function ScrollButtons() {
   const location = useLocation();
   const [state, setState] = useState({ up: false, down: false });
+  // Solo se ven mientras se desplaza la pantalla (y un momento después), para no tapar el texto.
+  const [active, setActive] = useState(false);
 
   useEffect(() => {
     const area = document.querySelector<HTMLElement>('.shell > .scroll');
@@ -25,8 +27,15 @@ export function ScrollButtons() {
         down: long && area.scrollHeight - area.clientHeight - area.scrollTop > MARGIN,
       });
     };
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      update();
+      setActive(true);
+      clearTimeout(idle);
+      idle = setTimeout(() => setActive(false), 1800);
+    };
     update();
-    area.addEventListener('scroll', update, { passive: true });
+    area.addEventListener('scroll', onScroll, { passive: true });
     // El contenido cambia de alto al cargar (listas, imágenes): se vuelve a mirar.
     const observer = new ResizeObserver(update);
     observer.observe(area);
@@ -35,9 +44,10 @@ export function ScrollButtons() {
     }
     const settle = setTimeout(update, 800);
     return () => {
-      area.removeEventListener('scroll', update);
+      area.removeEventListener('scroll', onScroll);
       observer.disconnect();
       clearTimeout(settle);
+      clearTimeout(idle);
     };
   }, [location.pathname]);
 
@@ -50,7 +60,7 @@ export function ScrollButtons() {
     return null;
   }
   return (
-    <div className="scroll-buttons">
+    <div className={`scroll-buttons${active ? ' visible' : ''}`}>
       {state.up && (
         <button type="button" onClick={() => go('top')} aria-label={t('Subir arriba del todo')}>
           ↑
