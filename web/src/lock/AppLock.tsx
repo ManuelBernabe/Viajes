@@ -3,7 +3,7 @@ import { useSession } from '../app/SessionContext';
 import { describeError } from '../api';
 import { t } from '../i18n';
 import { setLocked, trustForAWhile, useLocked, verify, watchVisibility } from './appLock';
-import { LockSetup } from './LockSetup';
+import { LockStatusReport } from './LockStatusReport';
 
 /** Pantalla de bloqueo: tapa toda la app hasta pasar Face ID (o la contraseña de la cuenta, si Face ID no va). */
 export function AppLock() {
@@ -62,8 +62,8 @@ export function AppLock() {
   }
 
   if (!locked) {
-    // Sin Face ID activado en este móvil, se pide activarlo: es obligatorio.
-    return <LockSetup />;
+    // Face ID es opcional: quien lo quiera lo activa en Ajustes. Aquí solo se cuenta al servidor si está activado.
+    return <LockStatusReport />;
   }
 
   return (

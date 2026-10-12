@@ -632,4 +632,11 @@ export const settings: Messages = {
   Caché: { en: 'Cache', fr: 'Cache', it: 'Cache' },
   '{n} respuestas guardadas': { en: '{n} saved answers', fr: '{n} réponses enregistrées', it: '{n} risposte salvate' },
   '{hits} de {total} desde la caché': { en: '{hits} of {total} from the cache', fr: '{hits} sur {total} depuis le cache', it: '{hits} su {total} dalla cache' },
+  'Es opcional.': { en: 'It’s optional.', fr: 'C’est facultatif.', it: 'È facoltativo.' },
+  '¿Quitar Face ID en este móvil? La app se abrirá sin pedirlo.': {
+    en: 'Turn off Face ID on this phone? The app will open without asking for it.',
+    fr: 'Désactiver Face ID sur ce téléphone ? L’app s’ouvrira sans le demander.',
+    it: 'Disattivare Face ID su questo telefono? L’app si aprirà senza chiederlo.',
+  },
+  'Face ID quitado en este móvil.': { en: 'Face ID turned off on this phone.', fr: 'Face ID désactivé sur ce téléphone.', it: 'Face ID disattivato su questo telefono.' },
 };

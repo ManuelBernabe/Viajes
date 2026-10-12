@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '../app/SessionContext';
 import { t } from '../i18n';
-import { DEFAULT_AFTER_MINUTES, enableLock, lockSupported, setAfterMinutes, useLockConfig } from './appLock';
+import { DEFAULT_AFTER_MINUTES, disableLock, enableLock, lockSupported, setAfterMinutes, useLockConfig } from './appLock';
 
 const DELAYS = [0, 1, 5, 15, 30, 60];
 
-/** Ajustes → «Face ID»: es obligatorio; aquí se elige cuándo se vuelve a pedir (o se activa si quedó pendiente). */
+/** Ajustes → «Face ID»: opcional; se activa, se elige cuándo se vuelve a pedir o se quita. */
 export function LockSettings() {
   const config = useLockConfig();
   const session = useSession();
@@ -39,7 +39,8 @@ export function LockSettings() {
     <section className="card">
       <h3>🔒 {t('Face ID')}</h3>
       <p className="small muted">
-        {t('Pide Face ID (o el código del iPhone) para abrir Viajes en este móvil: tus reservas, QR y documentos quedan protegidos si alguien coge el móvil desbloqueado.')}
+        {t('Pide Face ID (o el código del iPhone) para abrir Viajes en este móvil: tus reservas, QR y documentos quedan protegidos si alguien coge el móvil desbloqueado.')}{' '}
+        {t('Es opcional.')}
       </p>
       {supported === false && !config && <p className="small">{t('Este navegador no permite usar Face ID. Abre Viajes desde el icono de la pantalla de inicio.')}</p>}
       {config ? (
@@ -54,7 +55,18 @@ export function LockSettings() {
               ))}
             </select>
           </div>
-          <p className="small muted">{t('Face ID es obligatorio para entrar en Viajes: no se puede quitar.')}</p>
+          <button
+            className="btn danger block"
+            type="button"
+            onClick={() => {
+              if (confirm(t('¿Quitar Face ID en este móvil? La app se abrirá sin pedirlo.'))) {
+                disableLock();
+                setMessage(t('Face ID quitado en este móvil.'));
+              }
+            }}
+          >
+            {t('Quitar Face ID')}
+          </button>
         </>
       ) : (
         supported && (

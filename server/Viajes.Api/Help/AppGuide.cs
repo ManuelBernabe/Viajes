@@ -128,8 +128,7 @@ public static class AppGuide
 
         ## Ajustes
         - Cuenta: cerrar sesión (borra la copia del móvil), cambiar contraseña, cerrar sesión en todos los dispositivos.
-        - 🔒 Face ID: es obligatorio. Al entrar por primera vez en un móvil, la app pide «Activar Face ID» y no deja seguir
-          sin él (si falla, se puede entrar esa vez y lo vuelve a pedir al abrirla). No se puede quitar. En Ajustes se elige cuándo
+        - 🔒 Face ID: es opcional. Se activa en Ajustes → «Activar Face ID» y se quita con «Quitar Face ID». Con él activado se elige cuándo
           volver a pedirlo (cada vez, 1, 5, 15 o 30 minutos o 1 hora fuera; por defecto 15 minutos). Si al activarlo se abre Microsoft Authenticator u otra app, hay
           que guardar la llave en «Contraseñas» (Ajustes del iPhone → General → Autorrelleno y contraseñas → activar
           Contraseñas). Si Face ID falla, «Usar la contraseña» de la cuenta.
