@@ -16,7 +16,7 @@
         background: radial-gradient(110% 80% at 50% 35%, #3a2f73 0%, #1c1640 55%, #0e0b24 100%);
         font-family: Georgia, "Times New Roman", serif; transition: opacity 0.5s ease, visibility 0.5s ease;
       }
-      #splash.hide { opacity: 0; visibility: hidden; }
+      #splash.hide { opacity: 0; visibility: hidden; pointer-events: none; }
       #splash img { width: 118px; height: 118px; border-radius: 27px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); animation: splash-in 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
       #splash .name { font-size: 1.9rem; font-weight: 600; letter-spacing: 0.18em; padding-left: 0.18em; animation: splash-up 0.6s 0.2s ease both; }
       #splash .tag { margin-top: -8px; font: 0.9rem -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; opacity: 0.7; animation: splash-up 0.6s 0.35s ease both; }
