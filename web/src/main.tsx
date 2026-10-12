@@ -13,15 +13,20 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// La pantalla de bienvenida (index.html) se ve al menos 1,3 s desde que se abre la app y luego se funde con la primera pantalla.
+// La pantalla de bienvenida (index.html) se ve unos 5 s desde que se abre la app y luego se funde con la primera pantalla.
+// Tocarla la quita antes.
 const splash = document.getElementById('splash')
 if (splash) {
-  setTimeout(
-    () => {
-      splash.classList.add('hide')
-      document.body.style.removeProperty('background')
-      setTimeout(() => splash.remove(), 600)
-    },
-    Math.max(0, 1300 - performance.now()),
-  )
+  let gone = false
+  const hide = () => {
+    if (gone) {
+      return
+    }
+    gone = true
+    splash.classList.add('hide')
+    document.body.style.removeProperty('background')
+    setTimeout(() => splash.remove(), 600)
+  }
+  splash.addEventListener('click', hide)
+  setTimeout(hide, Math.max(0, 5000 - performance.now()))
 }
