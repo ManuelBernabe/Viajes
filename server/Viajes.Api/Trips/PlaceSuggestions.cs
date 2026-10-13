@@ -190,6 +190,12 @@ public static partial class PlaceSuggestions
                 continue;
             }
 
+            // El último trayecto: si no hay hotel después, es la vuelta (aunque se vuelva a Madrid y se saliera de Alicante).
+            if (next is null && !hotels.Any(h => h.StartUtcMs >= arrival - 3_600_000L))
+            {
+                continue;
+            }
+
             if (!cities.Contains(to, StringComparer.OrdinalIgnoreCase))
             {
                 cities.Add(to);
