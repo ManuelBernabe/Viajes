@@ -6,6 +6,7 @@ import { BookingCard } from '../components/BookingCard';
 import { groupSameTrip } from '../domain/today';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TripMerge } from '../components/TripMerge';
+import { TripQuickActions } from '../components/QuickSetup';
 import { TripReview } from '../components/TripReview';
 import { TypeChips } from '../components/TypeChips';
 import { DayWeatherBadge, useTripWeather, WeatherStrip } from '../components/WeatherStrip';
@@ -185,6 +186,8 @@ export function TripPage() {
         <Link className="btn" to={`/trips/${tripId}/share`}>
           🔗 {t('Compartir')}
         </Link>
+
+        <TripQuickActions />
 
       </div>
 
