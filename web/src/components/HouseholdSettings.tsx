@@ -143,36 +143,29 @@ export function HouseholdSettings() {
       </p>
       {home ? (
         <>
-          {home.members.map((member) => (
-            <div key={member.userId} className="row between small" style={{ margin: '6px 0' }}>
-              <span>
-                {member.email ?? member.userId}
-                {member.me ? ` (${t('tú')})` : ''}
-                {member.role === 'admin' ? ` · ${t('administra')}` : ''}
-                {home.iAmAdmin && (
-                  <span className={`face-id-state ${member.faceId ?? 'unknown'}`}>
-                    {member.faceId === 'on'
-                      ? ` · 🔒 ${t('Face ID activado')}`
-                      : member.faceId === 'off'
-                        ? ` · ⚠️ ${t('Face ID sin activar')}`
-                        : member.faceId === 'unsupported'
-                          ? ` · ${t('sin Face ID en su equipo')}`
-                          : ` · ${t('Face ID: aún no ha abierto la versión nueva')}`}
-                  </span>
+          <ul className="members">
+            {home.members.map((member) => (
+              <li key={member.userId}>
+                <div className="member-name">{member.email ?? member.userId}</div>
+                <div className="member-tags">
+                  {member.me && <span className="tag">{t('tú')}</span>}
+                  {member.role === 'admin' && <span className="tag">{t('administra')}</span>}
+                  {/* Face ID es opcional: solo se indica quien lo tiene puesto. */}
+                  {home.iAmAdmin && member.faceId === 'on' && <span className="tag ok">🔒 {t('Face ID activado')}</span>}
+                </div>
+                {home.iAmAdmin && !member.me && (
+                  <div className="member-actions">
+                    <button className="btn small" type="button" disabled={busy} onClick={() => void resetLink(member.userId, member.email)}>
+                      {t('Contraseña')}
+                    </button>
+                    <button className="btn small danger" type="button" disabled={busy} onClick={() => void remove(member.userId, member.email)}>
+                      {t('Quitar')}
+                    </button>
+                  </div>
                 )}
-              </span>
-              {home.iAmAdmin && !member.me && (
-                <span className="row" style={{ gap: 6 }}>
-                  <button className="btn small" type="button" disabled={busy} onClick={() => void resetLink(member.userId, member.email)}>
-                    {t('Contraseña')}
-                  </button>
-                  <button className="btn small danger" type="button" disabled={busy} onClick={() => void remove(member.userId, member.email)}>
-                    {t('Quitar')}
-                  </button>
-                </span>
-              )}
-            </div>
-          ))}
+              </li>
+            ))}
+          </ul>
           {home.iAmAdmin && (home.formerMembers ?? []).length > 0 && (
             <>
               <div className="small muted" style={{ margin: '12px 0 4px' }}>
@@ -180,14 +173,18 @@ export function HouseholdSettings() {
                   'Estuvieron en el hogar. Si alguien no recuerda su contraseña, borra su cuenta y mándale una invitación: podrá crearla de nuevo con el mismo email.',
                 )}
               </div>
-              {(home.formerMembers ?? []).map((former) => (
-                <div key={former.userId} className="row between small muted" style={{ margin: '6px 0' }}>
-                  <span>{former.email ?? former.userId}</span>
-                  <button className="btn small danger" type="button" disabled={busy} onClick={() => void deleteAccount(former.userId, former.email)}>
-                    {t('Borrar cuenta')}
-                  </button>
-                </div>
-              ))}
+              <ul className="members former">
+                {(home.formerMembers ?? []).map((former) => (
+                  <li key={former.userId}>
+                    <div className="member-name muted">{former.email ?? former.userId}</div>
+                    <div className="member-actions">
+                      <button className="btn small danger" type="button" disabled={busy} onClick={() => void deleteAccount(former.userId, former.email)}>
+                        {t('Borrar cuenta')}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
           {home.invitations.length > 0 && (

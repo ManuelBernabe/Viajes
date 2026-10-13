@@ -692,3 +692,14 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .settings-advanced > summary::after { content: ' ▾'; color: var(--muted); }
 .settings-advanced[open] > summary::after { content: ' ▴'; }
 .settings-advanced > summary::-webkit-details-marker { display: none; }
+
+/* Personas del hogar */
+.members { list-style: none; margin: 8px 0; padding: 0; }
+.members li { padding: 10px 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.members li:first-child { border-top: 0; }
+.member-name { font-weight: 600; overflow-wrap: anywhere; }
+.member-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.member-tags:empty { display: none; }
+.member-tags .tag { font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: var(--raise); color: var(--muted); }
+.member-tags .tag.ok { color: var(--ok); }
+.member-actions { display: flex; flex-wrap: wrap; gap: 8px; }
