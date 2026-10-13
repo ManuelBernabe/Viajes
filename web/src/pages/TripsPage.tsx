@@ -7,6 +7,7 @@ import { useSyncStatus } from '../data/syncClient';
 import type { Booking, Trip } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { isInProgress, nextBookings, sortTrips, todayLocal, tripStatus, TYPE_INFO } from '../domain/agenda';
+import { AddButton } from '../components/AddSheet';
 import { BrandMark } from '../components/BrandMark';
 import { SyncButton } from '../components/SyncButton';
 import { TextSizeButton } from '../components/TextSize';
@@ -120,13 +121,7 @@ export function TripsPage() {
         <h1>{t('Viajes')}</h1>
         <TextSizeButton />
         <SyncButton />
-        <Link className="btn primary add" to="/trips/new" aria-label={t('Nuevo viaje')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M12 7v10M7 12h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-          </svg>
-          {t('Nuevo viaje')}
-        </Link>
+        <AddButton label={t('Añadir')} />
       </div>
       {sync.pending > 0 && (
         <p className="muted small">

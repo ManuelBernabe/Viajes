@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AgendaRow, BoardingCard } from '../components/Agenda';
 import { BrandMark } from '../components/BrandMark';
+import { SetupCard } from '../components/SetupCard';
+import { AddButton } from '../components/AddSheet';
+import { PushOfferBanner } from '../components/QuickSetup';
 import { SyncButton } from '../components/SyncButton';
 import { TextSizeButton } from '../components/TextSize';
 import { useTripWeather } from '../components/WeatherStrip';
@@ -106,6 +109,7 @@ export function TodayPage() {
         <h1>{titles[view]}</h1>
         <TextSizeButton />
         <SyncButton />
+        <AddButton />
       </div>
       <p className="today-sub">
         {view === 'week' ? t('Los próximos 7 días') : formatLongDay(date)}
@@ -138,6 +142,8 @@ export function TodayPage() {
           <span className="muted">›</span>
         </Link>
       )}
+
+      <PushOfferBanner flightSoon={bookings.some((b) => b.type === 'flight' && b.startUtcMs > now && b.startUtcMs - now < 7 * 86_400_000)} />
 
       {data && data.tripCount === 0 && (
         <div className="empty">
@@ -235,6 +241,8 @@ export function TodayPage() {
           ))}
         </>
       )}
+
+      <SetupCard />
 
       {data && data.tripCount > 0 && (
         <Link className="teaser link" to="/trips">

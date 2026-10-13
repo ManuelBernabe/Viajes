@@ -407,6 +407,15 @@ export function BookingFormPage() {
           {prefill.warnings?.length ? <span className="error"> {prefill.warnings.join(' ')}</span> : null}
         </p>
       )}
+      {!bookingId && !prefill && (
+        <button type="button" className="card read-ticket" onClick={() => fileInput.current?.click()}>
+          <span className="read-ticket-icon">📄</span>
+          <span>
+            <strong>{t('Leer un billete, PDF o foto')}</strong>
+            <span className="small muted block-line">{t('Elige el archivo y la app rellena la reserva; luego la revisas.')}</span>
+          </span>
+        </button>
+      )}
       {!bookingId && dictationSupported() && (
         <section className="card">
           <div className="row between" style={{ gap: 12 }}>

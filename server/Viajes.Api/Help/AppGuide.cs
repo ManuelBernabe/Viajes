@@ -126,6 +126,16 @@ public static class AppGuide
         - «Solo para mí» hace un documento privado: no lo ve nadie más, ni quien administra.
         - Avisos arriba: caducado, caduca antes de acabar un viaje, pasaporte con menos de 6 meses al salir, caduca en 90 días.
 
+        ## Sin pasar por Ajustes
+        - «Pon a punto Viajes» (en «Hoy», abajo): avisos, calendario del iPhone, atajo «Enviar a Viajes» e invitar, cada uno con
+          su botón ahí mismo; se tacha al hacerlo y la tarjeta desaparece al terminar o con la ✕.
+        - Botón ⊕ en «Hoy» y «Viajes»: reserva nueva en cualquier viaje (dentro, «Leer un billete, PDF o foto»), viaje nuevo, y
+          cómo mandar una reserva desde Mail.
+        - En cada viaje, «📅 Al calendario» (si falta) y «👥 Invitar»; en un vuelo, «🔔 Avisarme de cambios» si los avisos están
+          apagados; con un vuelo en 7 días, «Hoy» ofrece activarlos.
+        - Ajustes está por grupos: «Tú y este móvil», «Hogar y conexiones» y, plegado, «Avanzado» (sincronización, IA, claves,
+          copias, espacio, versión).
+
         ## Ajustes
         - Cuenta: cerrar sesión (borra la copia del móvil), cambiar contraseña, cerrar sesión en todos los dispositivos.
         - 🔒 Face ID: es opcional. Se activa en Ajustes → «Activar Face ID» y se quita con «Quitar Face ID». Con él activado se elige cuándo

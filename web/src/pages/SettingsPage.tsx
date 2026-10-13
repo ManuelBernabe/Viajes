@@ -65,6 +65,14 @@ export function SettingsPage() {
   const trips = useLiveQuery(listTrips, []);
   // Los tokens y la gestión de miembros solo los toca quien administra el hogar; hasta saberlo, se esconden.
   const [admin, setAdmin] = useState(false);
+  // «/settings#atajo» (desde «Añadir»): se baja hasta esa sección.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) {
+      setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  }, []);
+
   useEffect(() => {
     loadHousehold().then((home) => setAdmin(home.iAmAdmin), () => setAdmin(false));
   }, []);
@@ -110,6 +118,8 @@ export function SettingsPage() {
         <h1>{t('Ajustes')}</h1>
       </div>
 
+      <h2 className="settings-group">{t('Tú y este móvil')}</h2>
+
       <section className="card">
         <h3>{t('Cuenta')}</h3>
         <p>{session.email}</p>
@@ -119,16 +129,7 @@ export function SettingsPage() {
         <AccountSecurity onSignedOutEverywhere={() => session.signOut()} />
       </section>
 
-      <section className="card">
-        <h3>{t('Sincronización')}</h3>
-        <p className="small">
-          {t('Última: {when} · Pendientes: {n}', { when: ago(sync.lastAt), n: sync.pending })}
-          {sync.incomplete ? ` · ⚠️ ${t('incompleta (¿sin conexión?)')}` : ''}
-        </p>
-        <button className="btn block" disabled={sync.running} onClick={() => void syncNow()}>
-          {sync.running ? t('Sincronizando…') : t('Sincronizar ahora')}
-        </button>
-      </section>
+      <LanguageSettings />
 
       <section className="card">
         <h3>🔠 {t('Tamaño de la letra')}</h3>
@@ -136,34 +137,19 @@ export function SettingsPage() {
         <TextSizeControl />
       </section>
 
-      <LanguageSettings />
-
-      <HouseholdSettings />
-
       <PushSettings />
 
       <LockSettings />
 
+      <h2 className="settings-group">{t('Hogar y conexiones')}</h2>
+
+      <HouseholdSettings />
+
       <CalendarSettings />
 
-      <ShareShortcut />
-
-      <ImportTokens admin={admin} />
-
-      <AiSettings admin={admin === true} />
-
-      <FlightKeySettings admin={admin} />
-
-      <BackupSettings admin={admin} />
-
-      <section className="card">
-        <h3>{t('Espacio en el móvil')}</h3>
-        <p className="small">{storage || t('No disponible')}</p>
-        <button className="btn block" onClick={() => void freePast()} disabled={past.length === 0}>
-          {t('Quitar del móvil los adjuntos de viajes pasados')}
-        </button>
-        {message && <p className="muted small">{message}</p>}
-      </section>
+      <div id="atajo">
+        <ShareShortcut />
+      </div>
 
       <section className="card">
         <h3>{t('Ayuda')}</h3>
@@ -176,18 +162,51 @@ export function SettingsPage() {
         </Link>
       </section>
 
-      <section className="card">
-        <h3>{t('Versión')}</h3>
-        <p className="small">{t('App: {version}', { version: APP_VERSION })}</p>
-        <p className="small">{t('Servidor: {server}', { server })}</p>
-        <button className="btn block" type="button" disabled={updateCheck === 'checking'} onClick={() => void searchUpdate()}>
-          {updateCheck === 'checking' ? t('Buscando…') : t('Buscar actualizaciones')}
-        </button>
-        {updateCheck && updateCheck !== 'checking' && <p className="small muted">{updateCheck}</p>}
-        <Link to="/diag" className="small">
-          {t('Página de diagnóstico')}
-        </Link>
-      </section>
+      <details className="settings-advanced">
+        <summary>{t('Avanzado')}</summary>
+        <p className="small muted">{t('Sincronización, lectura con IA, claves, copias de seguridad, espacio y versión. Normalmente no hace falta tocar nada.')}</p>
+
+        <section className="card">
+          <h3>{t('Sincronización')}</h3>
+          <p className="small">
+            {t('Última: {when} · Pendientes: {n}', { when: ago(sync.lastAt), n: sync.pending })}
+            {sync.incomplete ? ` · ⚠️ ${t('incompleta (¿sin conexión?)')}` : ''}
+          </p>
+          <button className="btn block" disabled={sync.running} onClick={() => void syncNow()}>
+            {sync.running ? t('Sincronizando…') : t('Sincronizar ahora')}
+          </button>
+        </section>
+
+        <ImportTokens admin={admin} />
+
+        <AiSettings admin={admin === true} />
+
+        <FlightKeySettings admin={admin} />
+
+        <BackupSettings admin={admin} />
+
+        <section className="card">
+          <h3>{t('Espacio en el móvil')}</h3>
+          <p className="small">{storage || t('No disponible')}</p>
+          <button className="btn block" onClick={() => void freePast()} disabled={past.length === 0}>
+            {t('Quitar del móvil los adjuntos de viajes pasados')}
+          </button>
+          {message && <p className="muted small">{message}</p>}
+        </section>
+
+        <section className="card">
+          <h3>{t('Versión')}</h3>
+          <p className="small">{t('App: {version}', { version: APP_VERSION })}</p>
+          <p className="small">{t('Servidor: {server}', { server })}</p>
+          <button className="btn block" type="button" disabled={updateCheck === 'checking'} onClick={() => void searchUpdate()}>
+            {updateCheck === 'checking' ? t('Buscando…') : t('Buscar actualizaciones')}
+          </button>
+          {updateCheck && updateCheck !== 'checking' && <p className="small muted">{updateCheck}</p>}
+          <Link to="/diag" className="small">
+            {t('Página de diagnóstico')}
+          </Link>
+        </section>
+      </details>
     </main>
   );
 }

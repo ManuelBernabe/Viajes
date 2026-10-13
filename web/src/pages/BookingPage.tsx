@@ -7,6 +7,7 @@ import { Alternatives } from '../components/Alternatives';
 import { AttachmentThumbs } from '../components/AttachmentThumbs';
 import { Directions } from '../components/Directions';
 import { FlightStatusCard } from '../components/FlightStatus';
+import { PushOfferButton } from '../components/QuickSetup';
 import { SeatCheckIn } from '../components/SeatCheckIn';
 import { formatLongDay } from '../data/localTime';
 import { deleteBooking, getBooking, hiddenBookings, listAttachments, saveBooking, setBookingHidden } from '../data/repo';
@@ -181,6 +182,7 @@ export function BookingPage() {
       </div>
 
       <FlightStatusCard booking={booking} />
+      {booking.type === 'flight' && booking.startUtcMs > Date.now() && <PushOfferButton />}
       <SeatCheckIn booking={booking} />
 
       <Alternatives booking={booking} />

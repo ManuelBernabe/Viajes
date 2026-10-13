@@ -38,6 +38,29 @@ export function calendarUrls(host: string, token: string): { webcal: string; htt
   return { webcal: `webcal://${path}`, https: `https://${path}` };
 }
 
+/** ¿Se añadió ya el calendario desde este móvil? */
+export function hasCalendar(): boolean {
+  return readToken() !== null;
+}
+
+/**
+ * Añade el calendario de Viajes al del móvil: crea la clave si no la hay (sustituyendo otras de antes, una por persona) y
+ * abre el enlace webcal, que en el iPhone pregunta «¿Suscribirse?».
+ */
+export async function subscribeToCalendar(): Promise<void> {
+  let current = readToken();
+  if (!current) {
+    const all = await api<TokenRow[]>('/api/import-tokens/');
+    for (const key of all.filter((k) => k.scope === 'calendar' && !k.revokedMs)) {
+      await api(`/api/import-tokens/${key.id}`, { method: 'DELETE' });
+    }
+    const created = await api<{ token: string }>('/api/import-tokens/', { method: 'POST', body: JSON.stringify({ scope: 'calendar' }) });
+    current = created.token;
+    writeToken(current);
+  }
+  window.location.href = calendarUrls(window.location.host, current).webcal;
+}
+
 /**
  * Ajustes → «Calendario»: suscribe el calendario del iPhone (o Google Calendar) a los viajes y reservas. El calendario
  * pregunta solo cada cierto tiempo, así que lo que cambie en la app aparece allí sin hacer nada.
