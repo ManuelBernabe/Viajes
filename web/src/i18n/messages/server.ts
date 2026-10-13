@@ -156,6 +156,11 @@ export const server: Messages = {
   'Como mucho 12 fotos por día.': { en: 'At most 12 photos per day.', fr: '12 photos par jour au maximum.', it: 'Al massimo 12 foto al giorno.' },
   'Solo quien administra el hogar puede ver esto.': { en: 'Only the household admin can see this.', fr: 'Seul l’administrateur du foyer peut voir ceci.', it: 'Solo chi amministra la famiglia può vederlo.' },
   'La miniatura no es válida.': { en: 'The thumbnail isn’t valid.', fr: 'La miniature n’est pas valide.', it: 'La miniatura non è valida.' },
+  'La IA está tardando demasiado. Vuelve a intentarlo dentro de un momento.': {
+    en: 'The AI is taking too long. Try again in a moment.',
+    fr: 'L’IA met trop de temps. Réessayez dans un instant.',
+    it: 'L’IA sta impiegando troppo. Riprova tra un momento.',
+  },
   'La lectura con IA no está configurada en el servidor.': {
     en: 'AI reading isn’t set up on the server.',
     fr: 'La lecture par IA n’est pas configurée sur le serveur.',

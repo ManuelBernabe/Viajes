@@ -14,7 +14,7 @@ namespace Viajes.Api.Trips;
 /// la lista. Las ideas se guardan en el viaje (<see cref="PlaceIdea"/>) para no tener que pedirlas otra vez: cada nueva
 /// petición añade ideas distintas a las que ya hay. Pasan a «Lugares» cuando alguien toca «Añadir»; «Quitar» las oculta.
 /// </summary>
-public static class PlaceSuggestions
+public static partial class PlaceSuggestions
 {
     public const int MaxSuggestions = 12;
 
@@ -145,14 +145,31 @@ public static class PlaceSuggestions
         var alive = bookings.Where(b => b.DeletedAtMs is null).ToList();
         var moves = alive.Where(b => b.Type is "flight" or "train").OrderBy(b => b.StartUtcMs).ToList();
         var hotels = alive.Where(b => b.Type == "hotel").ToList();
-        string? City(string? place) => string.IsNullOrWhiteSpace(place) ? null : CityName(Airports.Find(place.Trim())?.Label ?? place.Trim());
-        var home = City(moves.FirstOrDefault()?.StartPlace);
+        string? City(string? place)
+        {
+            if (string.IsNullOrWhiteSpace(place))
+            {
+                return null;
+            }
+
+            // «EZE», «Buenos Aires (EZE)» o «Aeropuerto de Ezeiza EZE»: el código del aeropuerto manda.
+            var text = place.Trim();
+            var code = Airports.Find(text) is not null ? text : IataIn().Match(text) is { Success: true } m && Airports.Find(m.Groups[1].Value) is not null ? m.Groups[1].Value : null;
+            return CityName(code is null ? StripCode().Replace(text, "").Trim() : Airports.Find(code)!.Label);
+        }
+
+        var homes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (City(moves.FirstOrDefault()?.StartPlace) is { } home)
+        {
+            homes.Add(home);
+        }
+
         var cities = new List<string>();
         for (var i = 0; i < moves.Count; i++)
         {
             var leg = moves[i];
             var to = City(leg.EndPlace);
-            if (to is null || string.Equals(to, home, StringComparison.OrdinalIgnoreCase))
+            if (to is null || homes.Contains(to))
             {
                 continue;
             }
@@ -169,11 +186,23 @@ public static class PlaceSuggestions
 
             // Una escala no es una ciudad del viaje: se llega y se vuelve a salir de allí sin dormir en un hotel y en menos de
             // 20 horas (una conexión larga en São Paulo camino de Río no hace que salgan ideas de São Paulo).
+            // Vale también si se sale de otra estación o aeropuerto (llegar en tren a Madrid Chamartín y volar desde Barajas).
             var next = moves.Skip(i + 1).FirstOrDefault(n => n.StartUtcMs > leg.StartUtcMs && !SameLeg(n, leg));
-            if (next is not null && string.Equals(City(next.StartPlace), to, StringComparison.OrdinalIgnoreCase)
+            if (next is not null
                 && next.StartUtcMs - arrival < 20 * 3_600_000L
                 && !hotels.Any(h => h.StartUtcMs >= arrival - 3_600_000L && h.StartUtcMs < next.StartUtcMs))
             {
+                // Mientras no se ha llegado a ningún destino, lo de paso cuenta como casa: volver a Madrid tras salir en tren
+                // de Alicante y volar desde Barajas es la vuelta, no una ciudad del viaje.
+                if (cities.Count == 0)
+                {
+                    homes.Add(to);
+                    if (City(next.StartPlace) is { } departure)
+                    {
+                        homes.Add(departure);
+                    }
+                }
+
                 continue;
             }
 
@@ -239,6 +268,14 @@ public static class PlaceSuggestions
         return string.Join(' ', words.Select((w, i) => i > 0 && w.ToLowerInvariant() is "de" or "do" or "da" or "del" or "la" or "los" or "las" ? w.ToLowerInvariant() : w));
     }
 
+    private static System.Text.RegularExpressions.Regex IataIn() => IataCode();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\(?\b([A-Z]{3})\b\)?\s*$")]
+    private static partial System.Text.RegularExpressions.Regex IataCode();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s*\([A-Z]{3}\)\s*$")]
+    private static partial System.Text.RegularExpressions.Regex StripCode();
+
     /// <summary>El mismo trayecto de otro pasajero (misma salida y ruta).</summary>
     private static bool SameLeg(Booking a, Booking b) =>
         a.StartUtcMs == b.StartUtcMs && string.Equals(a.StartPlace, b.StartPlace, StringComparison.OrdinalIgnoreCase) && string.Equals(a.EndPlace, b.EndPlace, StringComparison.OrdinalIgnoreCase);
@@ -293,12 +330,15 @@ public static class PlaceSuggestions
                 {list}
                 """;
             Dictionary<string, string> areas;
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            limit.CancelAfter(TimeSpan.FromSeconds(40));
             try
             {
-                areas = ParseAreas(await ai.AskJsonAsync(SystemPrompt, prompt, AreasSchema, 2000, ct));
+                areas = ParseAreas(await ai.AskJsonAsync(SystemPrompt, prompt, AreasSchema, 2000, limit.Token));
             }
-            catch (Exception error) when (error is not OperationCanceledException)
+            catch (Exception error) when (error is not OperationCanceledException || !ct.IsCancellationRequested)
             {
+                // Sin respuesta (o tarde): las ideas se quedan como estaban y se reintenta la próxima vez.
                 loggers.CreateLogger("Viajes.Places").LogWarning(error, "No se ha podido repartir las ideas por ciudad.");
                 return;
             }
@@ -461,7 +501,22 @@ public static class PlaceSuggestions
             """;
 
         var log = loggers.CreateLogger("Viajes.Places");
-        var json = await ai.AskJsonAsync(SystemPrompt, prompt, Schema, 3000, ct);
+        // Como mucho 70 s: si la IA no contesta, se dice en vez de dejar la app esperando.
+        string? json;
+        using (var limit = CancellationTokenSource.CreateLinkedTokenSource(ct))
+        {
+            limit.CancelAfter(TimeSpan.FromSeconds(70));
+            try
+            {
+                json = await ai.AskJsonAsync(SystemPrompt, prompt, Schema, 3000, limit.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                log.LogWarning("Sugerencias de lugares: la IA no ha contestado a tiempo.");
+                return Results.Problem("La IA está tardando demasiado. Vuelve a intentarlo dentro de un momento.", statusCode: StatusCodes.Status504GatewayTimeout);
+            }
+        }
+
         var suggestions = Parse(json, existing.Concat(known));
         if (suggestions is null)
         {

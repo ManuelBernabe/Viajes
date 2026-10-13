@@ -103,10 +103,14 @@ export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: rea
   async function ask(area?: string) {
     setBusy(area ?? '');
     setMessage('');
+    // Como mucho 80 s esperando (el servidor corta a los 70): nunca se queda «Buscando sitios…» para siempre.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 80_000);
     try {
       const result = await api<SuggestionsResponse>(`/api/trips/${trip.id}/place-suggestions`, {
         method: 'POST',
         body: JSON.stringify({ lang: lang(), area: area ?? null }),
+        signal: abort.signal,
       });
       setSuggestions(result.suggestions);
       setCities(result.cities);
@@ -114,8 +118,9 @@ export function PlaceSuggestions({ trip, existing }: { trip: Trip; existing: rea
         setMessage(t('No hay sugerencias nuevas: ya tenéis apuntados los sitios que se le ocurren.'));
       }
     } catch (error) {
-      setMessage(describeError(error));
+      setMessage(abort.signal.aborted ? t('La IA está tardando demasiado. Vuelve a intentarlo dentro de un momento.') : describeError(error));
     } finally {
+      clearTimeout(timer);
       setBusy(null);
     }
   }
