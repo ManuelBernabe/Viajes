@@ -208,6 +208,21 @@ public sealed class TripCitiesTests
     }
 
     [Fact]
+    public void A_train_to_another_station_before_the_flight_is_a_stop_and_airport_codes_give_the_city()
+    {
+        var cities = PlaceSuggestions.TripCities(
+        [
+            // En tren a Madrid Chamartín por la mañana y a Buenos Aires por la noche desde Barajas.
+            Leg("Alicante", "Madrid Chamartín", "2026-10-01T08:00", "2026-10-01T10:30", "Europe/Madrid"),
+            Leg("MAD", "Buenos Aires (EZE)", "2026-10-01T23:55", "2026-10-02T08:00", "Europe/Madrid"),
+            Leg("AEP", "IGR", "2026-10-06T10:00", "2026-10-06T12:00", "America/Argentina/Buenos_Aires"),
+            Leg("IGR", "Rio de Janeiro GIG", "2026-10-09T12:00", "2026-10-09T15:00", "America/Sao_Paulo"),
+            Leg("GIG", "MAD", "2026-10-18T20:00", "2026-10-19T12:00", "America/Sao_Paulo"),
+        ]);
+        Assert.Equal(["Buenos Aires", "Puerto Iguazú", "Río de Janeiro"], cities);
+    }
+
+    [Fact]
     public void A_long_connection_without_hotel_is_not_a_trip_city_but_a_night_in_a_hotel_is()
     {
         var legs = new List<Booking>
