@@ -158,13 +158,18 @@ public static partial class PlaceSuggestions
             return CityName(code is null ? StripCode().Replace(text, "").Trim() : Airports.Find(code)!.Label);
         }
 
-        var home = City(moves.FirstOrDefault()?.StartPlace);
+        var homes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (City(moves.FirstOrDefault()?.StartPlace) is { } home)
+        {
+            homes.Add(home);
+        }
+
         var cities = new List<string>();
         for (var i = 0; i < moves.Count; i++)
         {
             var leg = moves[i];
             var to = City(leg.EndPlace);
-            if (to is null || string.Equals(to, home, StringComparison.OrdinalIgnoreCase))
+            if (to is null || homes.Contains(to))
             {
                 continue;
             }
@@ -187,12 +192,17 @@ public static partial class PlaceSuggestions
                 && next.StartUtcMs - arrival < 20 * 3_600_000L
                 && !hotels.Any(h => h.StartUtcMs >= arrival - 3_600_000L && h.StartUtcMs < next.StartUtcMs))
             {
-                continue;
-            }
+                // Mientras no se ha llegado a ningún destino, lo de paso cuenta como casa: volver a Madrid tras salir en tren
+                // de Alicante y volar desde Barajas es la vuelta, no una ciudad del viaje.
+                if (cities.Count == 0)
+                {
+                    homes.Add(to);
+                    if (City(next.StartPlace) is { } departure)
+                    {
+                        homes.Add(departure);
+                    }
+                }
 
-            // El último trayecto: si no hay hotel después, es la vuelta (aunque se vuelva a Madrid y se saliera de Alicante).
-            if (next is null && !hotels.Any(h => h.StartUtcMs >= arrival - 3_600_000L))
-            {
                 continue;
             }
 
