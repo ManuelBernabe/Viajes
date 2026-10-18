@@ -6,7 +6,7 @@ import { destinationOf, directionsUrls, isAppleDevice } from '../domain/directio
 import { clock, hasFlightNumber, statusLabel } from '../domain/flightStatus';
 import { countdown, passengerOf, withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
-import { FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
+import { BagDropLine, FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
 import { useAutoFix } from './useAutoFix';
 import { formatSeats, useSeats } from './useSeats';
 import { baggageOf } from '../domain/baggage';
@@ -131,6 +131,12 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
         </div>
       )}
 
+      {booking.type === 'flight' && (
+        <div className="pass-counter">
+          <BagDropLine booking={booking} status={flight} now={now} />
+        </div>
+      )}
+
       {group.length > 1 && (
         <div className="pass-people">
           {group.map((b) => (
@@ -140,7 +146,12 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
                 {(() => {
                   const name = (passengerOf(b.title) ?? '').toLowerCase();
                   const mine = seats.find((s) => s.passenger && name.startsWith(s.passenger.toLowerCase()));
-                  return mine ? <strong> · {t('Asiento')} {mine.seat}</strong> : null;
+                  return mine ? (
+                    <strong>
+                      {' '}
+                      · {t('Asiento')} {mine.seat}
+                    </strong>
+                  ) : null;
                 })()}
               </span>
               <span className="muted">{b.reference ?? ''}</span>
@@ -179,7 +190,17 @@ export function BoardingCard({ group, qr, now, label: heading }: { group: Bookin
 }
 
 /** Una fila de la agenda: hora en negrita, icono, título y un detalle; lleva a la reserva. */
-export function AgendaRow({ booking, group, kind = 'start', now }: { booking: Booking; group?: Booking[]; kind?: 'start' | 'checkout' | 'night'; now?: number }) {
+export function AgendaRow({
+  booking,
+  group,
+  kind = 'start',
+  now,
+}: {
+  booking: Booking;
+  group?: Booking[];
+  kind?: 'start' | 'checkout' | 'night';
+  now?: number;
+}) {
   const info = TYPE_INFO[booking.type];
   const people = group && group.length > 1 ? group.map((b) => passengerOf(b.title) ?? b.title).join(', ') : null;
   const time = kind === 'checkout' ? (booking.endLocal ? timeOf(booking.endLocal) : '') : kind === 'night' ? '' : timeOf(booking.startLocal);
@@ -191,7 +212,7 @@ export function AgendaRow({ booking, group, kind = 'start', now }: { booking: Bo
         ? (booking.address ?? t('Noche en el hotel'))
         : people
           ? people
-            : booking.type === 'hotel'
+          : booking.type === 'hotel'
             ? info.startLabel
             : booking.type === 'flight' || booking.type === 'train'
               ? [booking.startPlace, booking.endPlace].filter(Boolean).join(' → ')

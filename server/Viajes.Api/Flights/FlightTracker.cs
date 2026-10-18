@@ -184,10 +184,25 @@ public static class FlightEndpoints
     /// <summary>Si se pide desde la app, se vuelve a consultar como mucho cada 20 minutos (cuidando el cupo del proveedor).</summary>
     public const long ManualMinAgeMs = 20 * 60_000;
 
+    /// <summary>Con el botón «↻ Actualizar» (force=true), como mucho cada 5 minutos.</summary>
+    public const long ForcedMinAgeMs = 5 * 60_000;
+
+    /// <summary>«Buenos Aires (AEP)» o «AEP» → «AEP».</summary>
+    private static string? IataOf(string? place)
+    {
+        if (place is null)
+        {
+            return null;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(place, @"\(([A-Za-z]{3})\)|^\s*([A-Z]{3})\s*$");
+        return match.Success ? (match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value).ToUpperInvariant() : null;
+    }
+
     public static void MapFlightEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/bookings/{id:guid}/flight-status", async (
-            Guid id, bool? refresh, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, FlightTracker tracker,
+            Guid id, bool? refresh, bool? force, ClaimsPrincipal principal, UserManager<IdentityUser> users, AccessService access, AppDbContext db, FlightTracker tracker,
             IFlightStatusSource source, CancellationToken ct) =>
         {
             var userId = users.GetUserId(principal)!;
@@ -207,7 +222,7 @@ public static class FlightEndpoints
                     .Where(b => FlightWatch.KeyOf(b) == key)
                     .OrderBy(b => b.Id == booking!.Id ? 0 : 1)
                     .ToList();
-                result = await tracker.RefreshAsync(key, siblings, now, ManualMinAgeMs, ct);
+                result = await tracker.RefreshAsync(key, siblings, now, force == true ? ForcedMinAgeMs : ManualMinAgeMs, ct);
             }
             else
             {
@@ -223,6 +238,11 @@ public static class FlightEndpoints
                 fetchedMs = result.FetchedMs,
                 info,
                 delayMinutes = info?.DelayMinutes ?? 0,
+                // Desde cuándo vale la pena volver a pulsar «↻ Actualizar» (antes devuelve lo guardado).
+                refreshAfterMs = result.FetchedMs is { } fetched ? fetched + ForcedMinAgeMs : (long?)null,
+                // Entre dos países o no: los mostradores abren y cierran antes en los internacionales.
+                international = Viajes.Api.Weather.Airports.International(
+                    info?.Origin ?? IataOf(booking!.StartPlace), info?.Destination ?? IataOf(booking!.EndPlace)),
                 // Por qué no hay datos, si el proveedor falla (clave rechazada, cupo del mes agotado…); lo ve todo el hogar.
                 problem = (source as DynamicFlightSource)?.LastError,
             });

@@ -9,7 +9,7 @@ import { clock, hasFlightNumber, statusLabel } from '../domain/flightStatus';
 import { passengerOf, withoutPassenger } from '../domain/today';
 import { t } from '../i18n';
 import { BoardingCard, shortWait } from './Agenda';
-import { FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
+import { BagDropLine, FlightCheckNote, FlightStatusLine, isTracked, useFlightStatus } from './FlightStatus';
 import { useAutoFix } from './useAutoFix';
 import { formatSeats, useSeats } from './useSeats';
 
@@ -66,14 +66,6 @@ function LegBlock({ leg, index, qr, now }: { leg: Leg; index: number; qr: Readon
       <div className="leg-head">
         <span className="leg-num">{index + 1}</span>
         <b>{withoutPassenger(booking.title)}</b>
-        {withQr && !done && (
-          <Link className="btn small primary leg-btn" to={`/bookings/${withQr.id}/qr`}>
-            {t('QR')}
-          </Link>
-        )}
-        <Link className="btn small leg-btn" to={`/bookings/${booking.id}`} aria-label={t('Ver reserva')}>
-          ›
-        </Link>
         {done ? (
           <span className="chip">✓ {t('Hecho')}</span>
         ) : (
@@ -83,6 +75,14 @@ function LegBlock({ leg, index, qr, now }: { leg: Leg; index: number; qr: Readon
             </span>
           )
         )}
+        {withQr && !done && (
+          <Link className="btn small primary leg-btn" to={`/bookings/${withQr.id}/qr`}>
+            {t('QR')}
+          </Link>
+        )}
+        <Link className="btn small leg-btn" to={`/bookings/${booking.id}`} aria-label={t('Ver reserva')}>
+          ›
+        </Link>
       </div>
       <div className="leg-route">
         <span>
@@ -116,6 +116,8 @@ function LegBlock({ leg, index, qr, now }: { leg: Leg; index: number; qr: Readon
           ))}
         </div>
       )}
+      {/* Se factura en el primer aeropuerto; en las escalas, la maleta suele ir directa. */}
+      {index === 0 && !done && <BagDropLine booking={booking} status={flight} now={now} />}
       {booking.changeNote && <div className="pass-warn">⚠️ {booking.changeNote}</div>}
       {!done && hasFlightNumber(booking) && <FlightCheckNote status={flight} />}
     </div>
