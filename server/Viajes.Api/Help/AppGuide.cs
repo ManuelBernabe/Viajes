@@ -29,6 +29,11 @@ public static class AppGuide
           el estado del vuelo), con «Ver QR» (o «Cómo llegar») y «Ver reserva». Si es el mismo vuelo de varias personas
           (una reserva cada una), sale una sola tarjeta con los pasajeros. Debajo «Esta noche» (el hotel) y «Resto del día».
           Lo de mañana no sale en Hoy: hay un acceso «Mañana: …» que abre esa vista.
+        - Vuelos (o trenes) con escala: los tramos seguidos (el segundo sale de donde llega el primero, poco después; con el
+          mismo localizador, hasta 24 h) salen en una sola tarjeta: arriba el trayecto entero «AEP → MAD vía GRU», la llegada
+          final y la duración total; debajo cada tramo con su número, horas, estado, terminal, puerta, asiento y QR, y entre
+          tramos cuánto dura la escala (avisa si es de menos de 1 h). Igual en Mañana, Semana y en la lista del viaje. Si se
+          duerme en la ciudad de la escala (hay hotel), cuenta como parada y se ven por separado.
         - Mañana y Semana: lo que empieza cada día, las salidas de hotel y dónde se duerme.
         - «N correos por revisar» si han llegado reservas por correo o por el atajo que esperan confirmación.
 

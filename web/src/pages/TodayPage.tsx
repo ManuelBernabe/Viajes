@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AgendaRow, BoardingCard } from '../components/Agenda';
+import { AgendaRow } from '../components/Agenda';
+import { ConnectionRow, JourneyCard } from '../components/Connection';
 import { BrandMark } from '../components/BrandMark';
 import { SetupCard } from '../components/SetupCard';
 import { AddButton } from '../components/AddSheet';
@@ -15,6 +16,7 @@ import type { Booking } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
 import { nextBookings, todayLocal, TYPE_INFO } from '../domain/agenda';
 import { shiftDate } from '../domain/alternatives';
+import { idsOf, withConnections } from '../domain/connections';
 import { dayPlan, groupSameTrip, todayView, weekPlans, type DayPlan } from '../domain/today';
 import { describeWeather, temps } from '../domain/weather';
 import { t } from '../i18n';
@@ -32,8 +34,30 @@ function savedView(): View {
   }
 }
 
-/** Las filas de un día: salidas de hotel, lo que empieza y, al final, dónde se duerme. */
-function DayRows({ plan, now, skip = new Set<string>() }: { plan: DayPlan; now: number; skip?: ReadonlySet<string> }) {
+/** El día tiene algo que pintar (un viaje con escalas que empezó la víspera ya salió ese día). */
+function hasRows(plan: DayPlan, all: readonly Booking[], onlyNew: boolean): boolean {
+  const fresh = withConnections(groupSameTrip(plan.starting), all).filter((legs) => !onlyNew || legs[0][0].startLocal.slice(0, 10) === plan.date);
+  return plan.checkOuts.length + fresh.length > 0 || (plan.night !== null && !plan.starting.includes(plan.night));
+}
+
+/**
+ * Las filas de un día: salidas de hotel, lo que empieza y, al final, dónde se duerme.
+ * `all`: todas las reservas, para juntar los vuelos con escala en una fila. `onlyNew`: un viaje con escalas que empezó un
+ * día antes no se repite (en «Semana» ya está en su primer día).
+ */
+function DayRows({
+  plan,
+  now,
+  all,
+  onlyNew = false,
+  skip = new Set<string>(),
+}: {
+  plan: DayPlan;
+  now: number;
+  all: readonly Booking[];
+  onlyNew?: boolean;
+  skip?: ReadonlySet<string>;
+}) {
   const night = plan.night && !plan.starting.includes(plan.night) && !skip.has(plan.night.id) ? plan.night : null;
   const starting = plan.starting.filter((b) => !skip.has(b.id));
   if (plan.checkOuts.length + starting.length === 0 && !night) {
@@ -44,9 +68,15 @@ function DayRows({ plan, now, skip = new Set<string>() }: { plan: DayPlan; now: 
       {plan.checkOuts.map((b) => (
         <AgendaRow key={`out-${b.id}`} booking={b} kind="checkout" />
       ))}
-      {groupSameTrip(starting).map((group) => (
-        <AgendaRow key={group[0].id} booking={group[0]} group={group} now={now} />
-      ))}
+      {withConnections(groupSameTrip(starting), all)
+        .filter((legs) => !onlyNew || legs[0][0].startLocal.slice(0, 10) === plan.date)
+        .map((legs) =>
+          legs.length > 1 ? (
+            <ConnectionRow key={legs[0][0].id} legs={legs} now={now} date={plan.date} />
+          ) : (
+            <AgendaRow key={legs[0][0].id} booking={legs[0][0]} group={legs[0]} now={now} />
+          ),
+        )}
       {night && <AgendaRow booking={night} kind="night" />}
     </div>
   );
@@ -91,14 +121,26 @@ export function TodayPage() {
   const tomorrow = shiftDate(today, 1);
   const bookings: Booking[] = data?.bookings ?? [];
   const todayV = todayView(bookings, now, today);
+  // Un vuelo con escala va en una sola tarjeta con todos sus tramos (aunque el segundo salga mañana).
+  const nextChains = todayV ? withConnections(groupSameTrip(todayV.next), bookings) : [];
+  const restChains = todayV ? withConnections(groupSameTrip(todayV.today), bookings, idsOf(nextChains)) : [];
   const tomorrowPlan = dayPlan(bookings, tomorrow);
   const week = weekPlans(bookings, today, 7);
   const date = view === 'tomorrow' ? tomorrow : today;
-  const focus = view === 'tomorrow' ? [...tomorrowPlan.starting, ...(tomorrowPlan.night ? [tomorrowPlan.night] : [])] : todayV ? [...todayV.tonight, ...todayV.next, ...todayV.today] : [];
+  const focus =
+    view === 'tomorrow'
+      ? [...tomorrowPlan.starting, ...(tomorrowPlan.night ? [tomorrowPlan.night] : [])]
+      : todayV
+        ? [...todayV.tonight, ...todayV.next, ...todayV.today]
+        : [];
   const weather = useTripWeather(focus[0]?.tripId ?? dayPlan(bookings, date).night?.tripId).find((d) => d.date === date);
   const sky = weather ? describeWeather(weather.code) : null;
   const upcoming = nextBookings(bookings, now)[0];
   const tomorrowCount = tomorrowPlan.starting.length + tomorrowPlan.checkOuts.length;
+  // En el aviso de «Mañana» no cuenta el segundo vuelo de una escala que ya está en la tarjeta de hoy.
+  const shownToday = idsOf([...nextChains, ...restChains]);
+  const teaserStarting = tomorrowPlan.starting.filter((b) => !shownToday.has(b.id));
+  const teaserCount = teaserStarting.length + tomorrowPlan.checkOuts.length;
 
   const titles: Record<View, string> = { today: t('Hoy'), tomorrow: t('Mañana'), week: t('Esta semana') };
 
@@ -158,8 +200,8 @@ export function TodayPage() {
         <>
           {todayV ? (
             <>
-              {groupSameTrip(todayV.next).map((group) => (
-                <BoardingCard key={group[0].id} group={group} qr={data.qr} now={now} />
+              {nextChains.map((legs) => (
+                <JourneyCard key={legs[0][0].id} legs={legs} qr={data.qr} now={now} />
               ))}
               {todayV.tonight.length > 0 && (
                 <>
@@ -171,13 +213,17 @@ export function TodayPage() {
                   </div>
                 </>
               )}
-              {todayV.today.length > 0 && (
+              {restChains.length > 0 && (
                 <>
                   <h2 className="section-title">{t('Resto del día')}</h2>
                   <div className="agenda">
-                    {groupSameTrip(todayV.today).map((group) => (
-                      <AgendaRow key={group[0].id} booking={group[0]} group={group} now={now} />
-                    ))}
+                    {restChains.map((legs) =>
+                      legs.length > 1 ? (
+                        <ConnectionRow key={legs[0][0].id} legs={legs} now={now} />
+                      ) : (
+                        <AgendaRow key={legs[0][0].id} booking={legs[0][0]} group={legs[0]} now={now} />
+                      ),
+                    )}
                   </div>
                 </>
               )}
@@ -193,12 +239,12 @@ export function TodayPage() {
               )}
             </div>
           )}
-          {tomorrowCount > 0 && (
+          {teaserCount > 0 && (
             <button type="button" className="teaser" onClick={() => setView('tomorrow')}>
               <span>
-                {t('Mañana')}: <b className="time-big">{timeOf((tomorrowPlan.starting[0] ?? tomorrowPlan.checkOuts[0]).startLocal)}</b>{' '}
-                {tomorrowPlan.starting[0]?.title ?? tomorrowPlan.checkOuts[0]?.startPlace ?? ''}
-                {tomorrowCount > 1 && ` · ${t('{n} cosas', { n: tomorrowCount })}`}
+                {t('Mañana')}: <b className="time-big">{timeOf((teaserStarting[0] ?? tomorrowPlan.checkOuts[0]).startLocal)}</b>{' '}
+                {teaserStarting[0]?.title ?? tomorrowPlan.checkOuts[0]?.startPlace ?? ''}
+                {teaserCount > 1 && ` · ${t('{n} cosas', { n: teaserCount })}`}
               </span>
               <span className="muted">›</span>
             </button>
@@ -208,15 +254,16 @@ export function TodayPage() {
 
       {data && data.tripCount > 0 && view === 'tomorrow' && (
         <>
-          {groupSameTrip(tomorrowPlan.starting.filter((b) => b.type === 'flight' || b.type === 'train'))
+          {withConnections(groupSameTrip(tomorrowPlan.starting.filter((b) => b.type === 'flight' || b.type === 'train')), bookings)
+            .filter((legs) => legs[0][0].startLocal.slice(0, 10) === tomorrow)
             .slice(0, 1)
-            .map((group) => (
-              <BoardingCard key={group[0].id} group={group} qr={data.qr} now={now} label={t('Mañana')} />
+            .map((legs) => (
+              <JourneyCard key={legs[0][0].id} legs={legs} qr={data.qr} now={now} label={t('Mañana')} />
             ))}
           {tomorrowCount > 0 || tomorrowPlan.night ? (
             <>
               <h2 className="section-title">{t('Todo lo de mañana')}</h2>
-              <DayRows plan={tomorrowPlan} now={now} />
+              <DayRows plan={tomorrowPlan} now={now} all={bookings} />
             </>
           ) : (
             <div className="calm">
@@ -233,12 +280,16 @@ export function TodayPage() {
               <p>{t('Nada reservado en los próximos 7 días.')}</p>
             </div>
           )}
-          {week.map((plan) => (
-            <section key={plan.date}>
-              <h2 className="section-title day-title">{plan.date === today ? t('Hoy') : plan.date === tomorrow ? t('Mañana') : formatLongDay(plan.date)}</h2>
-              <DayRows plan={plan} now={now} />
-            </section>
-          ))}
+          {week
+            .filter((plan) => hasRows(plan, bookings, true))
+            .map((plan) => (
+              <section key={plan.date}>
+                <h2 className="section-title day-title">
+                  {plan.date === today ? t('Hoy') : plan.date === tomorrow ? t('Mañana') : formatLongDay(plan.date)}
+                </h2>
+                <DayRows plan={plan} now={now} all={bookings} onlyNew />
+              </section>
+            ))}
         </>
       )}
 

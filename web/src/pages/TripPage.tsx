@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BackLink } from '../app/Layout';
-import { BoardingCard } from '../components/Agenda';
 import { BookingCard } from '../components/BookingCard';
+import { ConnectionBookingCard, JourneyCard } from '../components/Connection';
+import { idsOf, withConnections, type Leg } from '../domain/connections';
 import { groupSameTrip } from '../domain/today';
 import { OfflineBadge, useTripOffline } from '../components/OfflineBadge';
 import { TripMerge } from '../components/TripMerge';
@@ -14,9 +15,9 @@ import { formatLongDay, formatRange } from '../data/localTime';
 import { downloadMissing, dropBlobs, setManualOffline } from '../data/offline';
 import { deleteTrip, getTrip, hiddenBookings, listAttachments, listBookings, listDocuments, listPlaces, setBookingHidden } from '../data/repo';
 import { downloadAttachment } from '../data/syncClient';
-import type { BookingType } from '../data/types';
+import type { Booking, BookingType } from '../data/types';
 import { useLiveQuery } from '../data/useLive';
-import { groupByDay, isPast, nextBookings, todayLocal } from '../domain/agenda';
+import { groupByDay, isPast, nextBookings, todayLocal, type Day } from '../domain/agenda';
 import { documentAlerts } from '../domain/documents';
 import { t } from '../i18n';
 
@@ -29,8 +30,16 @@ export function TripPage() {
   // Lo siguiente del viaje, destacado arriba con su QR: la próxima reserva y las que empiezan con ella (en la misma hora).
   const highlights = useLiveQuery(async () => {
     const hiddenIds = await hiddenBookings();
-    const next = nextBookings((await listBookings(tripId)).filter((b) => !hiddenIds.has(b.id)), Date.now());
-    return Promise.all(next.map(async (booking) => ({ next: booking, qr: (await listAttachments(booking.id)).some((a) => a.qrText) })));
+    const all = (await listBookings(tripId)).filter((b) => !hiddenIds.has(b.id) && b.deletedAtMs === null);
+    // Un vuelo con escala, entero en una tarjeta: también los tramos que no son «lo siguiente».
+    const journeys = withConnections(groupSameTrip(nextBookings(all, Date.now())), all);
+    const qr = new Set<string>();
+    for (const booking of journeys.flat(2)) {
+      if ((await listAttachments(booking.id)).some((a) => a.qrText)) {
+        qr.add(booking.id);
+      }
+    }
+    return { journeys, qr };
   }, [tripId]);
   // Documentos que caducan antes o durante este viaje (pasaportes con menos de 6 meses, etc.).
   const docAlerts = useLiveQuery(async () => {
@@ -70,6 +79,10 @@ export function TripPage() {
   const now = Date.now();
   const days = groupByDay(visible.filter((b) => !isPast(b, now)));
   const pastDays = groupByDay(visible.filter((b) => isPast(b, now))).reverse();
+  // Los vuelos con escala, en una sola tarjeta el día en que empiezan (sin repetir el tramo en el día siguiente ni en el histórico).
+  const upcomingJourneys = journeysByDay(days, shown, new Set());
+  const pastJourneys = journeysByDay([...pastDays].reverse(), shown, idsOf([...upcomingJourneys.values()].flat()));
+  const hideMany = (ids: string[], value: boolean) => ids.forEach((id) => void setBookingHidden(id, value));
 
   async function toggleOffline() {
     if (!offline) {
@@ -111,15 +124,7 @@ export function TripPage() {
       </div>
       <div className="muted">{[trip.destination, formatRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ')}</div>
 
-      {highlights &&
-        groupSameTrip(highlights.map((h) => h.next)).map((group) => (
-          <BoardingCard
-            key={group[0].id}
-            group={group}
-            qr={new Set(highlights.filter((h) => h.qr).map((h) => h.next.id))}
-            now={Date.now()}
-          />
-        ))}
+      {highlights && highlights.journeys.map((legs) => <JourneyCard key={legs[0][0].id} legs={legs} qr={highlights.qr} now={Date.now()} />)}
 
       {docAlerts && docAlerts.length > 0 && (
         <Link className="card highlight" to="/documents" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
@@ -152,23 +157,20 @@ export function TripPage() {
           </button>
         )}
         {offline && offline.pendingUpload > 0 && (
-          <p className="muted small">{offline.pendingUpload === 1 ? t('1 adjunto pendiente de subir.') : t('{n} adjuntos pendientes de subir.', { n: offline.pendingUpload })}</p>
+          <p className="muted small">
+            {offline.pendingUpload === 1 ? t('1 adjunto pendiente de subir.') : t('{n} adjuntos pendientes de subir.', { n: offline.pendingUpload })}
+          </p>
         )}
         {busy && <p className="muted small">{busy}</p>}
       </section>
 
       <div className="actions" style={{ margin: '12px 0 0' }}>
-
         <Link className="btn primary" to={`/trips/${tripId}/bookings/new`}>
-
           {t('+ Añadir reserva')}
-
         </Link>
 
         <Link className="btn" to={`/trips/${tripId}/places`}>
-
           📍 {placeCount ? t('Lugares ({n})', { n: placeCount }) : t('Lugares')}
-
         </Link>
 
         <Link className="btn" to={`/trips/${tripId}/packing`}>
@@ -188,7 +190,6 @@ export function TripPage() {
         </Link>
 
         <TripQuickActions />
-
       </div>
 
       <div style={{ marginTop: 12 }}>
@@ -197,29 +198,43 @@ export function TripPage() {
 
       {visible.length === 0 && <p className="empty">{t('Sin reservas todavía.')}</p>}
       {visible.length > 0 && days.length === 0 && <p className="muted small">{t('No queda ninguna reserva por delante en este viaje.')}</p>}
-      {days.map((day) => (
-        <section key={day.date}>
-          <div className="day">
-            {formatLongDay(day.date)}
-            <DayWeatherBadge day={weather.find((w) => w.date === day.date)} />
-          </div>
-          {day.bookings.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} onHide={hide(booking.id)} />
-          ))}
-        </section>
-      ))}
+      {days
+        .filter((day) => (upcomingJourneys.get(day.date) ?? []).length > 0)
+        .map((day) => (
+          <section key={day.date}>
+            <div className="day">
+              {formatLongDay(day.date)}
+              <DayWeatherBadge day={weather.find((w) => w.date === day.date)} />
+            </div>
+            {(upcomingJourneys.get(day.date) ?? []).map((legs) =>
+              legs.length > 1 ? (
+                <ConnectionBookingCard key={legs[0][0].id} legs={legs} onHide={hideMany} />
+              ) : (
+                legs[0].map((booking) => <BookingCard key={booking.id} booking={booking} onHide={hide(booking.id)} />)
+              ),
+            )}
+          </section>
+        ))}
 
       {pastDays.length > 0 && (
         <>
           <h2>{t('Histórico')}</h2>
-          {pastDays.map((day) => (
-            <section key={day.date}>
-              <div className="day">{formatLongDay(day.date)}</div>
-              {[...day.bookings].reverse().map((booking) => (
-                <BookingCard key={booking.id} booking={booking} past onHide={hide(booking.id)} />
-              ))}
-            </section>
-          ))}
+          {pastDays
+            .filter((day) => (pastJourneys.get(day.date) ?? []).length > 0)
+            .map((day) => (
+              <section key={day.date}>
+                <div className="day">{formatLongDay(day.date)}</div>
+                {[...(pastJourneys.get(day.date) ?? [])]
+                  .reverse()
+                  .map((legs) =>
+                    legs.length > 1 ? (
+                      <ConnectionBookingCard key={legs[0][0].id} legs={legs} past onHide={hideMany} />
+                    ) : (
+                      [...legs[0]].reverse().map((booking) => <BookingCard key={booking.id} booking={booking} past onHide={hide(booking.id)} />)
+                    ),
+                  )}
+              </section>
+            ))}
         </>
       )}
 
@@ -230,7 +245,13 @@ export function TripPage() {
           </button>
           {showHidden &&
             hiddenList.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} showDay={formatLongDay(booking.startLocal.slice(0, 10))} hidden onHide={hide(booking.id)} />
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                showDay={formatLongDay(booking.startLocal.slice(0, 10))}
+                hidden
+                onHide={hide(booking.id)}
+              />
             ))}
         </>
       )}
@@ -242,4 +263,16 @@ export function TripPage() {
       </button>
     </main>
   );
+}
+
+/** Lo de cada día, con los vuelos con escala juntos en el día en que salen; `skip`: lo ya pintado en otra lista. */
+function journeysByDay(days: readonly Day[], all: readonly Booking[], skip: ReadonlySet<string>): Map<string, Leg[][]> {
+  const seen = new Set(skip);
+  const result = new Map<string, Leg[][]>();
+  for (const day of days) {
+    const journeys = withConnections(groupSameTrip(day.bookings), all, seen);
+    idsOf(journeys).forEach((id) => seen.add(id));
+    result.set(day.date, journeys);
+  }
+  return result;
 }
