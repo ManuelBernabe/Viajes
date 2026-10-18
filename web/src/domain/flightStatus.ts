@@ -31,15 +31,36 @@ export interface FlightStatusResponse {
   delayMinutes: number;
   /** Por qué no hay datos si el proveedor falla («Se han acabado las consultas del mes…»). */
   problem?: string | null;
+  /** Desde cuándo vale la pena volver a pedir «↻ Actualizar» (antes el servidor devuelve lo guardado). */
+  refreshAfterMs?: number | null;
+  /** Vuelo entre dos países (true), nacional (false) o sin saberlo. */
+  international?: boolean | null;
 }
 
 const NUMBER = /(?<![A-Za-z0-9])([A-Z][A-Z0-9]|[0-9][A-Z])\s?(\d{1,4})(?![0-9:.,])/;
 const BARE = /(?:vuelo|flight|vol|volo)\s*(?:n[º°o.]*\s*)?:?\s*(\d{1,4})(?![0-9])/i;
 const AIRLINE_NAMES: [string, string][] = [
-  ['iberia express', 'I2'], ['iberia', 'IB'], ['vueling', 'VY'], ['ryanair', 'FR'], ['air europa', 'UX'], ['aerolineas argentinas', 'AR'],
-  ['aerolíneas argentinas', 'AR'], ['latam', 'LA'], ['jetsmart', 'JA'], ['gol', 'G3'], ['azul', 'AD'], ['air france', 'AF'], ['klm', 'KL'],
-  ['lufthansa', 'LH'], ['british airways', 'BA'], ['easyjet', 'U2'], ['tap', 'TP'], ['ita airways', 'AZ'], ['american airlines', 'AA'],
-  ['united', 'UA'], ['delta', 'DL'],
+  ['iberia express', 'I2'],
+  ['iberia', 'IB'],
+  ['vueling', 'VY'],
+  ['ryanair', 'FR'],
+  ['air europa', 'UX'],
+  ['aerolineas argentinas', 'AR'],
+  ['aerolíneas argentinas', 'AR'],
+  ['latam', 'LA'],
+  ['jetsmart', 'JA'],
+  ['gol', 'G3'],
+  ['azul', 'AD'],
+  ['air france', 'AF'],
+  ['klm', 'KL'],
+  ['lufthansa', 'LH'],
+  ['british airways', 'BA'],
+  ['easyjet', 'U2'],
+  ['tap', 'TP'],
+  ['ita airways', 'AZ'],
+  ['american airlines', 'AA'],
+  ['united', 'UA'],
+  ['delta', 'DL'],
 ];
 
 /** El mismo criterio que el servidor: número de vuelo en el título, si no en las notas, o aerolínea + «Vuelo: 3157». */
@@ -108,7 +129,9 @@ export function clock(ms: number | null, timeZone: string): string | null {
 
 /** «Puerta 5 · Terminal A»: lo que hay que saber en el aeropuerto de salida. */
 export function departureHint(info: FlightInfo): string {
-  return [info.depTerminal && t('Terminal {t}', { t: info.depTerminal }), info.depGate && t('Puerta {g}', { g: info.depGate })].filter(Boolean).join(' · ');
+  return [info.depTerminal && t('Terminal {t}', { t: info.depTerminal }), info.depGate && t('Puerta {g}', { g: info.depGate })]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 const cacheKey = (bookingId: string) => `viajes:vuelo:${bookingId}`;
@@ -136,7 +159,9 @@ export async function loadFlight(booking: Booking, now = Date.now(), force = fal
   }
   lastAsked.set(booking.id, now);
   try {
-    const result = await api<FlightStatusResponse>(`/api/bookings/${booking.id}/flight-status${tracking ? '?refresh=true' : ''}`);
+    const result = await api<FlightStatusResponse>(
+      `/api/bookings/${booking.id}/flight-status${tracking ? `?refresh=true${force ? '&force=true' : ''}` : ''}`,
+    );
     try {
       localStorage.setItem(cacheKey(booking.id), JSON.stringify(result));
     } catch {

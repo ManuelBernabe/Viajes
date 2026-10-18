@@ -725,3 +725,11 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .leg-bag { padding: 0 18px 10px; margin-top: 0; }
 .connection-card .leg-link { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0 2px; color: var(--text); text-decoration: none; font-size: 0.92rem; }
 .connection-card .layover-line { padding-left: 2px; font-size: 0.82rem; }
+
+/* Mostradores de facturación, el día del vuelo. */
+.bagdrop { font-size: 0.9rem; margin-top: 6px; }
+.bagdrop-open { color: var(--ok, var(--text)); }
+.bagdrop-closing { color: var(--warn); font-weight: 600; }
+.bagdrop-closed { color: var(--danger); }
+.pass-counter { padding: 0 18px 10px; }
+.pass-counter .bagdrop { margin-top: 0; }

@@ -79,11 +79,18 @@ public sealed class FlightStatusTests(FlightApp app) : IClassFixture<FlightApp>
         Assert.Equal("JA3157", body.GetProperty("flight").GetString());
         Assert.Equal(40, body.GetProperty("delayMinutes").GetInt32());
         Assert.Equal("5", body.GetProperty("info").GetProperty("depGate").GetString());
+        // IGR y AEP están en Argentina: vuelo nacional (los mostradores abren y cierran más tarde).
+        Assert.False(body.GetProperty("international").GetBoolean());
+        Assert.True(body.GetProperty("refreshAfterMs").GetInt64() > body.GetProperty("fetchedMs").GetInt64());
         Assert.Equal([$"JA3157 {startLocal[..10]} IGR"], app.Flights.Calls);
 
         // La otra reserva del mismo vuelo usa lo ya consultado: no se gasta otra consulta.
         var other = await (await api.Client.GetAsync($"/api/bookings/{manuel}/flight-status?refresh=true")).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("delayed", other.GetProperty("info").GetProperty("status").GetString());
+        Assert.Single(app.Flights.Calls);
+
+        // «↻ Actualizar» recién consultado: devuelve lo guardado, sin gastar otra consulta.
+        await api.Client.GetAsync($"/api/bookings/{paco}/flight-status?refresh=true&force=true");
         Assert.Single(app.Flights.Calls);
 
         // Un solo aviso para la persona, aunque vea las dos reservas.
@@ -195,5 +202,14 @@ public sealed class FlightWatchRuleTests
         Assert.Equal("3", info.DepGate);
         Assert.Equal("12", info.ArrGate);
         Assert.Equal(new DateTimeOffset(2026, 10, 8, 13, 35, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(), info.ArrivalMs);
+    }
+
+    [Fact]
+    public void Airports_KnowTheCountry()
+    {
+        Assert.Equal("Argentina", Viajes.Api.Weather.Airports.Country("AEP"));
+        Assert.True(Viajes.Api.Weather.Airports.International("AEP", "GRU"));
+        Assert.False(Viajes.Api.Weather.Airports.International("MAD", "ALC"));
+        Assert.Null(Viajes.Api.Weather.Airports.International("MAD", "XXX"));
     }
 }

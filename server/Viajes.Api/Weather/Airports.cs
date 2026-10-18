@@ -10,6 +10,19 @@ public static class Airports
 {
     private static readonly Lazy<Dictionary<string, GeoPoint>> All = new(Load);
 
+    private static readonly Dictionary<string, string> Countries = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>País del aeropuerto (en inglés, «Spain»), o null si no se conoce.</summary>
+    public static string? Country(string? code)
+    {
+        _ = All.Value;
+        return code is { Length: 3 } && Countries.TryGetValue(code, out var country) ? country : null;
+    }
+
+    /// <summary>Vuelo entre dos países (true), dentro de uno (false) o sin saberlo (null).</summary>
+    public static bool? International(string? from, string? to) =>
+        Country(from) is { } a && Country(to) is { } b ? !string.Equals(a, b, StringComparison.OrdinalIgnoreCase) : null;
+
     public static GeoPoint? Find(string? code) =>
         code is { Length: 3 } && All.Value.TryGetValue(code.ToUpperInvariant(), out var point) ? point : null;
 
@@ -36,6 +49,10 @@ public static class Airports
                 && double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var lon))
             {
                 result[parts[0]] = new GeoPoint(lat, lon, parts[3]);
+                if (parts.Length >= 5 && parts[4].Length > 0)
+                {
+                    Countries[parts[0]] = parts[4];
+                }
             }
         }
 

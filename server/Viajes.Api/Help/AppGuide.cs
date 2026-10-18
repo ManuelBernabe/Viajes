@@ -105,6 +105,13 @@ public static class AppGuide
           todos los que ven la reserva. Si la reserva no tiene número de vuelo, la tarjeta explica cómo ponerlo. Solo funciona con la clave de un proveedor de datos de
           vuelos: quien administra la pega en Ajustes → «🛰️ Estado de los vuelos» (AeroDataBox por RapidAPI, plan Basic
           gratuito); si no hay clave, la tarjeta no sale.
+        - «↻ Actualizar» del estado del vuelo: vuelve a preguntar al proveedor como mucho cada 5 min (para no gastar el cupo
+          gratuito); si se acaba de comprobar, lo dice y cuándo se puede volver a pedir. Solo sale desde un día antes del vuelo.
+        - Mostradores de facturación (el día del vuelo, en la tarjeta de «Hoy» y en «Estado del vuelo»): el número de
+          mostradores si el proveedor lo da (AeroDataBox, no todos los aeropuertos) y si ya se puede facturar: «abre hacia las
+          18:30», «abierta: cierra hacia las 20:30 (en 40 min)» o «cerrada». Las horas son las habituales y aproximadas: en
+          vuelos internacionales abren 3 h antes y cierran 1 h antes; en nacionales, 2 h y 45 min; Ryanair, easyJet y Vueling
+          cierran 40 min antes. Ningún proveedor publica la hora real de apertura: lo que manda es lo que diga la aerolínea.
         - En los vuelos, «💺 Asiento y check-in»: el asiento si la reserva lo dice, cuándo abre el check-in de la aerolínea, botón
           para elegir o cambiar asiento en la web de la aerolínea y «Copiar localizador». Llega un aviso cuando abre el check-in.
           La app no puede mostrar los asientos libres: eso solo lo hace la aerolínea.
