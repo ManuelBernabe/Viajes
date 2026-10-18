@@ -703,3 +703,25 @@ input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .member-tags .tag { font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: var(--raise); color: var(--muted); }
 .member-tags .tag.ok { color: var(--ok); }
 .member-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Vuelos con escala: una tarjeta con el trayecto entero y cada tramo debajo. */
+.pass-via { font-size: 0.75rem; margin-top: 4px; white-space: nowrap; }
+.pass-time small { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.legs { margin: 10px 18px 6px; border-top: 1px solid var(--border); }
+.leg { padding: 10px 0 8px; }
+.leg.done { opacity: 0.6; }
+.leg-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.leg-head b { flex: 1; min-width: 0; font-size: 0.95rem; }
+.leg-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; font-weight: 700; background: color-mix(in srgb, var(--type, var(--primary)) 16%, var(--surface)); color: color-mix(in srgb, var(--type, var(--primary)) 75%, var(--text)); }
+.leg-route { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.leg-route b { font-size: 1.1rem; }
+.leg-route s { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+.leg-facts { padding: 8px 0 4px; }
+.leg .pass-warn { margin: 4px 0; }
+.btn.small.leg-btn { margin: 0; padding: 2px 12px; min-height: 32px; height: 32px; }
+.layover { margin: 2px 0; padding: 7px 12px; border-radius: 10px; background: color-mix(in srgb, var(--type, var(--primary)) 8%, var(--surface)); font-size: 0.88rem; color: var(--muted); }
+.layover b { color: var(--text); }
+.layover.short { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, var(--surface)); }
+.leg-bag { padding: 0 18px 10px; margin-top: 0; }
+.connection-card .leg-link { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0 2px; color: var(--text); text-decoration: none; font-size: 0.92rem; }
+.connection-card .layover-line { padding-left: 2px; font-size: 0.82rem; }
